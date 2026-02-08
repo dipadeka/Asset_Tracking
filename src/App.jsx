@@ -1,22 +1,28 @@
-import React from 'react'
-/*import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'*/
-import './App.css'
-import LoginForm from './LoginForm'
+import { useState } from "react";
+import { BrowserRouter, Routes, Route } from 'react-router-dom'; // routing
+import SignInPage from "./pages/auth/login/login";
+import SignUpPage from "./pages/auth/signup";
+import ForgotPasswordPage from './pages/auth/forgotPassword';
+import Deshboard from "./pages/deskboard";
 
 function App() {
-  
+  const [count, setCount] = useState(0);
+
   return (
     <>
-      <div>
-        <h1>Welcome!</h1>
-        <LoginForm/>
-      </div>
-      
+      {/* <Login /> */}
+
+      {/* Routing syntax  */}
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<SignInPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        </Routes>
+      </BrowserRouter>
     </>
-  )
-
+  );
 }
-export default App
 
-
+export default App;
