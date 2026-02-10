@@ -81,7 +81,7 @@ export default function SignInPage() {
             </Button>
 
             <Box textAlign="center" mb={2}>
-              <Link href="#" underline="hover" color="#9aa4bf">
+              <Link component={RouterLink} to="/forgot-password" underline="hover" color="#9aa4bf">
                 Forgot your password?
               </Link>
             </Box>

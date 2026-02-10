@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -44,7 +45,7 @@ export default function ForgotPasswordPage() {
           </Button>
 
           <Box textAlign="center" mt={3}>
-            <Link href="#" underline="hover" color="#4ea8ff">
+            <Link component={RouterLink} to="/signin" underline="hover" color="#4ea8ff">
               Back to sign in
             </Link>
           </Box>
