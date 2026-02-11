@@ -4,6 +4,7 @@ import SignInPage from "./pages/auth/login/login";
 import SignUpPage from "./pages/auth/signup";
 import ForgotPasswordPage from './pages/auth/forgotPassword';
 import Deshboard from "./pages/deskboard";
+import AssetManagementForm from "./pages/assetManagementForm";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -17,7 +18,9 @@ function App() {
         <Routes>
           <Route path="/" element={<SignInPage />} />
           <Route path="/signin" element={<SignInPage />} />
+        
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/amf" element={<AssetManagementForm />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Routes>
       </BrowserRouter>
