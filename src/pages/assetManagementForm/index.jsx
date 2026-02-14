@@ -15,12 +15,34 @@ import {
 import { useForm, Controller } from "react-hook-form";
 
 const AssetForm = () => {
-  const { control, handleSubmit } = useForm();
+  const { control, handleSubmit, setValue} = useForm({
+    defaultValues: {
+      State: "Assam",
+    
+    }
+  });
 
-  const onSubmit = (data) => {
-    console.log("User Input:", data);
+  const onPincodeChange = async(e) => {
+    const pincode = e.target.value;
+    if(pincode.length !== 6) return; 
+
+    try{
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      if(data[0].Status === "Success"){
+        const postOffice = data[0].PostOffice[0];
+        setValue('state', postOffice.State);
+        setValue('district', postOffice.District);
+        setValue('block', postOffice.Block);
+      }
+    }
+    catch(error){
+      console.error("Error fetching location data:", error);
+    } 
+
   };
 
+  
   const fields = [
     { name: "assetId", label: "Asset Id" },
     { name: "assetCode", label: "Asset Code" },
@@ -33,7 +55,6 @@ const AssetForm = () => {
     { name: "block", label: "Block" },
     { name: "village", label: "Village" },
     { name: "wardNo", label: "Ward No" },
-    { name: "pincode", label: "Pincode", type: "number" },
     { name: "latitude", label: "Latitude" },
     { name: "longitude", label: "Longitude" },
     { name: "areaSize", label: "Area / Size (sq. m / acres)" },
@@ -52,6 +73,8 @@ const AssetForm = () => {
         Asset Management
       </Typography>
 
+
+
       <Typography variant="subtitle1" color="text.secondary" mb={3}>
         Create and manage asset details
       </Typography>
@@ -62,9 +85,24 @@ const AssetForm = () => {
         <Divider />
 
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onPincodeChange)}>
             <Grid container spacing={2}>
-
+<Grid item xs={12} sm={6} md={3} >
+                  <Controller
+                    name="pincode"
+                    control={control}
+                    defaultValue=""
+                    render={({  }) => (
+                      <TextField
+                        label="Pincode"
+                        onChange={onPincodeChange}
+                        type= "text"
+                        fullWidth
+                        size="small"
+                      />
+                    )}
+                  />
+                </Grid>
               {/* 4 Columns Layout */}
               {fields.map((fieldItem) => (
                 <Grid item xs={12} sm={6} md={3} key={fieldItem.name}>
