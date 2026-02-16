@@ -47,6 +47,10 @@ const AssetForm = () => {
         setValue("state", postOffice.State);
         setValue("district", postOffice.District);
         setValue("block", postOffice.Block);
+        setValue("village", postOffice.Village);
+        setValue("fullPostalAddress",
+          `${postOffice.Village}, ${postOffice.Block}, ${postOffice.District}, ${postOffice.State} - ${pincode}`
+        );
       }
     } catch (error) {
       console.error("Error fetching location data:", error);
@@ -99,20 +103,19 @@ const AssetForm = () => {
     { name: "district", label: "District" },
     { name: "block", label: "Block" },
     { name: "village", label: "Village" },
-    { name: "wardNo", label: "Ward No" },
     { name: "latitude", label: "Latitude", readOnly: true },
     { name: "longitude", label: "Longitude", readOnly: true },
     { name: "areaSize", label: "Area / Size (sq. m / acres)" },
   ];
 
   // ================= FINANCIAL FIELDS =================
-  const financialFields = [
+  const schemeFields = [
     {
       name: "constructionCost",
       label: "Construction Cost (in Rs)",
       type: "number",
     },
-    { name: "fundingSource", label: "Funding Source" },
+   // { name: "fundingSource", label: "Funding Source" },
     { name: "estimatedCost", label: "Estimated Cost", type: "number" },
     { name: "actualCost", label: "Actual Cost", type: "number" },
     { name: "pointOfContact", label: "Point of Contact" },
@@ -236,6 +239,19 @@ const AssetForm = () => {
             </Grid>
 
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
+           const financialFields = [
+          { name: "schemeName", label: "Name of the Scheme" },
+          { name: "projectCost", label: "Project Cost", type: "number" },
+          { name: "constructionCost", label: "Construction Cost", type: "number" },
+          { name: "estimatedCost", label: "Estimated Cost", type: "number" },
+          { name: "actualCost", label: "Actual Cost", type: "number" },
+          { name: "contractValue", label: "Contract Value", type: "number" },
+          { name: "workOrderNumber", label: "Work Order Number" },
+          { name: "workOrderDate", label: "Work Order Date", type: "date" },
+          { name: "timeOfCompletion", label: "Time of Completion (Months)", type: "number" },
+          { name: "pointOfContact", label: "Point of Contact" }
+];
+
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -271,6 +287,7 @@ const AssetForm = () => {
                     )}
                   />
                 </Grid>
+              
               ))}
 
               {/* Status */}
@@ -280,17 +297,65 @@ const AssetForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Status</InputLabel>
-                      <Select {...field} label="Status" fullWidth>
+                    <FormControl fullWidth>
+                      <InputLabel id="status-label">Status</InputLabel>
+                      <Select {...field} labelId="status-label" id="status-select" label="Status">
                         <MenuItem value="Planned">Planned</MenuItem>
                         <MenuItem value="Ongoing">Ongoing</MenuItem>
                         <MenuItem value="Completed">Completed</MenuItem>
+                        <MenuItem value="Operational">Operational</MenuItem>
+                        <MenuItem value="Non-Operational">Non-Operational</MenuItem>
+                        <MenuItem value="Delayed">Delayed</MenuItem>
                       </Select>
                     </FormControl>
                   )}
                 />
               </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+  <Controller
+    name="completionPercentage"
+    control={control}
+    defaultValue=""
+    render={({ field }) => (
+      <TextField
+        {...field}
+        label="Completion %"
+        fullWidth
+        InputProps={{
+          readOnly: true,
+        }}
+      />
+    )}
+  />
+</Grid>
+<Grid item xs={12} sm={6} md={3}>
+  <Controller
+    name="fundingSource"
+    control={control}
+    defaultValue=""
+    render={({ field }) => (
+      <FormControl fullWidth size="small">
+        <InputLabel id="funding-label">
+          Funding Source
+        </InputLabel>
+
+        <Select
+          {...field}
+          labelId="funding-label"
+          label="Funding Source"
+        >
+          <MenuItem value="Article 275 Grant">Article 275 Grant</MenuItem>
+          <MenuItem value="Central Sector Scheme">Central Sector Scheme</MenuItem>
+          <MenuItem value="Centrally Sponsored Scheme">Centrally Sponsored Scheme</MenuItem>
+          <MenuItem value="District Fund">District Fund</MenuItem>
+        </Select>
+
+      </FormControl>
+    )}
+  />
+</Grid>
+
               {/* Financial Fields */}
               {financialFields.map((financeItem) => (
                 <Grid item xs={12} sm={6} md={3} key={financeItem.name}>
