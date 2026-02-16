@@ -18,11 +18,15 @@ import {
 import { useForm, Controller } from "react-hook-form";
 
 const AssetForm = () => {
-  const { control, handleSubmit, setValue } = useForm({
-    defaultValues: {
-      state: "Assam",
-    },
-  });
+  const { control, handleSubmit, setValue, watch } = useForm({
+  defaultValues: {
+    state: "Assam",
+  },
+});
+
+const startDate = watch("constructionStartDate");
+const completionMonths = watch("timeOfCompletion");
+
 
   // ================= SUBMIT =================
   const onSubmit = (data) => {
@@ -87,6 +91,19 @@ const AssetForm = () => {
     getLiveLocation();
   }, []);
 
+  useEffect(() => {
+  if (startDate && completionMonths) {
+    const start = new Date(startDate);
+
+    // Add months
+    start.setMonth(start.getMonth() + parseInt(completionMonths));
+
+    const formattedDate = start.toISOString().split("T")[0];
+
+    setValue("constructionEndDate", formattedDate);
+  }
+}, [startDate, completionMonths, setValue]);
+
   // ================= BASIC FIELDS =================
   const fields = [
     { name: "assetId", label: "Asset Id" },
@@ -112,20 +129,39 @@ const AssetForm = () => {
   const schemeFields = [
     
        {name: "schemeName", label: "Name of the Scheme"},
-       {name: "projectCost", label: "Project Cost", type: "number" },
-       {name: "constructionCost", label: "Construction Cost", type: "number"},
-       {name: "estimatedCost", label: "Estimated Cost", type: "number" },
-       {name: "actualCost", label: "Actual Cost", type: "number" },
-       {name: "contractValue", label: "Contract Value", type: "number"},
+       {
+    name: "fundingSource",
+    label: "Funding Source",
+    type: "select",
+    options: [
+      "Article 275 Grant",
+      "Central Sector Scheme",
+      "Centrally Sponsored Scheme",
+      "State Fund",
+    ],
+  },
+       {name: "projectCost", label: "Project Cost (In Lakhs)", type: "number" },
+       {name: "constructionCost", label: "Construction Cost(In Lakhs)", type: "number"},
+       {name: "estimatedCost", label: "Estimated Cost(In Lakhs)", type: "number" },
+       {name: "actualCost", label: "Actual Cost(In Lakhs)", type: "number" },
+       {name: "contractValue", label: "Contract Value(In Lakhs)", type: "number"},
        {name: "workOrderNumber", label: "Work Order Number" },
        {name: "workOrderDate", label: "Work Order Date", type: "date" },
-       {name: "timeOfCompletion", label: "Time of Completion (Months)", type: "number"},
+       {name: "timeOfCompletion", label: "Time of Completion (In Months)", type: "number"},
        {name: "pointOfContact", label: "Point of Contact" },
-    },
+       { name: "constructionStartDate", label: "Construction Start Date", type: "date" },
+       { name: "constructionEndDate", label: "Construction End Date", type: "date" },
+
+       
   ];
+  
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4,
+      backgroundColor: "#f1f5f9",
+    padding: 3,
+    borderRadius: 3
+     }}>
       {/* ===== Header ===== */}
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Asset Management
@@ -136,17 +172,52 @@ const AssetForm = () => {
       </Typography>
 
       <Card>
-        <CardHeader title="Asset Details Form" />
+        <Box
+  sx={{
+    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+    padding: 2,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16
+  }}
+>
+  <Typography
+    variant="h6"
+    sx={{
+      color: "#fff",
+      fontWeight: 600,
+      letterSpacing: 0.5
+    }}
+  >
+    Asset Details Form
+  </Typography>
+</Box>
+
         <Divider />
 
-        <CardContent>
+        <CardContent
+        sx={{
+    backgroundColor: "#f8fafc",
+    padding: 4,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16
+  }}>
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* ================= BASIC DETAILS ROW ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Project Details
-                </Typography>
+                <Typography
+  variant="h6"
+  sx={{
+    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+    color: "#fff",
+    padding: "8px 16px",
+    borderRadius: 2,
+    fontWeight: 600,
+    mb: 2
+  }}
+>
+  Project Details
+</Typography>
               </Grid>
             </Grid>
             <Grid container spacing={2} mb={4}>
@@ -172,9 +243,19 @@ const AssetForm = () => {
             {/* ================= ADDRESS DETAILS SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Address Details
-                </Typography>
+                <Typography
+  variant="h6"
+  sx={{
+    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+    color: "#fff",
+    padding: "8px 16px",
+    borderRadius: 2,
+    fontWeight: 600,
+    mb: 2
+  }}
+>
+  Address Details
+</Typography>
               </Grid>
             </Grid>
 
@@ -242,49 +323,70 @@ const AssetForm = () => {
             </Grid>
 
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
-           const financialFields = [
-          {
-];
 
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Financial Details
-                </Typography>
+                <Typography
+  variant="h6"
+  sx={{
+    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+    color: "#fff",
+    padding: "8px 16px",
+    borderRadius: 2,
+    fontWeight: 600,
+    mb: 2
+  }}
+>
+  Project Implementation Details
+</Typography>
               </Grid>
             </Grid>
 
             <Grid container spacing={2} mb={4}>
-              {/* Date Fields */}
-              {[
-                { name: "sanctionDate", label: "Sanction Date" },
-                {
-                  name: "constructionStartDate",
-                  label: "Construction Start Date",
-                },
-                { name: "constructionEndDate", label: "Construction End Date" },
-              ].map((dateField) => (
-                <Grid item xs={12} sm={6} md={3} key={dateField.name}>
+              {/* Financial Fields */}
+              {schemeFields.map((financeItem) => (
+                <Grid item xs={12} sm={6} md={3} key={financeItem.name}>
                   <Controller
-                    name={dateField.name}
+                    name={financeItem.name}
                     control={control}
                     defaultValue=""
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label={dateField.label}
-                        type="date"
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                        size="small"
-                      />
-                    )}
+  financeItem.type === "select" ? (
+
+    <FormControl fullWidth size="small">
+      <InputLabel>{financeItem.label}</InputLabel>
+      <Select {...field} label={financeItem.label}>
+        {financeItem.options.map((option) => (
+          <MenuItem key={option} value={option}>
+            {option}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+
+  ) : (
+
+    <TextField
+      {...field}
+      label={financeItem.label}
+      type={financeItem.type || "text"}
+      fullWidth
+      size="small"
+      InputLabelProps={
+        financeItem.type === "date"
+          ? { shrink: true }
+          : {}
+      }
+    />
+
+  )
+)}
+
                   />
                 </Grid>
-              
               ))}
-
-              {/* Status */}
+              
+{/* Status */}
               <Grid item xs={12} sm={6} md={3} fullWidth>
                 <Controller
                   name="status"
@@ -295,11 +397,9 @@ const AssetForm = () => {
                       <InputLabel id="status-label">Status</InputLabel>
                       <Select {...field} labelId="status-label" id="status-select" label="Status">
                         <MenuItem value="Planned">Planned</MenuItem>
-                        <MenuItem value="Ongoing">Ongoing</MenuItem>
+                        <MenuItem value="Work In Progress">Ongoing</MenuItem>
                         <MenuItem value="Completed">Completed</MenuItem>
-                        <MenuItem value="Operational">Operational</MenuItem>
-                        <MenuItem value="Non-Operational">Non-Operational</MenuItem>
-                        <MenuItem value="Delayed">Delayed</MenuItem>
+                        
                       </Select>
                     </FormControl>
                   )}
@@ -307,6 +407,7 @@ const AssetForm = () => {
               </Grid>
 
               <Grid item xs={12} sm={6} md={3}>
+
   <Controller
     name="completionPercentage"
     control={control}
@@ -323,52 +424,6 @@ const AssetForm = () => {
     )}
   />
 </Grid>
-<Grid item xs={12} sm={6} md={3}>
-  <Controller
-    name="fundingSource"
-    control={control}
-    defaultValue=""
-    render={({ field }) => (
-      <FormControl fullWidth size="small">
-        <InputLabel id="funding-label">
-          Funding Source
-        </InputLabel>
-
-        <Select
-          {...field}
-          labelId="funding-label"
-          label="Funding Source"
-        >
-          <MenuItem value="Article 275 Grant">Article 275 Grant</MenuItem>
-          <MenuItem value="Central Sector Scheme">Central Sector Scheme</MenuItem>
-          <MenuItem value="Centrally Sponsored Scheme">Centrally Sponsored Scheme</MenuItem>
-          <MenuItem value="District Fund">District Fund</MenuItem>
-        </Select>
-
-      </FormControl>
-    )}
-  />
-</Grid>
-
-              {/* Financial Fields */}
-              {financialFields.map((financeItem) => (
-                <Grid item xs={12} sm={6} md={3} key={financeItem.name}>
-                  <Controller
-                    name={financeItem.name}
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label={financeItem.label}
-                        type={financeItem.type || "text"}
-                        fullWidth
-                        size="small"
-                      />
-                    )}
-                  />
-                </Grid>
-              ))}
 
               {/* Remarks */}
               <Grid item xs={12} md={6}>
