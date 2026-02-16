@@ -110,15 +110,18 @@ const AssetForm = () => {
 
   // ================= FINANCIAL FIELDS =================
   const schemeFields = [
-    {
-      name: "constructionCost",
-      label: "Construction Cost (in Rs)",
-      type: "number",
+    
+       {name: "schemeName", label: "Name of the Scheme"},
+       {name: "projectCost", label: "Project Cost", type: "number" },
+       {name: "constructionCost", label: "Construction Cost", type: "number"},
+       {name: "estimatedCost", label: "Estimated Cost", type: "number" },
+       {name: "actualCost", label: "Actual Cost", type: "number" },
+       {name: "contractValue", label: "Contract Value", type: "number"},
+       {name: "workOrderNumber", label: "Work Order Number" },
+       {name: "workOrderDate", label: "Work Order Date", type: "date" },
+       {name: "timeOfCompletion", label: "Time of Completion (Months)", type: "number"},
+       {name: "pointOfContact", label: "Point of Contact" },
     },
-   // { name: "fundingSource", label: "Funding Source" },
-    { name: "estimatedCost", label: "Estimated Cost", type: "number" },
-    { name: "actualCost", label: "Actual Cost", type: "number" },
-    { name: "pointOfContact", label: "Point of Contact" },
   ];
 
   return (
@@ -240,16 +243,7 @@ const AssetForm = () => {
 
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
            const financialFields = [
-          { name: "schemeName", label: "Name of the Scheme" },
-          { name: "projectCost", label: "Project Cost", type: "number" },
-          { name: "constructionCost", label: "Construction Cost", type: "number" },
-          { name: "estimatedCost", label: "Estimated Cost", type: "number" },
-          { name: "actualCost", label: "Actual Cost", type: "number" },
-          { name: "contractValue", label: "Contract Value", type: "number" },
-          { name: "workOrderNumber", label: "Work Order Number" },
-          { name: "workOrderDate", label: "Work Order Date", type: "date" },
-          { name: "timeOfCompletion", label: "Time of Completion (Months)", type: "number" },
-          { name: "pointOfContact", label: "Point of Contact" }
+          {
 ];
 
             <Grid container spacing={2}>
