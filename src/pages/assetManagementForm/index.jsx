@@ -12,6 +12,8 @@ import {
   Divider,
   Container,
   Select,
+  FormControl,
+  InputLabel
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 
@@ -98,8 +100,8 @@ const AssetForm = () => {
     { name: "block", label: "Block" },
     { name: "village", label: "Village" },
     { name: "wardNo", label: "Ward No" },
-    { name: "latitude", label: "Latitude", readOnly:true },
-    { name: "longitude", label: "Longitude",  readOnly:true  },
+    { name: "latitude", label: "Latitude", readOnly: true },
+    { name: "longitude", label: "Longitude", readOnly: true },
     { name: "areaSize", label: "Area / Size (sq. m / acres)" },
   ];
 
@@ -272,27 +274,23 @@ const AssetForm = () => {
               ))}
 
               {/* Status */}
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={3} fullWidth>
                 <Controller
                   name="status"
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <Select
-                      {...field}
-                      select
-                      label="Status"
-                      fullWidth
-                      size="small"
-                    >
-                      <MenuItem value="Planned">Planned</MenuItem>
-                      <MenuItem value="Ongoing">Ongoing</MenuItem>
-                      <MenuItem value="Completed">Completed</MenuItem>
-                    </Select>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Status</InputLabel>
+                      <Select {...field} label="Status" fullWidth>
+                        <MenuItem value="Planned">Planned</MenuItem>
+                        <MenuItem value="Ongoing">Ongoing</MenuItem>
+                        <MenuItem value="Completed">Completed</MenuItem>
+                      </Select>
+                    </FormControl>
                   )}
                 />
               </Grid>
-
               {/* Financial Fields */}
               {financialFields.map((financeItem) => (
                 <Grid item xs={12} sm={6} md={3} key={financeItem.name}>
