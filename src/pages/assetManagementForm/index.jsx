@@ -13,20 +13,19 @@ import {
   Container,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 
 const AssetForm = () => {
   const { control, handleSubmit, setValue, watch } = useForm({
-  defaultValues: {
-    state: "Assam",
-  },
-});
+    defaultValues: {
+      state: "Assam",
+    },
+  });
 
-const startDate = watch("constructionStartDate");
-const completionMonths = watch("timeOfCompletion");
-
+  const startDate = watch("constructionStartDate");
+  const completionMonths = watch("timeOfCompletion");
 
   // ================= SUBMIT =================
   const onSubmit = (data) => {
@@ -52,8 +51,9 @@ const completionMonths = watch("timeOfCompletion");
         setValue("district", postOffice.District);
         setValue("block", postOffice.Block);
         setValue("village", postOffice.Village);
-        setValue("fullPostalAddress",
-          `${postOffice.Village}, ${postOffice.Block}, ${postOffice.District}, ${postOffice.State} - ${pincode}`
+        setValue(
+          "fullPostalAddress",
+          `${postOffice.Village}, ${postOffice.Block}, ${postOffice.District}, ${postOffice.State} - ${pincode}`,
         );
       }
     } catch (error) {
@@ -92,17 +92,17 @@ const completionMonths = watch("timeOfCompletion");
   }, []);
 
   useEffect(() => {
-  if (startDate && completionMonths) {
-    const start = new Date(startDate);
+    if (startDate && completionMonths) {
+      const start = new Date(startDate);
 
-    // Add months
-    start.setMonth(start.getMonth() + parseInt(completionMonths));
+      // Add months
+      start.setMonth(start.getMonth() + parseInt(completionMonths));
 
-    const formattedDate = start.toISOString().split("T")[0];
+      const formattedDate = start.toISOString().split("T")[0];
 
-    setValue("constructionEndDate", formattedDate);
-  }
-}, [startDate, completionMonths, setValue]);
+      setValue("constructionEndDate", formattedDate);
+    }
+  }, [startDate, completionMonths, setValue]);
 
   // ================= BASIC FIELDS =================
   const fields = [
@@ -127,41 +127,66 @@ const completionMonths = watch("timeOfCompletion");
 
   // ================= FINANCIAL FIELDS =================
   const schemeFields = [
-    
-       {name: "schemeName", label: "Name of the Scheme"},
-       {
-    name: "fundingSource",
-    label: "Funding Source",
-    type: "select",
-    options: [
-      "Article 275 Grant",
-      "Central Sector Scheme",
-      "Centrally Sponsored Scheme",
-      "State Fund",
-    ],
-  },
-       {name: "projectCost", label: "Project Cost (In Lakhs)", type: "number" },
-       {name: "constructionCost", label: "Construction Cost(In Lakhs)", type: "number"},
-       {name: "estimatedCost", label: "Estimated Cost(In Lakhs)", type: "number" },
-       {name: "actualCost", label: "Actual Cost(In Lakhs)", type: "number" },
-       {name: "contractValue", label: "Contract Value(In Lakhs)", type: "number"},
-       {name: "workOrderNumber", label: "Work Order Number" },
-       {name: "workOrderDate", label: "Work Order Date", type: "date" },
-       {name: "timeOfCompletion", label: "Time of Completion (In Months)", type: "number"},
-       {name: "pointOfContact", label: "Point of Contact" },
-       { name: "constructionStartDate", label: "Construction Start Date", type: "date" },
-       { name: "constructionEndDate", label: "Construction End Date", type: "date" },
-
-       
+    { name: "schemeName", label: "Name of the Scheme" },
+    {
+      name: "fundingSource",
+      label: "Funding Source",
+      type: "select",
+      options: [
+        "Article 275 Grant",
+        "Central Sector Scheme",
+        "Centrally Sponsored Scheme",
+        "State Fund",
+      ],
+    },
+    { name: "projectCost", label: "Project Cost (In Lakhs)", type: "number" },
+    {
+      name: "constructionCost",
+      label: "Construction Cost(In Lakhs)",
+      type: "number",
+    },
+    {
+      name: "estimatedCost",
+      label: "Estimated Cost(In Lakhs)",
+      type: "number",
+    },
+    { name: "actualCost", label: "Actual Cost(In Lakhs)", type: "number" },
+    {
+      name: "contractValue",
+      label: "Contract Value(In Lakhs)",
+      type: "number",
+    },
+    { name: "workOrderNumber", label: "Work Order Number" },
+    { name: "workOrderDate", label: "Work Order Date", type: "date" },
+    {
+      name: "timeOfCompletion",
+      label: "Time of Completion (In Months)",
+      type: "number",
+    },
+    { name: "pointOfContact", label: "Point of Contact" },
+    {
+      name: "constructionStartDate",
+      label: "Construction Start Date",
+      type: "date",
+    },
+    {
+      name: "constructionEndDate",
+      label: "Construction End Date",
+      type: "date",
+    },
   ];
-  
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4,
-      backgroundColor: "#f1f5f9",
-    padding: 3,
-    borderRadius: 3
-     }}>
+    <Container
+      maxWidth="xl"
+      sx={{
+        mt: 4,
+        mb: 4,
+        backgroundColor: "#f1f5f9",
+        padding: 3,
+        borderRadius: 3,
+      }}
+    >
       {/* ===== Header ===== */}
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Asset Management
@@ -173,51 +198,52 @@ const completionMonths = watch("timeOfCompletion");
 
       <Card>
         <Box
-  sx={{
-    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-    padding: 2,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16
-  }}
->
-  <Typography
-    variant="h6"
-    sx={{
-      color: "#fff",
-      fontWeight: 600,
-      letterSpacing: 0.5
-    }}
-  >
-    Asset Details Form
-  </Typography>
-</Box>
+          sx={{
+            background: "linear-gradient(to right, #1976d2, #42a5f5)",
+            padding: 2,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              color: "#fff",
+              fontWeight: 600,
+              letterSpacing: 0.5,
+            }}
+          >
+            Asset Details Form
+          </Typography>
+        </Box>
 
         <Divider />
 
         <CardContent
-        sx={{
-    backgroundColor: "#f8fafc",
-    padding: 4,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16
-  }}>
+          sx={{
+            backgroundColor: "#f8fafc",
+            padding: 4,
+            borderBottomLeftRadius: 16,
+            borderBottomRightRadius: 16,
+          }}
+        >
           <form onSubmit={handleSubmit(onSubmit)}>
             {/* ================= BASIC DETAILS ROW ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
-  variant="h6"
-  sx={{
-    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-    color: "#fff",
-    padding: "8px 16px",
-    borderRadius: 2,
-    fontWeight: 600,
-    mb: 2
-  }}
->
-  Project Details
-</Typography>
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Project Details
+                </Typography>
               </Grid>
             </Grid>
             <Grid container spacing={2} mb={4}>
@@ -244,18 +270,18 @@ const completionMonths = watch("timeOfCompletion");
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
-  variant="h6"
-  sx={{
-    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-    color: "#fff",
-    padding: "8px 16px",
-    borderRadius: 2,
-    fontWeight: 600,
-    mb: 2
-  }}
->
-  Address Details
-</Typography>
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Address Details
+                </Typography>
               </Grid>
             </Grid>
 
@@ -327,79 +353,81 @@ const completionMonths = watch("timeOfCompletion");
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
-  variant="h6"
-  sx={{
-    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-    color: "#fff",
-    padding: "8px 16px",
-    borderRadius: 2,
-    fontWeight: 600,
-    mb: 2
-  }}
->
-  Project Implementation Details
-</Typography>
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Project Implementation Details
+                </Typography>
               </Grid>
             </Grid>
 
             <Grid container spacing={2} mb={4}>
               {/* Financial Fields */}
               {schemeFields.map((financeItem) => (
-                <Grid item xs={12} sm={6} md={3} key={financeItem.name}>
+                <Grid item xs={12} sm={6} md={3} lg={3} key={financeItem.name}>
                   <Controller
                     name={financeItem.name}
                     control={control}
                     defaultValue=""
-                    render={({ field }) => (
-  financeItem.type === "select" ? (
-
-    <FormControl fullWidth size="small">
-      <InputLabel>{financeItem.label}</InputLabel>
-      <Select {...field} label={financeItem.label}>
-        {financeItem.options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-
-  ) : (
-
-    <TextField
-      {...field}
-      label={financeItem.label}
-      type={financeItem.type || "text"}
-      fullWidth
-      size="small"
-      InputLabelProps={
-        financeItem.type === "date"
-          ? { shrink: true }
-          : {}
-      }
-    />
-
-  )
-)}
-
+                    render={({ field }) =>
+                      financeItem.type === "select" ? (
+                        <FormControl fullWidth size="small" sx={{minWidth:225}}>
+                          <InputLabel>{financeItem.label}</InputLabel>
+                          <Select {...field} label={financeItem.label} fullWidth size="small">
+                            {financeItem.options.map((option) => (
+                              <MenuItem key={option} value={option}>
+                                {option}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        <TextField
+                          {...field}
+                          label={financeItem.label}
+                          type={financeItem.type || "text"}
+                          fullWidth
+                          size="small"
+                          InputLabelProps={
+                            financeItem.type === "date" ? { shrink: true } : {}
+                          }
+                        />
+                      )
+                    }
                   />
                 </Grid>
               ))}
-              
-{/* Status */}
-              <Grid item xs={12} sm={6} md={3} fullWidth>
+
+              {/* Status */}
+              <Grid item xs={12} sm={6} md={3}>
                 <Controller
                   name="status"
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <FormControl fullWidth>
+                    <FormControl fullWidth size="small" sx={{minWidth:225}}>
                       <InputLabel id="status-label">Status</InputLabel>
-                      <Select {...field} labelId="status-label" id="status-select" label="Status">
+
+                      <Select
+                        {...field}
+                        labelId="status-label"
+                        id="status-select"
+                        label="Status"
+                        fullWidth
+                        size="small"
+                      >
                         <MenuItem value="Planned">Planned</MenuItem>
-                        <MenuItem value="Work In Progress">Ongoing</MenuItem>
+                        <MenuItem value="Work In Progress">
+                          Work In Progress
+                        </MenuItem>
                         <MenuItem value="Completed">Completed</MenuItem>
-                        
                       </Select>
                     </FormControl>
                   )}
@@ -407,23 +435,22 @@ const completionMonths = watch("timeOfCompletion");
               </Grid>
 
               <Grid item xs={12} sm={6} md={3}>
-
-  <Controller
-    name="completionPercentage"
-    control={control}
-    defaultValue=""
-    render={({ field }) => (
-      <TextField
-        {...field}
-        label="Completion %"
-        fullWidth
-        InputProps={{
-          readOnly: true,
-        }}
-      />
-    )}
-  />
-</Grid>
+                <Controller
+                  name="completionPercentage"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Completion %"
+                      fullWidth
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
 
               {/* Remarks */}
               <Grid item xs={12} md={6}>
