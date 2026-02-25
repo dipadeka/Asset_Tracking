@@ -35,8 +35,58 @@ const AssetForm = () => {
   const completionMonths = watch("timeOfCompletion");
 
   // ================= SUBMIT =================
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     console.log("Form Data:", data);
+    try {
+        const payload = {
+          assetId: data.assetId,
+          assetname: data.assetName, // mapped
+          assetCode: Number(data.assetCode),
+          projectName: data.projectName,
+          ImplementingAgency: data.implementingAgency, // mapped
+          district: data.district,
+          block: data.block,
+          gramPanchayat: data.gramPanchayat || "",
+          village: data.village,
+          latitude: Number(data.latitude),
+          longitude: Number(data.longitude),
+          areaSize: Number(data.areaSize),
+          schemeName: data.schemeName,
+          fundingSource: data.fundingSource,
+          estimatedCost: Number(data.estimatedCost),
+          actualCost: Number(data.actualCost),
+          contractvalue: Number(data.contractValue), // mapped
+          workorderNumber: data.workOrderNumber,
+          workorderDate: data.workOrderDate,
+          timeofcompletion: Number(data.timeOfCompletion),
+          pointofcontact: data.pointOfContact,
+          constructionStartDate: data.constructionStartDate,
+          constructionEndDate: data.constructionEndDate,
+          status: data.status === "Work In Progress" ? "Ongoing" : data.status,
+          completionPercentage: Number(data.completionPercentage || 0),
+          remarks: data.remarks,
+        };
+
+        const response = await fetch("http://localhost:5000/api/assets", {  
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || "Something went wrong");
+        }
+
+        alert("Asset Created Successfully ✅");
+        console.log(result);
+      } catch (error) {
+        console.error("Error:", error.message);
+        alert("Failed to create asset ❌");
+      }
   };
 
   // ================= PINCODE AUTO FILL =================
