@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import * as exifr from "exifr";
 import {
   Box,
   Grid,
@@ -14,10 +15,16 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 
 const AssetForm = () => {
+  const [openImageDialog, setOpenImageDialog] = useState(false);
+
   const { control, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
       state: "Assam",
@@ -85,6 +92,26 @@ const AssetForm = () => {
         maximumAge: 0,
       },
     );
+  };
+
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+
+    try {
+      const gpsData = await exifr.gps(file);
+
+      if (gpsData?.latitude && gpsData?.longitude) {
+        setValue("latitude", gpsData.latitude);
+        setValue("longitude", gpsData.longitude);
+        alert("Location extracted from image!");
+      } else {
+        alert("No GPS data found in the image.");
+      }
+
+      setValue("assetImage", file);
+    } catch (error) {
+      console.error("Error reading image metadata:", error);
+    }
   };
 
   useEffect(() => {
@@ -351,6 +378,34 @@ const AssetForm = () => {
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
 
             <Grid container spacing={2}>
+              {/* ================= IMAGE UPLOAD SECTION ================= */}
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                    mt: 2,
+                  }}
+                >
+                  Asset Image
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => setOpenImageDialog(true)}
+                >
+                  Add Photo
+                </Button>
+              </Grid>
+
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -378,9 +433,18 @@ const AssetForm = () => {
                     defaultValue=""
                     render={({ field }) =>
                       financeItem.type === "select" ? (
-                        <FormControl fullWidth size="small" sx={{minWidth:225}}>
+                        <FormControl
+                          fullWidth
+                          size="small"
+                          sx={{ minWidth: 225 }}
+                        >
                           <InputLabel>{financeItem.label}</InputLabel>
-                          <Select {...field} label={financeItem.label} fullWidth size="small">
+                          <Select
+                            {...field}
+                            label={financeItem.label}
+                            fullWidth
+                            size="small"
+                          >
                             {financeItem.options.map((option) => (
                               <MenuItem key={option} value={option}>
                                 {option}
@@ -412,7 +476,7 @@ const AssetForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <FormControl fullWidth size="small" sx={{minWidth:225}}>
+                    <FormControl fullWidth size="small" sx={{ minWidth: 225 }}>
                       <InputLabel id="status-label">Status</InputLabel>
 
                       <Select
@@ -488,6 +552,46 @@ const AssetForm = () => {
           </form>
         </CardContent>
       </Card>
+      <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
+        <DialogTitle>Select Image Option</DialogTitle>
+
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
+        >
+          {/* Capture Photo */}
+          <Button variant="outlined" component="label">
+            📷 Capture Photo
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => {
+                handleImageUpload(e.target.files[0]);
+                setOpenImageDialog(false);
+              }}
+            />
+          </Button>
+
+          {/* Upload From Device */}
+          <Button variant="outlined" component="label">
+            🖼 Upload From Device
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={(e) => {
+                handleImageUpload(e.target.files[0]);
+                setOpenImageDialog(false);
+              }}
+            />
+          </Button>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenImageDialog(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
