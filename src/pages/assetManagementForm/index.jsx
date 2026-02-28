@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { CircularProgress } from "@mui/material";
 import * as exifr from "exifr";
 import {
   Box,
@@ -24,18 +25,23 @@ import { useForm, Controller } from "react-hook-form";
 
 const AssetForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit, setValue, watch } = useForm({
-    defaultValues: {
-      state: "Assam",
-    },
-  });
+  defaultValues: {
+    status: "",
+    completionPercentage: ""
+  }
+});
 
   const startDate = watch("constructionStartDate");
   const completionMonths = watch("timeOfCompletion");
+  const endDate = watch("constructionEndDate");
+  
 
   // ================= SUBMIT =================
   const onSubmit = async (data) => {
+    setLoading(true);   // 🔴 START LOADER
     console.log("Form Data:", data);
     try {
         const payload = {
@@ -46,7 +52,7 @@ const AssetForm = () => {
           ImplementingAgency: data.implementingAgency, // mapped
           district: data.district,
           block: data.block,
-          gramPanchayat: data.gramPanchayat || "",
+          gramPanchayat: data.gramPanchayat,
           village: data.village,
           latitude: Number(data.latitude),
           longitude: Number(data.longitude),
@@ -86,6 +92,8 @@ const AssetForm = () => {
       } catch (error) {
         console.error("Error:", error.message);
         alert("Failed to create asset ❌");
+        } finally {
+    setLoading(false);   // 🔴 STOP LOADER
       }
   };
 
@@ -107,10 +115,11 @@ const AssetForm = () => {
         setValue("state", postOffice.State);
         setValue("district", postOffice.District);
         setValue("block", postOffice.Block);
+        setValue("gram panchayat", postOffice.gramPanchayat);
         setValue("village", postOffice.Village);
         setValue(
           "fullPostalAddress",
-          `${postOffice.Village}, ${postOffice.Block}, ${postOffice.District}, ${postOffice.State} - ${pincode}`,
+          `${postOffice.Village}, ${postOffice.gramPanchayat} ${postOffice.Block}, ${postOffice.District}, ${postOffice.State} - ${pincode}`,
         );
       }
     } catch (error) {
@@ -172,6 +181,22 @@ const AssetForm = () => {
     if (startDate && completionMonths) {
       const start = new Date(startDate);
 
+      useEffect(() => {
+  if (!status) return;
+
+  let percentage = 0;
+
+  if (status === "Planned") {
+    percentage = 0;
+  } else if (status === "Work In Progress") {
+    percentage = 50;
+  } else if (status === "Completed") {
+    percentage = 100;
+  }
+
+  setValue("completionPercentage", percentage);
+}, [status, setValue]);
+
       // Add months
       start.setMonth(start.getMonth() + parseInt(completionMonths));
 
@@ -193,9 +218,10 @@ const AssetForm = () => {
 
   // ================= ADDRESS FIELDS =================
   const addressFields = [
-    { name: "state", label: "State" },
+    
     { name: "district", label: "District" },
     { name: "block", label: "Block" },
+    { name: "gramPanchayat", label: "Gram Panchayat"},
     { name: "village", label: "Village" },
     { name: "latitude", label: "Latitude", readOnly: true },
     { name: "longitude", label: "Longitude", readOnly: true },
@@ -304,7 +330,13 @@ const AssetForm = () => {
             borderBottomRightRadius: 16,
           }}
         >
-          <form onSubmit={handleSubmit(onSubmit)}>
+         <form
+  onSubmit={handleSubmit(onSubmit)}
+  style={{
+    pointerEvents: loading ? "none" : "auto",
+    opacity: loading ? 0.6 : 1,
+  }}
+>
             {/* ================= BASIC DETAILS ROW ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -428,34 +460,7 @@ const AssetForm = () => {
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
 
             <Grid container spacing={2}>
-              {/* ================= IMAGE UPLOAD SECTION ================= */}
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                    mt: 2,
-                  }}
-                >
-                  Asset Image
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={4}>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={() => setOpenImageDialog(true)}
-                >
-                  Add Photo
-                </Button>
-              </Grid>
-
+             
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -558,6 +563,8 @@ const AssetForm = () => {
                       {...field}
                       label="Completion %"
                       fullWidth
+                      size="small"
+        
                       InputProps={{
                         readOnly: true,
                       }}
@@ -584,24 +591,78 @@ const AssetForm = () => {
                   )}
                 />
               </Grid>
-
-              {/* Submit */}
-              <Grid item xs={12} md={6}>
-                <Box
-                  display="flex"
-                  justifyContent="flex-end"
-                  alignItems="center"
-                  height="100%"
+               </Grid>
+              
+               {/* ================= IMAGE UPLOAD SECTION ================= */}
+             <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
                 >
-                  <Button type="submit" variant="contained">
-                    Submit
-                  </Button>
-                </Box>
+                  Asset Image
+                </Typography>
               </Grid>
             </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => setOpenImageDialog(true)}
+                >
+                  Add Photo
+                </Button>
+              </Grid>
+
+              
+                 {/* Preview */}
+  {watch("assetImage") && (
+    <Grid item xs={12} md={4}>
+      <img
+        src={URL.createObjectURL(watch("assetImage"))}
+        alt="preview"
+        style={{
+          width: "100%",
+          height: "150px",
+          objectFit: "cover",
+          borderRadius: "10px"
+        }}
+      />
+    </Grid>
+  )}
+
+ {/* Submit */}
+             <Grid item xs={12}>
+  <Box display="flex" justifyContent="flex-end">
+    <Button
+      type="submit"
+      variant="contained"
+      disabled={loading}
+      startIcon={
+        loading ? (
+          <CircularProgress size={20} sx={{ color: "white" }} />
+        ) : null
+      }
+    >
+      {loading ? "Submitting..." : "Submit"}
+    </Button>
+  </Box>
+</Grid>
+
+                        
           </form>
         </CardContent>
       </Card>
+
+      
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
         <DialogTitle>Select Image Option</DialogTitle>
 
