@@ -28,73 +28,74 @@ const AssetForm = () => {
   const [loading, setLoading] = useState(false);
 
   const { control, handleSubmit, setValue, watch } = useForm({
-  defaultValues: {
-    status: "",
-    completionPercentage: ""
-  }
-});
+    defaultValues: {
+      status: "",
+      completionPercentage: ""
+    }
+  });
 
   const startDate = watch("constructionStartDate");
   const completionMonths = watch("timeOfCompletion");
   const endDate = watch("constructionEndDate");
-  
+  const status = watch("status");
+
 
   // ================= SUBMIT =================
   const onSubmit = async (data) => {
     setLoading(true);   // 🔴 START LOADER
     console.log("Form Data:", data);
     try {
-        const payload = {
-          assetId: data.assetId,
-          assetname: data.assetName, // mapped
-          assetCode: Number(data.assetCode),
-          projectName: data.projectName,
-          ImplementingAgency: data.implementingAgency, // mapped
-          district: data.district,
-          block: data.block,
-          gramPanchayat: data.gramPanchayat,
-          village: data.village,
-          latitude: Number(data.latitude),
-          longitude: Number(data.longitude),
-          areaSize: Number(data.areaSize),
-          schemeName: data.schemeName,
-          fundingSource: data.fundingSource,
-          estimatedCost: Number(data.estimatedCost),
-          actualCost: Number(data.actualCost),
-          contractvalue: Number(data.contractValue), // mapped
-          workorderNumber: data.workOrderNumber,
-          workorderDate: data.workOrderDate,
-          timeofcompletion: Number(data.timeOfCompletion),
-          pointofcontact: data.pointOfContact,
-          constructionStartDate: data.constructionStartDate,
-          constructionEndDate: data.constructionEndDate,
-          status: data.status === "Work In Progress" ? "Ongoing" : data.status,
-          completionPercentage: Number(data.completionPercentage || 0),
-          remarks: data.remarks,
-        };
+      const payload = {
+        assetId: data.assetId,
+        assetname: data.assetName, // mapped
+        assetCode: Number(data.assetCode),
+        projectName: data.projectName,
+        ImplementingAgency: data.implementingAgency, // mapped
+        district: data.district,
+        block: data.block,
+        gramPanchayat: data.gramPanchayat,
+        village: data.village,
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        areaSize: Number(data.areaSize),
+        schemeName: data.schemeName,
+        fundingSource: data.fundingSource,
+        estimatedCost: Number(data.estimatedCost),
+        actualCost: Number(data.actualCost),
+        contractvalue: Number(data.contractValue), // mapped
+        workorderNumber: data.workOrderNumber,
+        workorderDate: data.workOrderDate,
+        timeofcompletion: Number(data.timeOfCompletion),
+        pointofcontact: data.pointOfContact,
+        constructionStartDate: data.constructionStartDate,
+        constructionEndDate: data.constructionEndDate,
+        status: data.status === "Work In Progress" ? "Ongoing" : data.status,
+        completionPercentage: Number(data.completionPercentage || 0),
+        remarks: data.remarks,
+      };
 
-        const response = await fetch("http://localhost:5000/api/assets", {  
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+      const response = await fetch("http://localhost:5000/api/assets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          throw new Error(result.message || "Something went wrong");
-        }
-
-        alert("Asset Created Successfully ✅");
-        console.log(result);
-      } catch (error) {
-        console.error("Error:", error.message);
-        alert("Failed to create asset ❌");
-        } finally {
-    setLoading(false);   // 🔴 STOP LOADER
+      if (!response.ok) {
+        throw new Error(result.message || "Something went wrong");
       }
+
+      alert("Asset Created Successfully ✅");
+      console.log(result);
+    } catch (error) {
+      console.error("Error:", error.message);
+      alert("Failed to create asset ❌");
+    } finally {
+      setLoading(false);   // 🔴 STOP LOADER
+    }
   };
 
   // ================= PINCODE AUTO FILL =================
@@ -180,24 +181,7 @@ const AssetForm = () => {
   useEffect(() => {
     if (startDate && completionMonths) {
       const start = new Date(startDate);
-
-      useEffect(() => {
-  if (!status) return;
-
-  let percentage = 0;
-
-  if (status === "Planned") {
-    percentage = 0;
-  } else if (status === "Work In Progress") {
-    percentage = 50;
-  } else if (status === "Completed") {
-    percentage = 100;
-  }
-
-  setValue("completionPercentage", percentage);
-}, [status, setValue]);
-
-      // Add months
+       // Add months
       start.setMonth(start.getMonth() + parseInt(completionMonths));
 
       const formattedDate = start.toISOString().split("T")[0];
@@ -205,6 +189,24 @@ const AssetForm = () => {
       setValue("constructionEndDate", formattedDate);
     }
   }, [startDate, completionMonths, setValue]);
+
+      useEffect(() => {
+        if (!status) return;
+
+        let percentage = 0;
+
+        if (status === "Planned") {
+          percentage = 0;
+        } else if (status === "Work In Progress") {
+          percentage = 50;
+        } else if (status === "Completed") {
+          percentage = 100;
+        }
+
+        setValue("completionPercentage", percentage);
+      }, [status, setValue]);
+
+     
 
   // ================= BASIC FIELDS =================
   const fields = [
@@ -218,10 +220,10 @@ const AssetForm = () => {
 
   // ================= ADDRESS FIELDS =================
   const addressFields = [
-    
+
     { name: "district", label: "District" },
     { name: "block", label: "Block" },
-    { name: "gramPanchayat", label: "Gram Panchayat"},
+    { name: "gramPanchayat", label: "Gram Panchayat" },
     { name: "village", label: "Village" },
     { name: "latitude", label: "Latitude", readOnly: true },
     { name: "longitude", label: "Longitude", readOnly: true },
@@ -330,13 +332,13 @@ const AssetForm = () => {
             borderBottomRightRadius: 16,
           }}
         >
-         <form
-  onSubmit={handleSubmit(onSubmit)}
-  style={{
-    pointerEvents: loading ? "none" : "auto",
-    opacity: loading ? 0.6 : 1,
-  }}
->
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            style={{
+              pointerEvents: loading ? "none" : "auto",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
             {/* ================= BASIC DETAILS ROW ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -460,7 +462,7 @@ const AssetForm = () => {
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
 
             <Grid container spacing={2}>
-             
+
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -564,7 +566,7 @@ const AssetForm = () => {
                       label="Completion %"
                       fullWidth
                       size="small"
-        
+
                       InputProps={{
                         readOnly: true,
                       }}
@@ -591,10 +593,10 @@ const AssetForm = () => {
                   )}
                 />
               </Grid>
-               </Grid>
-              
-               {/* ================= IMAGE UPLOAD SECTION ================= */}
-             <Grid container spacing={2}>
+            </Grid>
+
+            {/* ================= IMAGE UPLOAD SECTION ================= */}
+            <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -612,57 +614,57 @@ const AssetForm = () => {
               </Grid>
             </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={() => setOpenImageDialog(true)}
-                >
-                  Add Photo
-                </Button>
+            <Grid item xs={12} sm={6} md={4}>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => setOpenImageDialog(true)}
+              >
+                Add Photo
+              </Button>
+            </Grid>
+
+
+            {/* Preview */}
+            {watch("assetImage") && (
+              <Grid item xs={12} md={4}>
+                <img
+                  src={URL.createObjectURL(watch("assetImage"))}
+                  alt="preview"
+                  style={{
+                    width: "100%",
+                    height: "150px",
+                    objectFit: "cover",
+                    borderRadius: "10px"
+                  }}
+                />
               </Grid>
+            )}
 
-              
-                 {/* Preview */}
-  {watch("assetImage") && (
-    <Grid item xs={12} md={4}>
-      <img
-        src={URL.createObjectURL(watch("assetImage"))}
-        alt="preview"
-        style={{
-          width: "100%",
-          height: "150px",
-          objectFit: "cover",
-          borderRadius: "10px"
-        }}
-      />
-    </Grid>
-  )}
+            {/* Submit */}
+            <Grid item xs={12}>
+              <Box display="flex" justifyContent="flex-end">
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={20} sx={{ color: "white" }} />
+                    ) : null
+                  }
+                >
+                  {loading ? "Submitting..." : "Submit"}
+                </Button>
+              </Box>
+            </Grid>
 
- {/* Submit */}
-             <Grid item xs={12}>
-  <Box display="flex" justifyContent="flex-end">
-    <Button
-      type="submit"
-      variant="contained"
-      disabled={loading}
-      startIcon={
-        loading ? (
-          <CircularProgress size={20} sx={{ color: "white" }} />
-        ) : null
-      }
-    >
-      {loading ? "Submitting..." : "Submit"}
-    </Button>
-  </Box>
-</Grid>
 
-                        
           </form>
         </CardContent>
       </Card>
 
-      
+
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
         <DialogTitle>Select Image Option</DialogTitle>
 
