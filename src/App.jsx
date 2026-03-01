@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route } from 'react-router-dom'; // routing
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import SignInPage from "./pages/auth/login/login";
 import SignUpPage from "./pages/auth/signup";
-import ForgotPasswordPage from './pages/auth/forgotPassword';
-import AssetForm from "./pages/assetManagementForm";
-import Deshboard from "./pages/deskboard";
+import ForgotPasswordPage from "./pages/auth/forgotPassword";
+
+import DashboardLayout from "./pages/DashboardLayout";
+import NewApplication from "./pages/NewApplication";
+import AlreadyApplied from "./pages/AlreadyApplied";
 
 function App() {
-  const [count, setCount] = useState(0);
+
 
   return (
     <>
@@ -16,11 +18,21 @@ function App() {
       {/* Routing syntax  */}
       <BrowserRouter>
         <Routes>
+
+          {/* 🔐 AUTH PAGES */}
           <Route path="/" element={<SignInPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/amf" element={<AssetForm />} />
+
+          {/* 🧭 DASHBOARD WITH SIDEBAR + TOPBAR */}
+          <Route path="/dashboard" element={<DashboardLayout />}>
+
+            <Route path="new" element={<NewApplication />} />
+            <Route path="applied" element={<AlreadyApplied />} />
+
+          </Route>
+
         </Routes>
       </BrowserRouter>
     </>

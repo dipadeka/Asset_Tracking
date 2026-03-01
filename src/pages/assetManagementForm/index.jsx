@@ -181,7 +181,7 @@ const AssetForm = () => {
   useEffect(() => {
     if (startDate && completionMonths) {
       const start = new Date(startDate);
-       // Add months
+      // Add months
       start.setMonth(start.getMonth() + parseInt(completionMonths));
 
       const formattedDate = start.toISOString().split("T")[0];
@@ -190,23 +190,23 @@ const AssetForm = () => {
     }
   }, [startDate, completionMonths, setValue]);
 
-      useEffect(() => {
-        if (!status) return;
+  useEffect(() => {
+    if (!status) return;
 
-        let percentage = 0;
+    let percentage = 0;
 
-        if (status === "Planned") {
-          percentage = 0;
-        } else if (status === "Work In Progress") {
-          percentage = 50;
-        } else if (status === "Completed") {
-          percentage = 100;
-        }
+    if (status === "Planned") {
+      percentage = 0;
+    } else if (status === "Work In Progress") {
+      percentage = 50;
+    } else if (status === "Completed") {
+      percentage = 100;
+    }
 
-        setValue("completionPercentage", percentage);
-      }, [status, setValue]);
+    setValue("completionPercentage", percentage);
+  }, [status, setValue]);
 
-     
+
 
   // ================= BASIC FIELDS =================
   const fields = [
@@ -364,12 +364,15 @@ const AssetForm = () => {
                     name={fieldItem.name}
                     control={control}
                     defaultValue=""
-                    render={({ field }) => (
+                    rules={{ required: `${fieldItem.label} is required` }}
+                    render={({ field, fieldState: { error } }) => (
                       <TextField
                         {...field}
                         label={fieldItem.label}
                         fullWidth
                         size="small"
+                        error={!!error}
+                        helperText={error ? error.message : ""}
                       />
                     )}
                   />
@@ -403,7 +406,8 @@ const AssetForm = () => {
                   name="pincode"
                   control={control}
                   defaultValue=""
-                  render={({ field }) => (
+                  rules={{ required: "Pincode is required" }}
+                  render={({ field, fieldState: { error } }) => (
                     <TextField
                       {...field}
                       label="Pincode"
@@ -413,6 +417,8 @@ const AssetForm = () => {
                       }}
                       fullWidth
                       size="small"
+                      error={!!error}
+                      helperText={error ? error.message : ""}
                     />
                   )}
                 />
@@ -425,7 +431,8 @@ const AssetForm = () => {
                     name={addressItem.name}
                     control={control}
                     defaultValue=""
-                    render={({ field }) => (
+                    rules={{ required: `${addressItem.label} is required` }}
+                    render={({ field, fieldState: { error } }) => (
                       <TextField
                         {...field}
                         label={addressItem.label}
@@ -433,6 +440,8 @@ const AssetForm = () => {
                         size="small"
                         disabled={addressItem?.readOnly}
                         InputProps={{ readOnly: addressItem?.readOnly }}
+                        error={!!error}
+                        helperText={error ? error.message : ""}
                       />
                     )}
                   />
@@ -445,7 +454,8 @@ const AssetForm = () => {
                   name="fullPostalAddress"
                   control={control}
                   defaultValue=""
-                  render={({ field }) => (
+                  rules={{ required: "Full Postal Address is required" }}
+                  render={({ field, fieldState: { error } }) => (
                     <TextField
                       {...field}
                       label="Full Postal Address"
@@ -453,6 +463,8 @@ const AssetForm = () => {
                       rows={3}
                       fullWidth
                       size="small"
+                      error={!!error}
+                      helperText={error ? error.message : ""}
                     />
                   )}
                 />
@@ -488,26 +500,21 @@ const AssetForm = () => {
                     name={financeItem.name}
                     control={control}
                     defaultValue=""
-                    render={({ field }) =>
+                    rules={{ required: `${financeItem.label} is required` }}
+                    render={({ field, fieldState: { error } }) =>
                       financeItem.type === "select" ? (
-                        <FormControl
-                          fullWidth
-                          size="small"
-                          sx={{ minWidth: 225 }}
-                        >
+                        <FormControl fullWidth size="small" error={!!error}>
                           <InputLabel>{financeItem.label}</InputLabel>
-                          <Select
-                            {...field}
-                            label={financeItem.label}
-                            fullWidth
-                            size="small"
-                          >
+                          <Select {...field} label={financeItem.label}>
                             {financeItem.options.map((option) => (
                               <MenuItem key={option} value={option}>
                                 {option}
                               </MenuItem>
                             ))}
                           </Select>
+                          <Typography variant="caption" color="error">
+                            {error?.message}
+                          </Typography>
                         </FormControl>
                       ) : (
                         <TextField
@@ -519,6 +526,8 @@ const AssetForm = () => {
                           InputLabelProps={
                             financeItem.type === "date" ? { shrink: true } : {}
                           }
+                          error={!!error}
+                          helperText={error ? error.message : ""}
                         />
                       )
                     }
@@ -532,24 +541,18 @@ const AssetForm = () => {
                   name="status"
                   control={control}
                   defaultValue=""
-                  render={({ field }) => (
-                    <FormControl fullWidth size="small" sx={{ minWidth: 225 }}>
-                      <InputLabel id="status-label">Status</InputLabel>
-
-                      <Select
-                        {...field}
-                        labelId="status-label"
-                        id="status-select"
-                        label="Status"
-                        fullWidth
-                        size="small"
-                      >
+                  rules={{ required: "Status is required" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <FormControl fullWidth size="small" error={!!error}>
+                      <InputLabel>Status</InputLabel>
+                      <Select {...field} label="Status">
                         <MenuItem value="Planned">Planned</MenuItem>
-                        <MenuItem value="Work In Progress">
-                          Work In Progress
-                        </MenuItem>
+                        <MenuItem value="Work In Progress">Work In Progress</MenuItem>
                         <MenuItem value="Completed">Completed</MenuItem>
                       </Select>
+                      <Typography variant="caption" color="error">
+                        {error?.message}
+                      </Typography>
                     </FormControl>
                   )}
                 />
@@ -581,7 +584,8 @@ const AssetForm = () => {
                   name="remarks"
                   control={control}
                   defaultValue=""
-                  render={({ field }) => (
+                  rules={{ required: "Remarks is required" }}
+                  render={({ field, fieldState: { error } }) => (
                     <TextField
                       {...field}
                       label="Remarks"
@@ -589,6 +593,8 @@ const AssetForm = () => {
                       rows={2}
                       fullWidth
                       size="small"
+                      error={!!error}
+                      helperText={error ? error.message : ""}
                     />
                   )}
                 />

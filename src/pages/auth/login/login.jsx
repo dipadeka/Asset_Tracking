@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
@@ -15,7 +16,23 @@ import {
 import GoogleIcon from '@mui/icons-material/Google';
 import FacebookIcon from '@mui/icons-material/Facebook';
 
+
+
+  
+
+
 export default function SignInPage() {
+  const navigate = useNavigate();
+
+  const handleLogin = () => {
+
+  // here you can later call backend API also
+
+  localStorage.setItem("token", "dummy_token"); // save login token
+
+  navigate("/amf");   // 🔴 AFTER LOGIN GO TO ASSET FORM
+};
+
   return (
     <Box
       sx={{
@@ -67,18 +84,19 @@ export default function SignInPage() {
             />
 
             <Button
-              fullWidth
-              variant="contained"
-              sx={{
-                mt: 2,
-                mb: 1,
-                py: 1.2,
-                fontWeight: 600,
-                borderRadius: 2
-              }}
-            >
-              Sign in
-            </Button>
+  fullWidth
+  variant="contained"
+  onClick={handleLogin}
+  sx={{
+    mt: 2,
+    mb: 1,
+    py: 1.2,
+    fontWeight: 600,
+    borderRadius: 2
+  }}
+>
+  Sign in
+</Button>
 
             <Box textAlign="center" mb={2}>
               <Link component={RouterLink} to="/forgot-password" underline="hover" color="#9aa4bf">
