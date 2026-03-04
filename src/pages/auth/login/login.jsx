@@ -18,7 +18,7 @@ import FacebookIcon from '@mui/icons-material/Facebook';
 
 
 
-  
+
 
 
 export default function SignInPage() {
@@ -26,12 +26,12 @@ export default function SignInPage() {
 
   const handleLogin = () => {
 
-  // here you can later call backend API also
+    // here you can later call backend API also
 
-  localStorage.setItem("token", "dummy_token"); // save login token
+    localStorage.setItem("token", "dummy_token"); // save login token
 
-  navigate("/amf");   // 🔴 AFTER LOGIN GO TO ASSET FORM
-};
+    navigate("/amf");   // 🔴 AFTER LOGIN GO TO ASSET FORM
+  };
 
   return (
     <Box
@@ -43,7 +43,7 @@ export default function SignInPage() {
       }}
     >
       {/* xs, sm, md, lg  */}
-      <Container maxWidth="xs"> 
+      <Container maxWidth="xs">
         <Paper
           elevation={6}
           sx={{
@@ -84,19 +84,19 @@ export default function SignInPage() {
             />
 
             <Button
-  fullWidth
-  variant="contained"
-  onClick={handleLogin}
-  sx={{
-    mt: 2,
-    mb: 1,
-    py: 1.2,
-    fontWeight: 600,
-    borderRadius: 2
-  }}
->
-  Sign in
-</Button>
+              fullWidth
+              variant="contained"
+              onClick={handleLogin}
+              sx={{
+                mt: 2,
+                mb: 1,
+                py: 1.2,
+                fontWeight: 600,
+                borderRadius: 2
+              }}
+            >
+              Sign in
+            </Button>
 
             <Box textAlign="center" mb={2}>
               <Link component={RouterLink} to="/forgot-password" underline="hover" color="#9aa4bf">
