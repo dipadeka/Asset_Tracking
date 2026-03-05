@@ -6,7 +6,7 @@ import ForgotPasswordPage from "./pages/auth/forgotPassword";
 
 import DashboardLayout from "./pages/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
-import AlreadyApplied from "./pages/AlreadyApplied";
+import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
 import EMRSForm from "./pages/EMRSForm";
 
 function App() {
@@ -20,13 +20,13 @@ function App() {
       <BrowserRouter>
         <Routes>
 
-          {/* 🔐 AUTH PAGES */}
+          {/* AUTH PAGES */}
           <Route path="/" element={<SignInPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-          {/* 🧭 DASHBOARD WITH SIDEBAR + TOPBAR */}
+          {/*  DASHBOARD WITH SIDEBAR + TOPBAR */}
           <Route path="dashboard" element={<DashboardLayout />}>
             <Route path="new" element={<NewApplication />} />
             <Route path="applied" element={<AlreadyApplied />} />

@@ -16,11 +16,6 @@ import {
 import GoogleIcon from '@mui/icons-material/Google';
 import FacebookIcon from '@mui/icons-material/Facebook';
 
-
-
-
-
-
 export default function SignInPage() {
   const navigate = useNavigate();
 
@@ -30,7 +25,7 @@ export default function SignInPage() {
 
     localStorage.setItem("token", "dummy_token"); // save login token
 
-    navigate("/amf");   // 🔴 AFTER LOGIN GO TO ASSET FORM
+    navigate("/dashboard/new");   // 🔴 AFTER LOGIN GO TO ASSET FORM
   };
 
   return (
