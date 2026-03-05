@@ -742,6 +742,8 @@ const EMRSForm = () => {
                   Infrastructure Details
                 </Typography>
               </Grid>
+            </Grid>
+            <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>
                 <Controller
                   name="totalClassrooms"
@@ -764,7 +766,14 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Science Lab" fullWidth>
+                    <TextField
+                      {...field}
+                      select
+                      label="Science Lab"
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      fullWidth
+                    >
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -778,7 +787,14 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Computer Lab" fullWidth>
+                    <TextField
+                      {...field}
+                      select
+                      label="Computer Lab"
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      fullWidth
+                    >
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -792,7 +808,14 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Library" fullWidth>
+                    <TextField
+                      {...field}
+                      select
+                      label="Library"
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      fullWidth
+                    >
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -806,7 +829,14 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Playground" fullWidth>
+                    <TextField
+                      {...field}
+                      select
+                      label="Playground"
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      fullWidth
+                    >
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -824,6 +854,8 @@ const EMRSForm = () => {
                       {...field}
                       select
                       label="Smart Classroom"
+                      size="small"
+                      sx={{ minWidth: 220 }}
                       fullWidth
                     >
                       <MenuItem value="Yes">Yes</MenuItem>
@@ -834,7 +866,7 @@ const EMRSForm = () => {
               </Grid>
             </Grid>
             {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
-            <Grid container spacing={2}>
+            <Grid container spacing={2} sx={{mt:2}}>
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -927,6 +959,7 @@ const EMRSForm = () => {
                         InputProps={{
                           readOnly: fieldItem.readOnly || false,
                         }}
+                        sx={{ minWidth: 220 }}
                       >
                         {fieldItem.options &&
                           fieldItem.options.map((option) => (
@@ -973,6 +1006,7 @@ const EMRSForm = () => {
                         label={fieldItem.label}
                         fullWidth
                         size="small"
+                        sx={{minWidth:220}}
                         type={fieldItem.type || "text"}
                         select={!!fieldItem.options}
                         error={!!error}
@@ -1057,6 +1091,7 @@ const EMRSForm = () => {
                       label="Year"
                       fullWidth
                       size="small"
+                      sx={{minWidth:220}}
                       onChange={(e) => {
                         const updated = [...dropoutRows];
                         updated[index].year = e.target.value;
@@ -1402,6 +1437,8 @@ const EMRSForm = () => {
                     <TextField
                       select
                       fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
                       label={field.label}
                       {...register(field.name)}
                     >
@@ -1416,6 +1453,7 @@ const EMRSForm = () => {
                     <TextField
                       fullWidth
                       type={field.type}
+                      size="small"
                       label={field.label}
                       {...register(field.name)}
                       InputProps={{ readOnly: field.readOnly }}
@@ -1479,6 +1517,8 @@ const EMRSForm = () => {
                     <TextField
                       select
                       fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
                       label={field.label}
                       {...register(field.name)}
                     >
@@ -1492,6 +1532,7 @@ const EMRSForm = () => {
                   ) : (
                     <TextField
                       fullWidth
+                      size="small"
                       type={field.type}
                       label={field.label}
                       {...register(field.name)}
