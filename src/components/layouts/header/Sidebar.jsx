@@ -37,13 +37,12 @@ const Sidebar = () => {
     <Box
       sx={{
         width: 260,
-        height: "100vh",
+        minHeight: "100vh",
         background: "linear-gradient(180deg,#0f172a,#1e293b)",
         color: "#fff",
         display: "flex",
         flexDirection: "column",
-        p: 2,
-        m:0
+        p: 2
       }}
     >
       {/* TOP SECTION */}
@@ -125,7 +124,7 @@ const Sidebar = () => {
                   "&:hover": { background: "rgba(255,255,255,0.08)" },
                 }}
               >
-                <ListItemText primary="EMRS" />
+                <ListItemText sx={{ pl: 3 }} primary="EMRS" />
               </ListItemButton>
 
             </List>
