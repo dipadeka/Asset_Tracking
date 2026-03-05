@@ -150,7 +150,7 @@ const EMRSForm = () => {
     return migrations.map((item) => ({
       year: item.year,
       studentName: item.studentName?.trim(),
-      fromClass: item.fromClass,
+      migratedfrom: item.migratedfrom,
       transferredTo: item.transferredTo,
       reason: item.reason,
     }));
@@ -231,16 +231,17 @@ const EMRSForm = () => {
   };
   const preparePayload = (data) => {
     return {
-      schoolDetails: prepareschoolDetails(data),
-      locationDetais: preparelocationDetails(data),
-      infrastructureDetails: prepareinfrastructureDetails(data),
-      hostelAdministration: preparehostelAdministration(data),
-      studentenrollment: preparestudentenrollment(data),
-      reservationDetails: prepareReservationDetails(data.reservationRows),
-      academicResults: prepareAcademicResults(data.results),
-      dropouts: prepareDropouts(dropoutRows),
-      migrations: prepareMigrations(migrationRows),
-      achievements: prepareAchievements(achievementRows),
+      BasicDetails: prepareBasicDetails(data),
+      locationDetais: prepareLocationDetails(data),
+      InfrastructureDetails: prepareInfrastructureDetails(data),
+      HostelAdministration: prepareHostelAdministration(data),
+      EnrollmentSummary: prepareEnrollmentSummary(data),
+      ClassStrength: prepareClassStrength(data),
+      ReservationDetails: prepareReservationDetails(data.reservationRows),
+      AcademicResults: prepareAcademicResults(data.results),
+      Dropouts: prepareDropouts(dropoutRows),
+      Migrations: prepareMigrations(migrationRows),
+      Achievements: prepareAchievements(achievementRows),
       teachingStaff: {
         summary: prepareTeachingStaffSummary(data.teachingSummary),
         details: prepareTeachingStaffDetails(data.teachingDetails),
@@ -763,7 +764,7 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Science Lab" fullWidth sx={{minWidth:220}}>
+                    <TextField {...field} select label="Science Lab" fullWidth>
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -777,7 +778,7 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Computer Lab" fullWidth sx={{minWidth:220}}>
+                    <TextField {...field} select label="Computer Lab" fullWidth>
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -791,7 +792,7 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Library" fullWidth sx={{minWidth:220}}>
+                    <TextField {...field} select label="Library" fullWidth>
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -805,7 +806,7 @@ const EMRSForm = () => {
                   control={control}
                   defaultValue=""
                   render={({ field }) => (
-                    <TextField {...field} select label="Playground" fullWidth sx={{minWidth:220}}>
+                    <TextField {...field} select label="Playground" fullWidth>
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -824,8 +825,6 @@ const EMRSForm = () => {
                       select
                       label="Smart Classroom"
                       fullWidth
-                      size="medium"
-                      sx={{minWidth:220}}
                     >
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
@@ -1211,7 +1210,7 @@ const EMRSForm = () => {
                         size="small"
                         onChange={(e) => {
                           const updated = [...migrationRows];
-                          updated[index].fromClass = e.target.value;
+                          updated[index].migratedfrom = e.target.value;
                           setMigrationRows(updated);
                         }}
                       />
@@ -1426,6 +1425,35 @@ const EMRSForm = () => {
               ))}
             </Grid>
 
+            {/* Add Post Button */}
+            <Grid container>
+              <Grid item xs={12}>
+                <Box mt={1} mb={4}>
+                  <Button
+                    variant="outlined"
+                    sx={{ mb: 4 }}
+                    onClick={() =>
+                      setteachingRows([
+                        ...teachingRows,
+                        {
+                          post: "",
+                          total: "",
+                          filled: "",
+                          vacant: "",
+                          staffName: "",
+                          dob: "",
+                          doj: "",
+                          email: "",
+                          contactNumber: "",
+                        },
+                      ])
+                    }
+                  >
+                    + Add Post
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
             {/* =================NON TEACHING STAFF DETAILS SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -1474,6 +1502,32 @@ const EMRSForm = () => {
               ))}
             </Grid>
 
+            {/* Add Post Button */}
+            <Grid container>
+              <Grid item xs={12}>
+                <Box mt={1} mb={4}>
+                  <Button
+                    variant="outlined"
+                    sx={{ mb: 4 }}
+                    onClick={() =>
+                      setnonTeachingRows([
+                        ...nonTeachingRows,
+                        {
+                          post: "",
+                          name: "",
+                          dob: "",
+                          doj: "",
+                          email: "",
+                          contact: "",
+                        },
+                      ])
+                    }
+                  >
+                    + Add Post
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
             {/* =================OPERATIONAL COST DETAILS SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
