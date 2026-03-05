@@ -40,10 +40,7 @@ const EMRSForm = () => {
     { studentName: "", class: "", eventName: "", level: "", recognition: "" }
   ]);
 
-  const [nonTeachingRows, setNonTeachingRows] = useState([
-  { post: "", name: "", dob: "", doj: "", email: "", contact: "" }
-]);
-const [teachingRows, setTeachingRows] = useState([
+const [teachingRows, setteachingRows] = useState([
   {
     post: "",
     total: "",
@@ -55,6 +52,9 @@ const [teachingRows, setTeachingRows] = useState([
     email: "",
     contactNumber: ""
   }
+]);
+  const [nonTeachingRows, setnonTeachingRows] = useState([
+  { post: "", name: "", dob: "", doj: "", email: "", contact: "" }
 ]);
 const handleAddNonTeachingSummary = () => {
     setNonTeachingSummaryRows([
@@ -1456,10 +1456,22 @@ const teachingStaffSummaryFields = [
     <Box mt={1} mb={4}>
       <Button
         variant="outlined"
-        onClick={() => {
-          console.log("Add Post Clicked");
-        }}
-      >
+        sx={{ mb: 4 }}
+                onClick={() =>
+                  setteachingRows([
+                    ...teachingRows,
+                    { post: "",
+    total: "",
+    filled: "",
+    vacant: "",
+    staffName: "",
+    dob: "",
+    doj: "",
+    email: "",
+    contactNumber: ""}
+                  ])
+                }
+              >
         + Add Post
       </Button>
     </Box>
@@ -1523,10 +1535,14 @@ const teachingStaffSummaryFields = [
     <Box mt={1} mb={4}>
       <Button
         variant="outlined"
-        onClick={() => {
-          console.log("Add Non-Teaching Post");
-        }}
-      >
+         sx={{ mb: 4 }}
+                onClick={() =>
+                  setnonTeachingRows([
+                    ...nonTeachingRows,
+                    { post: "", name: "", dob: "", doj: "", email: "", contact: "" }
+                  ])
+                }
+              >
         + Add Post
       </Button>
     </Box>
