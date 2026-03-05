@@ -27,6 +27,25 @@ const EMRSForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const { control, handleSubmit, setValue, watch, register } = useForm({});
+  const AcademicPerformance = () => {
+  const { control, watch } = useForm();
+  const [passPercentage, setPassPercentage] = useState(0);
+
+ const appeared = watch("studentsAppeared") || 0;
+  const passed = watch("studentsPassed") || 0;
+
+   // Calculate pass percentage whenever values change
+  React.useEffect(() => {
+    const appearedNum = Number(appeared);
+    const passedNum = Number(passed);
+    if (appearedNum > 0 && passedNum >= 0) {
+      setPassPercentage(((passedNum / appearedNum) * 100).toFixed(2));
+    } else {
+      setPassPercentage(0);
+    }
+  }, [appeared, passed]);
+
+  }
   // ================= DROPOUT / MIGRATION / ACHIEVEMENT STATES =================
   const [dropoutRows, setDropoutRows] = useState([
     { year: "", class: "",section: "", studentName: "", reason: "" }
@@ -131,11 +150,10 @@ const prepareHostelAdministration = (data) => ({
   };
   const prepareReservationDetails = (rows) => {
     return rows.map((row) => ({
-      class: row.class,
-      st: Number(row.st || 0),
-      pvtg: Number(row.pvtg || 0),
-      dnt: Number(row.dnt || 0),
-      others: Number(row.others || 0)
+      name: row.class,
+      class: Number(row.st || 0),
+      section: Number(row.pvtg || 0),
+      catogory: Number(row.dnt || 0),
     }));
   };
   const prepareAcademicResults = (results) => {
@@ -445,24 +463,29 @@ const enrollmentFields = [
 ];  
 // ================= RESERVATION DETAILS =================
   const reservationFields = [
+     {
+    name: "studentName",
+    label: "Student Name",
+    type: "text"
+  },
   {
     name: "class",
     label: "Class",
+     type: "select",
     options: ["6","7","8","9","10","11","12"],
   },
   {
     name: "section",
     label: "Section",
+     type: "select",
     options: ["A","B","C"],
   },
-  { name: "st", label: "ST Students", type: "number" },
-  { name: "pvtg", label: "PVTG Students", type: "number" },
-  { name: "dnt", label: "DNT/NT/SNT Students", type: "number" },
-  {
-    name: "others",
-    label: "Orphan / LWE / Divyang Parent",
-    type: "number"
-  }
+   {
+    name: "category",
+    label: "Category",
+    type: "select",
+    options: ["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang Parent"]
+  },
 ];
 // ================= ACADEMIC RESULT =================
   const academicFields = [
@@ -997,54 +1020,59 @@ const teachingStaffSummaryFields = [
 
 
             {/* ================= STUDENT RESERVATION DETAILS SECTION ================= */}
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Student Reservation Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={4}>
-              {reservationFields.map((fieldItem) => (
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-  <TextField
-    {...field}
-    label={fieldItem.label}
-    fullWidth
-    size="small"
-    type={fieldItem.type || "text"}
-    select={!!fieldItem.options}
-    error={!!error}
-    helperText={error ? error.message : ""}
-  >
-    {fieldItem.options &&
-      fieldItem.options.map((option) => (
-        <MenuItem key={option} value={option}>
-          {option}
-        </MenuItem>
-      ))}
-  </TextField>
-)}
-                  />
-                </Grid>
+           <Grid container spacing={2}>
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Student Reservation Details
+    </Typography>
+  </Grid>
+</Grid>
+
+<Grid container spacing={2} mb={4}>
+  {reservationFields.map((fieldItem) => (
+    <Grid item xs={12} sm={6} md={3} key={fieldItem.name}>
+      <Controller
+        name={fieldItem.name}
+        control={control}
+        defaultValue=""
+        rules={{ required: `${fieldItem.label} is required` }}
+        render={({ field, fieldState: { error } }) => (
+          <TextField
+            {...field}
+            label={fieldItem.label}
+            fullWidth
+            size="small"
+            type={fieldItem.type === "text" ? "text" : undefined}
+            select={fieldItem.type === "select"}
+            error={!!error}
+            helperText={error ? error.message : ""}
+          >
+            {fieldItem.type === "select" && (
+              <MenuItem value="">Select</MenuItem>
+            )}
+
+            {fieldItem.options &&
+              fieldItem.options.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
               ))}
-            </Grid>
+          </TextField>
+        )}
+      />
+    </Grid>
+  ))}
+</Grid>
 
             {/* ================= ACADEMIC PERFORMANCE DETAILS SECTION ================= */}
             <Grid container spacing={2}>
