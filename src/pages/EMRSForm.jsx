@@ -33,7 +33,7 @@ const EMRSForm = () => {
   ]);
 
   const [migrationRows, setMigrationRows] = useState([
-    { year: "", studentName: "", fromClass: "", transferredTo: "", reason: "" }
+    { year: "", studentName: "", migratedfrom: "", transferredTo: "", reason: "" }
   ]);
 
   const [achievementRows, setAchievementRows] = useState([
@@ -42,6 +42,19 @@ const EMRSForm = () => {
 
   const [nonTeachingRows, setNonTeachingRows] = useState([
   { post: "", name: "", dob: "", doj: "", email: "", contact: "" }
+]);
+const [teachingRows, setTeachingRows] = useState([
+  {
+    post: "",
+    total: "",
+    filled: "",
+    vacant: "",
+    staffName: "",
+    dob: "",
+    doj: "",
+    email: "",
+    contactNumber: ""
+  }
 ]);
 const handleAddNonTeachingSummary = () => {
     setNonTeachingSummaryRows([
@@ -151,7 +164,7 @@ const prepareHostelAdministration = (data) => ({
     return migrations.map((item) => ({
       year: item.year,
       studentName: item.studentName?.trim(),
-      fromClass: item.fromClass,
+      migratedfrom: item.migratedfrom,
       transferredTo: item.transferredTo,
       reason: item.reason
     }));
@@ -233,25 +246,26 @@ const prepareHostelAdministration = (data) => ({
   };
   const preparePayload = (data) => {
     return {
-      schoolDetails: prepareschoolDetails(data),
-      locationDetais: preparelocationDetails(data),
-      infrastructureDetails: prepareinfrastructureDetails(data),
-      hostelAdministration: preparehostelAdministration(data),
-      studentenrollment: preparestudentenrollment(data),
-      reservationDetails: prepareReservationDetails(data.reservationRows),
-      academicResults: prepareAcademicResults(data.results),
-      dropouts: prepareDropouts(dropoutRows),
-      migrations: prepareMigrations(migrationRows),
-      achievements: prepareAchievements(achievementRows),
+      BasicDetails: prepareBasicDetails(data),
+      locationDetais: prepareLocationDetails(data),
+      InfrastructureDetails: prepareInfrastructureDetails(data),
+      HostelAdministration: prepareHostelAdministration(data),
+      EnrollmentSummary: prepareEnrollmentSummary(data),
+      ClassStrength: prepareClassStrength(data),
+      ReservationDetails: prepareReservationDetails(data.reservationRows),
+      AcademicResults: prepareAcademicResults(data.results),
+      Dropouts: prepareDropouts(dropoutRows),
+      Migrations: prepareMigrations(migrationRows),
+      Achievements: prepareAchievements(achievementRows),
       teachingStaff: {
-        summary: prepareTeachingStaffSummary(data.teachingSummary),
-        details: prepareTeachingStaffDetails(data.teachingDetails)
+        Summary: prepareTeachingStaffSummary(data.teachingSummary),
+        Details: prepareTeachingStaffDetails(data.teachingDetails)
       },
       nonTeachingStaff: {
-        summary: prepareNonTeachingSummary(data.nonTeachingSummary),
-        details: prepareNonTeachingDetails(data.nonTeachingDetails)
+        Summary: prepareNonTeachingSummary(data.nonTeachingSummary),
+        Details: prepareNonTeachingDetails(data.nonTeachingDetails)
       },
-      operationalCost: prepareOperationalCost(data.operationalCost)
+      OperationalCost: prepareOperationalCost(data.operationalCost)
     };
   };
 
@@ -338,8 +352,8 @@ const prepareHostelAdministration = (data) => ({
         "ICSC",
       ],
     },
-    { name: "Name of the Principal", label: "Principal Name"},
-    { name: "Vice-Principal", label: "Vice Principal"},
+    { name: "NameofthePrincipal", label: "Principal Name"},
+    { name: "VicePrincipal", label: "Vice Principal"},
   ];
   // ================= EMRS LOCATION =================
   const emrsLocationFields = [
@@ -350,14 +364,14 @@ const prepareHostelAdministration = (data) => ({
   ];
   //=================INFRASTRUCTURE DETAILS ==============//
   const emrsInfrastructureFields=[
-    { name: " Total Classrooms", label: "Total Classrooms"},
-     {name: "Science Lab", label: "Science Lab",
+    { name: " TotalClassrooms", label: "Total Classrooms"},
+     {name: "ScienceLab", label: "Science Lab",
       options: [
         "Yes",
         "No",
       ],
     }, 
-    {name: "Computer Lab", label: "Computer Lab",
+    {name: "ComputerLab", label: "Computer Lab",
       options: [
         "Yes",
         "No",
@@ -375,7 +389,7 @@ const prepareHostelAdministration = (data) => ({
         "No",
       ],
     }, 
-    {name: "Smart class ", label: "Smart Class",
+    {name: "Smartclass ", label: "Smart Class",
       options: [
         "Yes",
         "No", 
@@ -388,7 +402,7 @@ const prepareHostelAdministration = (data) => ({
     { name: "CurrentStrength", label: "Current Hostel Strength" },
     { name: "HostelWardenName", label: "Hostel Warden Name" },
     
-    { name: "CCTVinstalled ", label: "CCTV Installed",
+    { name: "CCTVinstalled", label: "CCTV Installed",
     options: [
         "Yes",
         "No",
@@ -761,6 +775,7 @@ const teachingStaffSummaryFields = [
 
 <Grid container spacing={3}>
 
+  {/* Heading Row */}
   <Grid item xs={12}>
     <Typography
       variant="h6"
@@ -776,7 +791,13 @@ const teachingStaffSummaryFields = [
       Infrastructure Details
     </Typography>
   </Grid>
-   <Grid item xs={12} sm={6} md={3}>
+
+</Grid>
+
+{/* Fields Row (New Line) */}
+<Grid container spacing={3} mb={4}>
+
+  <Grid item xs={12} sm={6} md={3}>
     <Controller
       name="totalClassrooms"
       control={control}
@@ -792,18 +813,14 @@ const teachingStaffSummaryFields = [
       )}
     />
   </Grid>
+
   <Grid item xs={12} sm={6} md={3}>
     <Controller
       name="scienceLab"
       control={control}
       defaultValue=""
       render={({ field }) => (
-        <TextField
-          {...field}
-          select
-          label="Science Lab"
-          fullWidth
-        >
+        <TextField {...field} select label="Science Lab" fullWidth size="small">
           <MenuItem value="Yes">Yes</MenuItem>
           <MenuItem value="No">No</MenuItem>
         </TextField>
@@ -817,12 +834,7 @@ const teachingStaffSummaryFields = [
       control={control}
       defaultValue=""
       render={({ field }) => (
-        <TextField
-          {...field}
-          select
-          label="Computer Lab"
-          fullWidth
-        >
+        <TextField {...field} select label="Computer Lab" fullWidth size="small">
           <MenuItem value="Yes">Yes</MenuItem>
           <MenuItem value="No">No</MenuItem>
         </TextField>
@@ -836,12 +848,7 @@ const teachingStaffSummaryFields = [
       control={control}
       defaultValue=""
       render={({ field }) => (
-        <TextField
-          {...field}
-          select
-          label="Library"
-          fullWidth
-        >
+        <TextField {...field} select label="Library" fullWidth size="small">
           <MenuItem value="Yes">Yes</MenuItem>
           <MenuItem value="No">No</MenuItem>
         </TextField>
@@ -855,12 +862,7 @@ const teachingStaffSummaryFields = [
       control={control}
       defaultValue=""
       render={({ field }) => (
-        <TextField
-          {...field}
-          select
-          label="Playground"
-          fullWidth
-        >
+        <TextField {...field} select label="Playground" fullWidth size="small">
           <MenuItem value="Yes">Yes</MenuItem>
           <MenuItem value="No">No</MenuItem>
         </TextField>
@@ -874,12 +876,7 @@ const teachingStaffSummaryFields = [
       control={control}
       defaultValue=""
       render={({ field }) => (
-        <TextField
-          {...field}
-          select
-          label="Smart Classroom"
-          fullWidth
-        >
+        <TextField {...field} select label="Smart Classroom" fullWidth size="small">
           <MenuItem value="Yes">Yes</MenuItem>
           <MenuItem value="No">No</MenuItem>
         </TextField>
@@ -887,8 +884,8 @@ const teachingStaffSummaryFields = [
     />
   </Grid>
 
-</Grid>
-           {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
+</Grid>   
+       {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
@@ -1091,7 +1088,7 @@ const teachingStaffSummaryFields = [
               ))}
 
               {/* ================= DROPOUT DETAILS ================= */}
-              <Grid container spacing={2}>
+                  <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Typography
                     variant="h6"
@@ -1253,10 +1250,10 @@ const teachingStaffSummaryFields = [
                     </Grid>
 
                     <Grid item xs={12} md={2}>
-                      <TextField label="From Class" fullWidth size="small"
+                      <TextField label="Migrated From" fullWidth size="small"
                         onChange={(e) => {
                           const updated = [...migrationRows];
-                          updated[index].fromClass = e.target.value;
+                          updated[index].migratedfrom = e.target.value;
                           setMigrationRows(updated);
                         }}
                       />
@@ -1292,7 +1289,7 @@ const teachingStaffSummaryFields = [
                         onClick={() =>
                           setMigrationRows([
                             ...migrationRows,
-                            { year: "", studentName: "", fromClass: "", transferredTo: "", reason: "" }
+                            { year: "", studentName: "", migratedfrom: "", transferredTo: "", reason: "" }
                           ])
                         }
                       >
@@ -1355,15 +1352,26 @@ const teachingStaffSummaryFields = [
                   </Grid>
 
                   <Grid item xs={12} md={2}>
-                    <TextField label="Level" fullWidth size="small"
-                      onChange={(e) => {
-                        const updated = [...achievementRows];
-                        updated[index].level = e.target.value;
-                        setAchievementRows(updated);
-                      }}
-                    />
-                  </Grid>
-
+  <TextField
+    select
+    label="Level"
+    fullWidth
+    size="full width"
+    value={row.level}
+    onChange={(e) => {
+      const updated = [...achievementRows];
+      updated[index].level = e.target.value;
+      setAchievementRows(updated);
+    }}
+  >
+    <MenuItem value="School Level">School Level</MenuItem>
+    <MenuItem value="Block Level">Block Level</MenuItem>
+    <MenuItem value="District Level">District Level</MenuItem>
+    <MenuItem value="State Level">State Level</MenuItem>
+    <MenuItem value="National Level">National Level</MenuItem>
+    <MenuItem value="International Level">International Level</MenuItem>
+  </TextField>
+</Grid>
                   <Grid item xs={12} md={2}>
                     <TextField label="Recognition" fullWidth size="small"
                       onChange={(e) => {
@@ -1392,102 +1400,138 @@ const teachingStaffSummaryFields = [
 
             {/* ================= TEACHING STAFF DETAILS SECTION ================= */}
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Teaching Staff Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={4}>
-              {teachingStaffSummaryFields.map((field) => (
-  <Grid item xs={12} sm={3} key={field.name}>
-    {field.type === "select" ? (
-      <TextField
-        select
-        fullWidth
-        label={field.label}
-        {...register(field.name)}
-      >
-        <MenuItem value="">Select</MenuItem>
-        {field.options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
-          </MenuItem>
-        ))}
-      </TextField>
-    ) : (
-      <TextField
-        fullWidth
-        type={field.type}
-        label={field.label}
-        {...register(field.name)}
-        InputProps={{ readOnly: field.readOnly }}
-      />
-    )}
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Teaching Staff Details
+    </Typography>
   </Grid>
-))}
+</Grid>
 
-            </Grid>
+{/* Teaching Staff Fields */}
+<Grid container spacing={2} mb={2}>
+  {teachingStaffSummaryFields.map((field) => (
+    <Grid item xs={12} sm={3} key={field.name}>
+      {field.type === "select" ? (
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label={field.label}
+          {...register(field.name)}
+        >
+          <MenuItem value="">Select</MenuItem>
+          {field.options.map((option) => (
+            <MenuItem key={option} value={option}>
+              {option}
+            </MenuItem>
+          ))}
+        </TextField>
+      ) : (
+        <TextField
+          fullWidth
+          size="small"
+          type={field.type}
+          label={field.label}
+          {...register(field.name)}
+          InputProps={{ readOnly: field.readOnly }}
+        />
+      )}
+    </Grid>
+  ))}
+</Grid>
 
+{/* Add Post Button */}
+<Grid container>
+  <Grid item xs={12}>
+    <Box mt={1} mb={4}>
+      <Button
+        variant="outlined"
+        onClick={() => {
+          console.log("Add Post Clicked");
+        }}
+      >
+        + Add Post
+      </Button>
+    </Box>
+  </Grid>
+</Grid>
             {/* =================NON TEACHING STAFF DETAILS SECTION ================= */}
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Non-Teaching Staff Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={4}>
-              {nonTeachingStaffDetailFields.map((field) => (
-  <Grid item xs={12} sm={3} key={field.name}>
-    {field.type === "select" ? (
-      <TextField
-        select
-        fullWidth
-        label={field.label}
-        {...register(field.name)}
-      >
-        <MenuItem value="">Select</MenuItem>
-        {field.options.map((option) => (
-          <MenuItem key={option} value={option}>
-            {option}
-          </MenuItem>
-        ))}
-      </TextField>
-    ) : (
-      <TextField
-        fullWidth
-        type={field.type}
-        label={field.label}
-        {...register(field.name)}
-        InputProps={{ readOnly: field.readOnly }}
-      />
-    )}
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Non-Teaching Staff Details
+    </Typography>
   </Grid>
-))}
+</Grid>
 
-            </Grid>
+{/* Non Teaching Staff Fields */}
+<Grid container spacing={2} mb={2}>
+  {nonTeachingStaffDetailFields.map((field) => (
+    <Grid item xs={12} sm={3} key={field.name}>
+      {field.type === "select" ? (
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label={field.label}
+          {...register(field.name)}
+        >
+          <MenuItem value="">Select</MenuItem>
+          {field.options.map((option) => (
+            <MenuItem key={option} value={option}>
+              {option}
+            </MenuItem>
+          ))}
+        </TextField>
+      ) : (
+        <TextField
+          fullWidth
+          size="small"
+          type={field.type}
+          label={field.label}
+          {...register(field.name)}
+          InputProps={{ readOnly: field.readOnly }}
+        />
+      )}
+    </Grid>
+  ))}
+</Grid>
 
+{/* Add Post Button */}
+<Grid container>
+  <Grid item xs={12}>
+    <Box mt={1} mb={4}>
+      <Button
+        variant="outlined"
+        onClick={() => {
+          console.log("Add Non-Teaching Post");
+        }}
+      >
+        + Add Post
+      </Button>
+    </Box>
+  </Grid>
+</Grid>
             {/* =================OPERATIONAL COST DETAILS SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
