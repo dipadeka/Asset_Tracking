@@ -30,8 +30,8 @@ const AssetForm = () => {
   const { control, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
       status: "",
-      completionPercentage: ""
-    }
+      completionPercentage: "",
+    },
   });
 
   const startDate = watch("constructionStartDate");
@@ -39,10 +39,9 @@ const AssetForm = () => {
   const endDate = watch("constructionEndDate");
   const status = watch("status");
 
-
   // ================= SUBMIT =================
   const onSubmit = async (data) => {
-    setLoading(true);   // 🔴 START LOADER
+    setLoading(true); // 🔴 START LOADER
     console.log("Form Data:", data);
     try {
       const payload = {
@@ -94,7 +93,7 @@ const AssetForm = () => {
       console.error("Error:", error.message);
       alert("Failed to create asset ❌");
     } finally {
-      setLoading(false);   // 🔴 STOP LOADER
+      setLoading(false); // 🔴 STOP LOADER
     }
   };
 
@@ -206,8 +205,6 @@ const AssetForm = () => {
     setValue("completionPercentage", percentage);
   }, [status, setValue]);
 
-
-
   // ================= BASIC FIELDS =================
   const fields = [
     { name: "assetId", label: "Asset Id" },
@@ -220,7 +217,6 @@ const AssetForm = () => {
 
   // ================= ADDRESS FIELDS =================
   const addressFields = [
-
     { name: "district", label: "District" },
     { name: "block", label: "Block" },
     { name: "gramPanchayat", label: "Gram Panchayat" },
@@ -231,7 +227,7 @@ const AssetForm = () => {
   ];
 
   // ================= FINANCIAL FIELDS =================
-  const schemeFields = [
+  const finencialFields = [
     { name: "schemeName", label: "Name of the Scheme" },
     {
       name: "fundingSource",
@@ -474,7 +470,6 @@ const AssetForm = () => {
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
 
             <Grid container spacing={2}>
-
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -494,7 +489,7 @@ const AssetForm = () => {
 
             <Grid container spacing={2} mb={4}>
               {/* Financial Fields */}
-              {schemeFields.map((financeItem) => (
+              {finencialFields.map((financeItem) => (
                 <Grid item xs={12} sm={6} md={3} lg={3} key={financeItem.name}>
                   <Controller
                     name={financeItem.name}
@@ -503,7 +498,12 @@ const AssetForm = () => {
                     rules={{ required: `${financeItem.label} is required` }}
                     render={({ field, fieldState: { error } }) =>
                       financeItem.type === "select" ? (
-                        <FormControl fullWidth size="small" error={!!error}>
+                        <FormControl
+                          fullWidth
+                          size="small"
+                          error={!!error}
+                          sx={{ minWidth: 220 }}
+                        >
                           <InputLabel>{financeItem.label}</InputLabel>
                           <Select {...field} label={financeItem.label}>
                             {financeItem.options.map((option) => (
@@ -543,11 +543,18 @@ const AssetForm = () => {
                   defaultValue=""
                   rules={{ required: "Status is required" }}
                   render={({ field, fieldState: { error } }) => (
-                    <FormControl fullWidth size="small" error={!!error}>
+                    <FormControl
+                      fullWidth
+                      size="small"
+                      error={!!error}
+                      sx={{ minWidth: 220 }}
+                    >
                       <InputLabel>Status</InputLabel>
                       <Select {...field} label="Status">
                         <MenuItem value="Planned">Planned</MenuItem>
-                        <MenuItem value="Work In Progress">Work In Progress</MenuItem>
+                        <MenuItem value="Work In Progress">
+                          Work In Progress
+                        </MenuItem>
                         <MenuItem value="Completed">Completed</MenuItem>
                       </Select>
                       <Typography variant="caption" color="error">
@@ -569,7 +576,6 @@ const AssetForm = () => {
                       label="Completion %"
                       fullWidth
                       size="small"
-
                       InputProps={{
                         readOnly: true,
                       }}
@@ -620,16 +626,18 @@ const AssetForm = () => {
               </Grid>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={4}>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={() => setOpenImageDialog(true)}
-              >
-                Add Photo
-              </Button>
+            <Grid container spacing={1}>
+              <Grid item xs={12} sm={6} md={6}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => setOpenImageDialog(true)}
+                  sx={{ mb: 2 }}
+                >
+                  Add Photo
+                </Button>
+              </Grid>
             </Grid>
-
 
             {/* Preview */}
             {watch("assetImage") && (
@@ -641,7 +649,7 @@ const AssetForm = () => {
                     width: "100%",
                     height: "150px",
                     objectFit: "cover",
-                    borderRadius: "10px"
+                    borderRadius: "10px",
                   }}
                 />
               </Grid>
@@ -664,12 +672,9 @@ const AssetForm = () => {
                 </Button>
               </Box>
             </Grid>
-
-
           </form>
         </CardContent>
       </Card>
-
 
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
         <DialogTitle>Select Image Option</DialogTitle>
