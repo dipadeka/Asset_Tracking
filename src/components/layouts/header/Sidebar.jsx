@@ -48,7 +48,7 @@ const Sidebar = () => {
     >
       {/* TOP SECTION */}
       <Box>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 , textAlign:'center'}}>
           Asset Portal
         </Typography>
 
