@@ -279,17 +279,15 @@ const AssetForm = () => {
 
   return (
     <Container
-      maxWidth="xl"
       sx={{
-        mt: 4,
-        mb: 4,
+        pb: 4,
         backgroundColor: "#f1f5f9",
-        padding: 3,
+        padding: 0,
         borderRadius: 3,
       }}
     >
       {/* ===== Header ===== */}
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
+      <Typography variant="h4" fontWeight="bold" gutterBottom pt={4}>
         Asset Management
       </Typography>
 

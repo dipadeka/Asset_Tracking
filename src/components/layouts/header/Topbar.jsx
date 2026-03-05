@@ -18,7 +18,7 @@ const Topbar = ({ onMenuClick, isMobile }) => {
         )}
 
         <Typography variant="h6">
-          Asset Management System
+          Management System
         </Typography>
       </Toolbar>
     </AppBar>
