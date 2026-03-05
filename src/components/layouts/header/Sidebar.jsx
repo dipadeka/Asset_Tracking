@@ -42,8 +42,8 @@ const Sidebar = () => {
         color: "#fff",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
         p: 2,
+        m:0
       }}
     >
       {/* TOP SECTION */}

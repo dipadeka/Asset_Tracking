@@ -10,8 +10,6 @@ import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
 import EMRSForm from "./pages/EMRSForm";
 
 function App() {
-
-
   return (
     <>
       {/* <Login /> */}
@@ -31,9 +29,7 @@ function App() {
             <Route path="new" element={<NewApplication />} />
             <Route path="applied" element={<AlreadyApplied />} />
             <Route path="EMRS" element={<EMRSForm />} />
-
           </Route>
-
         </Routes>
       </BrowserRouter>
     </>
