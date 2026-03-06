@@ -1,10 +1,29 @@
 import React, { useState } from "react";
-import { Box, Button, Typography, Collapse } from "@mui/material";
-import { ExpandLess, ExpandMore } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  Button,
+  Typography,
+  Collapse,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+} from "@mui/material";
+
+import {
+  ExpandLess,
+  ExpandMore,
+  Logout,
+  Assignment,
+  CheckCircle,
+  AccountBalance,
+} from "@mui/icons-material";
+
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [openScheme, setOpenScheme] = useState(false);
 
   const logoutUser = () => {
@@ -12,71 +31,117 @@ const Sidebar = () => {
     navigate("/");
   };
 
+  const isActive = (path) => location.pathname === path;
+
   return (
     <Box
       sx={{
-        background: "linear-gradient(180deg, #0f172a, #1e293b)",
+        width: 260,
+        minHeight: "100vh",
+        background: "linear-gradient(180deg,#0f172a,#1e293b)",
         color: "#fff",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
-        padding: 3,
+        p: 2
       }}
     >
-      {/* 🔹 TOP SECTION */}
+      {/* TOP SECTION */}
       <Box>
-        <Typography variant="h6" mb={3} fontWeight={600}>
+        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 , textAlign:'center'}}>
           Asset Portal
         </Typography>
 
-        {/* New Application */}
-        <Button
-          fullWidth
-          variant="contained"
-          sx={{ mb: 2 }}
-          onClick={() => navigate("/dashboard/new")}
-        >
-          New Application
-        </Button>
+        <List>
 
-        {/* Already Applied */}
-        <Button
-          fullWidth
-          variant="outlined"
-          sx={{ color: "#fff", borderColor: "#fff", mb: 2 }}
-          onClick={() => navigate("/dashboard/applied")}
-        >
-          Already Applied
-        </Button>
-
-        {/* 🔹 Scheme Parent */}
-        <Button
-          fullWidth
-          variant="outlined"
-          sx={{ color: "#fff", borderColor: "#fff", mb: 1 }}
-          onClick={() => setOpenScheme(!openScheme)}
-        >
-          Scheme {openScheme ? <ExpandLess /> : <ExpandMore />}
-        </Button>
-
-        {/* 🔹 Scheme Children */}
-        <Collapse in={openScheme}>
-          <Button
-            fullWidth
-            variant="text"
-            sx={{ color: "#fff", pl: 4 }}
-            onClick={() => navigate("/dashboard/emrs")}
+          {/* New Application */}
+          <ListItemButton
+            selected={isActive("/dashboard/new")}
+            onClick={() => navigate("/dashboard/new")}
+            sx={{
+              borderRadius: 2,
+              mb: 1,
+              "&.Mui-selected": {
+                background: "#2563eb",
+                "&:hover": { background: "#1d4ed8" },
+              },
+            }}
           >
-            EMRS
-          </Button>
-        </Collapse>
+            <ListItemIcon sx={{ color: "#fff" }}>
+              <Assignment />
+            </ListItemIcon>
+            <ListItemText primary="New Application" />
+          </ListItemButton>
+
+          {/* Already Applied */}
+          <ListItemButton
+            selected={isActive("/dashboard/applied")}
+            onClick={() => navigate("/dashboard/applied")}
+            sx={{
+              borderRadius: 2,
+              mb: 1,
+              "&.Mui-selected": {
+                background: "#2563eb",
+              },
+              "&:hover": { background: "rgba(255,255,255,0.08)" },
+            }}
+          >
+            <ListItemIcon sx={{ color: "#fff" }}>
+              <CheckCircle />
+            </ListItemIcon>
+            <ListItemText primary="Already Applied" />
+          </ListItemButton>
+
+          {/* Scheme */}
+          <ListItemButton
+            onClick={() => setOpenScheme(!openScheme)}
+            sx={{
+              borderRadius: 2,
+              "&:hover": { background: "rgba(255,255,255,0.08)" },
+            }}
+          >
+            <ListItemIcon sx={{ color: "#fff" }}>
+              <AccountBalance />
+            </ListItemIcon>
+
+            <ListItemText primary="Scheme" />
+
+            {openScheme ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+
+          {/* Scheme Children */}
+          <Collapse in={openScheme}>
+            <List component="div" disablePadding>
+
+              <ListItemButton
+                selected={isActive("/dashboard/emrs")}
+                onClick={() => navigate("/dashboard/emrs")}
+                sx={{
+                  pl: 6,
+                  borderRadius: 2,
+                  "&.Mui-selected": {
+                    background: "#2563eb",
+                  },
+                  "&:hover": { background: "rgba(255,255,255,0.08)" },
+                }}
+              >
+                <ListItemText sx={{ pl: 3 }} primary="EMRS" />
+              </ListItemButton>
+
+            </List>
+          </Collapse>
+        </List>
       </Box>
 
-      {/* 🔹 LOGOUT */}
+      {/* LOGOUT */}
       <Button
-        fullWidth
         variant="contained"
         color="error"
+        startIcon={<Logout />}
+        sx={{
+          borderRadius: 2,
+          textTransform: "none",
+          fontWeight: "bold",
+        }}
         onClick={logoutUser}
       >
         Logout

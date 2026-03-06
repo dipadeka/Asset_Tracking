@@ -25,7 +25,7 @@ export default function SignInPage() {
 
     localStorage.setItem("token", "dummy_token"); // save login token
 
-    navigate("/dashboard/new");   // 🔴 AFTER LOGIN GO TO ASSET FORM
+    navigate("/dashboard/new");   
   };
 
   return (

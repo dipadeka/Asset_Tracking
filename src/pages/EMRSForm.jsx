@@ -587,12 +587,11 @@ const EMRSForm = () => {
 
   return (
     <Container
-      maxWidth="xl"
       sx={{
-        mt: 4,
+        mt: 1,
         mb: 4,
         backgroundColor: "#f1f5f9",
-        padding: 3,
+        padding: 1,
         borderRadius: 3,
       }}
     >
@@ -1199,7 +1198,6 @@ const EMRSForm = () => {
                       label="Year"
                       fullWidth
                       size="small"
-                      sx={{minWidth:220}}
                       onChange={(e) => {
                         const updated = [...dropoutRows];
                         updated[index].year = e.target.value;
@@ -1214,6 +1212,7 @@ const EMRSForm = () => {
                       label="Class"
                       fullWidth
                       size="small"
+                      sx={{minWidth:220}}
                       value={row.class}
                       onChange={(e) => {
                         const updated = [...dropoutRows];
@@ -1231,6 +1230,7 @@ const EMRSForm = () => {
                   <Grid item xs={12} sm={6} md={4}>
                     <TextField
                       select
+                      sx={{minWidth:220}}
                       label="Section"
                       fullWidth
                       size="small"
