@@ -26,46 +26,91 @@ import { GirlSharp } from "@mui/icons-material";
 const EMRSForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { control, handleSubmit, setValue, watch, register } = useForm({});
-  const AcademicPerformance = () => {
-  const { control, watch } = useForm();
-  const [passPercentage, setPassPercentage] = useState(0);
-
- const appeared = watch("studentsAppeared") || 0;
-  const passed = watch("studentsPassed") || 0;
-
-   // Calculate pass percentage whenever values change
-  React.useEffect(() => {
-    const appearedNum = Number(appeared);
-    const passedNum = Number(passed);
-    if (appearedNum > 0 && passedNum >= 0) {
-      setPassPercentage(((passedNum / appearedNum) * 100).toFixed(2));
-    } else {
-      setPassPercentage(0);
-    }
-  }, [appeared, passed]);
-
+  const [reservationRows, setReservationRows] = useState([
+  {
+    name: "",
+    class: "",
+    section: "",
+    category: ""
   }
+]);
+  const { control, handleSubmit, setValue, watch, register } = useForm({});
   // ================= DROPOUT / MIGRATION / ACHIEVEMENT STATES =================
   const [dropoutRows, setDropoutRows] = useState([
-    { year: "", class: "", section: "", studentName: "", reason: "" },
+    { year: "", class: "",section: "", studentName: "", reason: "" }
   ]);
 
   const [migrationRows, setMigrationRows] = useState([
-    { year: "", studentName: "", fromClass: "", transferredTo: "", reason: "" },
+    { year: "", studentName: "",class: "", migratedfrom: "", transferredTo: "", reason: "" }
   ]);
+ 
+   const [academicRows, setAcademicRows] = useState([
+  {
+    year: "",
+    boardClass: "",
+    appeared: "",
+    passed: "",
+    passPercent: "",
+    above75: "",
+    below50: ""
+  }
+]);
 
   const [achievementRows, setAchievementRows] = useState([
-    { studentName: "", class: "", eventName: "", level: "", recognition: "" },
+    { studentName: "", class: "", eventName: "", level: "", recognition: "" }
+
   ]);
 
-  const [nonTeachingRows, setNonTeachingRows] = useState([
-    { post: "", name: "", dob: "", doj: "", email: "", contact: "" },
+const [teachingRows, setteachingRows] = useState([
+  {
+    post: "",
+     staffName: "",
+    dob: "",
+    doj: "",
+    email: "",
+    contactNumber: "",
+    total: "",
+    filled: "",
+    vacant: ""
+   
+  }
+]);
+  const [nonTeachingRows, setnonTeachingRows] = useState([
+  { post: "", name: "", dob: "", doj: "", email: "", contact: "" }
+]);
+
+const handleAcademicChange = (index, field, value) => {
+  const updatedRows = [...academicRows];
+
+  updatedRows[index][field] = value;
+
+  const appeared = Number(updatedRows[index].appeared || 0);
+  const passed = Number(updatedRows[index].passed || 0);
+
+  updatedRows[index].passPercent =
+    appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+
+  setAcademicRows(updatedRows);
+};   // ✅ CLOSE FUNCTION
+
+
+const handleAddAcademicRows = () => {
+  setAcademicRows([
+    ...academicRows,
+    {
+      year: "",
+      boardClass: "",
+      appeared: "",
+      passed: "",
+      passPercent: "",
+      above75: "",
+      below50: ""
+    }
   ]);
-  const handleAddNonTeachingSummary = () => {
+};const handleAddNonTeachingSummary = () => {
     setNonTeachingSummaryRows([
       ...nonTeachingSummaryRows,
-      { post: "", total: "", filled: "", vacant: "" },
+      { post: "", total: "", filled: "", vacant: "" }
     ]);
   };
 
@@ -74,120 +119,132 @@ const EMRSForm = () => {
     EMRSid: data.EMRSid?.trim(),
     udaisecode: Number(data.udaisecode),
     schoolname: data.schoolname?.trim(),
-    schooltype: data.schooltype?.trim(), // dropdown value
-    affiliation: data.affiliation?.trim(), // dropdown value
-    principalName: data.principalName?.trim(),
-    vicePrincipalName: data.vicePrincipalName?.trim(),
-  });
+  schooltype: data.schooltype?.trim(),        // dropdown value
+  affiliation: data.affiliation?.trim(),      // dropdown value
+  principalName: data.principalName?.trim(),
+  contactno: data.contactno?.trim(),
+  email: data.email?.trim()
+});
+    
 
   const prepareLocationDetails = (data) => ({
-    state: data.state,
-    district: data.district,
-    block: data.block,
-    grampanchayat: data.grampanchayat,
-    village: data.village,
-  });
+  state: data.state,
+  district: data.district,
+  block: data.block,
+  grampanchayat: data.grampanchayat,
+  village: data.village
+});
+const prepareInfrastructureDetails = (data) => ({
+  totalClassrooms: Number(data.totalClassrooms || 0),
 
-  const prepareInfrastructureDetails = (data) => ({
-    totalClassrooms: Number(data.totalClassrooms || 0),
+  classroomWithSmartClass: Number(data.classroomWithSmartClass || 0),
+  classroomWithProjector: Number(data.classroomWithProjector || 0),
 
-    scienceLab: data.scienceLab || "",
-    computerLab: data.computerLab || "",
-    library: data.library || "",
-    playground: data.playground || "",
-    smartClass: data.smartClass || "",
-  });
-  const prepareHostelAdministration = (data) => ({
-    hostelCapacity: Number(data.hostelCapacity || 0),
+  scienceLab: data.scienceLab || "",
+  computerLab: data.computerLab || "",
 
-    currentHostelStrength: Number(data.currentHostelStrength || 0),
+  library: data.library || "",
+  booksInLibrary: Number(data.booksInLibrary || 0),
 
-    wardenName: data.wardenName?.trim() || "",
+  playground: data.playground || ""
+});
+const prepareHostelAdministration = (data) => ({
+  boysHostelCapacity: Number(data.boysHostelCapacity || 0),
 
-    wardenContactNo: data.wardenContactNo?.trim() || "",
+  girlsHostelCapacity: Number(data.girlsHostelCapacity || 0),
 
-    cctvInstalled: data.cctvInstalled || "",
+  bedsAvailable: Number(data.bedsAvailable || 0),
 
-    securityGuardAvailable: data.securityGuardAvailable || "",
-  });
+  currentOccupancy: Number(data.currentOccupancy || 0),
 
-  const prepareEnrollmentSummary = (data) => {
-    const boys = Number(data.boys || 0);
-    const girls = Number(data.girls || 0);
+  cctvInstalled: data.cctvInstalled || "",
+
+  noOfCCTV: Number(data.noOfCCTV || 0),
+
+  securityAgency: data.securityAgency || "",
+
+  girlsWarden: {
+    name: data.girlsWardenName?.trim() || "",
+    email: data.girlsWardenEmail?.trim() || "",
+    contact: data.girlsWardenContact || ""
+  },
+
+  boysWarden: {
+    name: data.boysWardenName?.trim() || "",
+    email: data.boysWardenEmail?.trim() || "",
+    contact: data.boysWardenContact || ""
+  },
+
+  otherAmenities: data.otherAmenities?.trim() || ""
+
+});
+  const prepareClassStrength = (rows) => {
+  return rows.map((row) => {
+
+    const sanctionedCapacity = Number(row.sanctionedCapacity || 0);
+    const currentEnrollment = Number(row.currentEnrollment || 0);
 
     return {
-      boys,
-      girls,
-      totalstudents: boys + girls,
-    };
-  };
-  const prepareClassStrength = (rows) => {
-    return rows.map((row) => {
-      const boys = Number(row.boys || 0);
-      const girls = Number(row.girls || 0);
-
-      return {
-        class: row.class,
-        section: row.section,
-        boys,
-        girls,
-        total: boys + girls,
-      };
-    });
-  };
-  const prepareReservationDetails = (rows) => {
-    return rows.map((row) => ({
-<<<<<<< HEAD
-      name: row.class,
-      class: Number(row.st || 0),
-      section: Number(row.pvtg || 0),
-      catogory: Number(row.dnt || 0),
-=======
+      academicYear: row.academicYear,
       class: row.class,
-      st: Number(row.st || 0),
-      pvtg: Number(row.pvtg || 0),
-      dnt: Number(row.dnt || 0),
-      others: Number(row.others || 0),
->>>>>>> cae2281f9eda170d29061dffe9ec5ebade693dff
-    }));
-  };
-  const prepareAcademicResults = (results) => {
-    return results.map((item) => {
-      const appeared = Number(item.appeared || 0);
-      const passed = Number(item.passed || 0);
+      section: row.section,
+      sanctionedCapacity,
+      currentEnrollment
 
-      return {
-        year: item.year,
-        appeared,
-        passed,
-        passPercent: appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : 0,
-      };
-    });
-  };
+    };
+  });
+};
+  const prepareReservationDetails = (rows) => {
+  return rows.map((row) => ({
+    name: row.name,
+    class: row.class,
+    section: row.section,
+    category: row.category
+  }));
+};
+  const prepareAcademicResults = (results) => {
+  return results.map((item) => {
+    const appeared = Number(item.appeared || 0);
+    const passed = Number(item.passed || 0);
+
+    return {
+      year: item.year,
+      boardClass: item.boardClass,
+      appeared,
+      passed,
+      passPercent:
+        appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : 0,
+      above75: Number(item.above75 || 0),
+      below50: Number(item.below50 || 0)
+    };
+  });
+};
   const prepareDropouts = (dropouts) => {
     return dropouts.map((item) => ({
       year: item.year,
       class: item.class,
       studentName: item.studentName?.trim(),
-      reason: item.reason,
+      reason: item.reason
     }));
   };
   const prepareMigrations = (migrations) => {
     return migrations.map((item) => ({
       year: item.year,
       studentName: item.studentName?.trim(),
+      class: item.class?.trim(),
       migratedfrom: item.migratedfrom,
       transferredTo: item.transferredTo,
-      reason: item.reason,
+      reason: item.reason
     }));
   };
+  
   const prepareAchievements = (achievements) => {
     return achievements.map((item) => ({
       studentName: item.studentName?.trim(),
       class: item.class,
       eventName: item.eventName,
       level: item.level,
-      recognition: item.recognition,
+      recognition: item.recognition
     }));
   };
   const prepareTeachingStaffSummary = (summary) => {
@@ -199,7 +256,7 @@ const EMRSForm = () => {
         post: item.post,
         total,
         filled,
-        vacant: total - filled,
+        vacant: total - filled
       };
     });
   };
@@ -210,7 +267,7 @@ const EMRSForm = () => {
       dob: staff.dob,
       doj: staff.doj,
       email: staff.email?.trim(),
-      contact: staff.contact,
+      contact: staff.contact
     }));
   };
 
@@ -223,7 +280,7 @@ const EMRSForm = () => {
         post: item.post,
         total,
         filled,
-        vacant: total - filled,
+        vacant: total - filled
       };
     });
   };
@@ -235,7 +292,7 @@ const EMRSForm = () => {
       dob: staff.dob,
       doj: staff.doj,
       email: staff.email?.trim(),
-      contact: staff.contact,
+      contact: staff.contact
     }));
   };
 
@@ -252,7 +309,8 @@ const EMRSForm = () => {
       internet,
       maintenance,
       mess,
-      totalMonthlyCost: electricity + water + internet + maintenance + mess,
+      totalMonthlyCost:
+        electricity + water + internet + maintenance + mess
     };
   };
   const preparePayload = (data) => {
@@ -263,20 +321,20 @@ const EMRSForm = () => {
       HostelAdministration: prepareHostelAdministration(data),
       EnrollmentSummary: prepareEnrollmentSummary(data),
       ClassStrength: prepareClassStrength(data),
-      ReservationDetails: prepareReservationDetails(data.reservationRows),
-      AcademicResults: prepareAcademicResults(data.results),
+      ReservationDetails: prepareReservationDetails(reservationRows),
+      AcademicResults: prepareAcademicResults(academicRows),
       Dropouts: prepareDropouts(dropoutRows),
       Migrations: prepareMigrations(migrationRows),
       Achievements: prepareAchievements(achievementRows),
       teachingStaff: {
-        summary: prepareTeachingStaffSummary(data.teachingSummary),
-        details: prepareTeachingStaffDetails(data.teachingDetails),
+        Summary: prepareTeachingStaffSummary(data.teachingSummary),
+        Details: prepareTeachingStaffDetails(data.teachingDetails)
       },
       nonTeachingStaff: {
-        summary: prepareNonTeachingSummary(data.nonTeachingSummary),
-        details: prepareNonTeachingDetails(data.nonTeachingDetails),
+        Summary: prepareNonTeachingSummary(data.nonTeachingSummary),
+        Details: prepareNonTeachingDetails(data.nonTeachingDetails)
       },
-      operationalCost: prepareOperationalCost(data.operationalCost),
+      OperationalCost: prepareOperationalCost(data.operationalCost)
     };
   };
 
@@ -286,14 +344,14 @@ const EMRSForm = () => {
   };
   const submitEMRS = async (payload) => {
     try {
-      setLoading(true); // 🟢 START LOADER
+      setLoading(true);   // 🟢 START LOADER
 
       const response = await fetch("/api/emrs/create", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -304,11 +362,12 @@ const EMRSForm = () => {
 
       alert("EMRS Data Submitted Successfully ✅");
       console.log("EMRS RESPONSE:", result);
+
     } catch (error) {
       console.error("Error:", error.message);
       alert("Failed to Submit EMRS Data ❌");
     } finally {
-      setLoading(false); // 🔴 STOP LOADER
+      setLoading(false);   // 🔴 STOP LOADER
     }
   };
 
@@ -338,24 +397,34 @@ const EMRSForm = () => {
     }
   };
 
+
+
+
+
   // ================= EMRS BASIC DETAILS =================
   const emrsBasicFields = [
     { name: "EMRScode", label: "EMRS Code" },
     { name: "EMRSid", label: "EMRS ID" },
     { name: "udaisecode", label: "UDISE Code" },
     { name: "schoolname", label: "School Name" },
-    {
-      name: "schooltype",
-      label: "School Type",
-      options: ["Girls", "Boys", "Co-Ed"],
+    { name: "schooltype", label: "School Type",  type: "select",
+    options: [
+        "Girls",
+        "Boys",
+        "Co-Ed",
+      ],
     },
-    {
-      name: "Affiliation",
-      label: "Affiliation",
-      options: ["SEBA", "CBSE", "ICSC"],
+    { name: "Affiliation", label: "Affiliation",  type: "select",
+      options: [
+        "SEBA",
+        "CBSE",
+        "ICSC",
+      ],
     },
-    { name: "Name of the Principal", label: "Principal Name" },
-    { name: "Vice-Principal", label: "Vice Principal" },
+    { name: "NameofthePrincipal", label: "Principal Name"},
+    { name: "contactno", label: "Contact Number", type: "number"},
+    { name: "emailid", label: "Email-id"},
+
   ];
   // ================= EMRS LOCATION =================
   const emrsLocationFields = [
@@ -365,212 +434,326 @@ const EMRSForm = () => {
     { name: "village", label: "Village" },
   ];
   //=================INFRASTRUCTURE DETAILS ==============//
-  const emrsInfrastructureFields = [
-    { name: " Total Classrooms", label: "Total Classrooms" },
-    { name: "Science Lab", label: "Science Lab", options: ["Yes", "No"] },
-    { name: "Computer Lab", label: "Computer Lab", options: ["Yes", "No"] },
-    { name: "Library", label: "Library", options: ["Yes", "No"] },
-    { name: "Playground", label: "Playground", options: ["Yes", "No"] },
-    { name: "Smart class ", label: "Smart Class", options: ["Yes", "No"] },
-  ];
-  // ================= HOSTEL ADMINISTRATION DETAILS =================
-  const emrsHostelFields = [
-    { name: "HostelCapacity", label: "Hostel Capacity" },
-    { name: "CurrentStrength", label: "Current Hostel Strength" },
-    { name: "HostelWardenName", label: "Hostel Warden Name" },
-
-    { name: "CCTVinstalled ", label: "CCTV Installed", options: ["Yes", "No"] },
+  const emrsInfrastructureFields=[
+    { name: " TotalClassrooms", label: "Total Classrooms"},
+    { name: "ClassroomwithSmartclass", label: "Classroom with Smart Class"},
+    { name: "classroomwithprojector", label: "Classroom with Projector"},
+     {name: "ScienceLab", label: "Science Lab",
+      options: [
+        "Yes",
+        "No",
+      ],
+    }, 
+    {name: "ComputerLab", label: "Computer Lab",
+      options: [
+        "Yes",
+        "No",
+      ],
+    }, 
+{name: "Library", label: "Library",
+      options: [
+        "Yes",
+        "No",
+      ],
+    }, 
     {
-      name: "SecurityGuardAvailable",
-      label: "Security Guard Available",
-      options: ["Yes", "No"],
-    },
+    name: "booksInLibrary",
+    label: "No of Books in Library",
+    type: "number"
+  },
+    {name: "Playground", label: "Playground",
+      options: [
+        "Yes",
+        "No",
+      ],
+    }, 
   ];
+   // ================= HOSTEL ADMINISTRATION DETAILS =================
+  const emrsHostelFields = [
+
+  { name: "boysHostelCapacity", label: "Boys Hostel Capacity", type: "number" },
+  { name: "girlsHostelCapacity", label: "Girls Hostel Capacity", type: "number" },
+
+  { name: "bedsAvailable", label: "No of Beds Available", type: "number" },
+
+  { name: "currentOccupancy", label: "Current Occupancy", type: "number" },
+
+  {
+    name: "cctvInstalled",
+    label: "CCTV Installed",
+    options: ["Yes", "No"],
+  },
+
+  { name: "noOfCCTV", label: "No of CCTV Installed", type: "number" },
+
+  {
+    name: "securityAgency",
+    label: "Security Agency Available",
+    options: ["Yes", "No"],
+  },
+
+  { name: "girlsWardenName", label: "Girls Hostel Warden Name" },
+  { name: "girlsWardenEmail", label: "Girls Hostel Warden Email" },
+  { name: "girlsWardenContact", label: "Girls Hostel Warden Contact No", type: "number" },
+
+  { name: "boysWardenName", label: "Boys Hostel Warden Name" },
+  { name: "boysWardenEmail", label: "Boys Hostel Warden Email" },
+  { name: "boysWardenContact", label: "Boys Hostel Warden Contact No", type: "number" },
+
+  {
+  name: "otherAmenities",
+  label: "Other Amenities to be Made Available",
+  multiline: true,
+  rows: 3
+}
+
+]; 
 
   // ================= ENROLLMENT SUMMARY =================
-  const enrollmentFields = [
-    { name: "SanctionedCapacity", label: "Sanctioned Capacity" },
-    { name: "Currentenrollment", label: "Current Enrollment" },
+const enrollmentFields = [
 
-    {
-      name: "class",
-      label: "Class",
-      options: ["6", "7", "8", "9", "10", "11", "12"],
-    },
-
-    {
-      name: "section",
-      label: "Section",
-      options: ["A", "B", "C"],
-    },
-
-    { name: "girls", label: "Total Girls", type: "number" },
-    { name: "boys", label: "Total Boys", type: "number" },
-    {
-      name: "totalstudents",
-      label: "Total Students",
-      type: "number",
-      readOnly: true,
-    },
-  ];
-  // ================= RESERVATION DETAILS =================
-  const reservationFields = [
-<<<<<<< HEAD
-     {
-    name: "studentName",
-    label: "Student Name",
-    type: "text"
+  {
+    name: "academicYear",
+    label: "Academic Year",
+    options: [
+      "2024-2025",
+      "2025-2026",
+      "2026-2027",
+      "2027-2028",
+      "2028-2029",
+      "2029-2030"
+    ]
   },
+
   {
     name: "class",
     label: "Class",
-     type: "select",
-    options: ["6","7","8","9","10","11","12"],
+    options: ["6","7","8","9","10","11","12"]
   },
+
   {
     name: "section",
     label: "Section",
-     type: "select",
-    options: ["A","B","C"],
+    options: ["A","B","C"]
   },
-   {
+
+  {
+    name: "sanctionedCapacity",
+    label: "Sanctioned Capacity",
+    type: "number"
+  },
+
+  {
+    name: "currentEnrollment",
+    label: "Current Enrollment",
+    type: "number"
+  }
+
+];
+// ================= RESERVATION DETAILS =================
+  const reservationFields = [
+  { name: "Student Name", label: "Student Name" },
+
+  {
+    name: "class",
+    label: "Class",
+    options: ["6","7","8","9","10","11","12"]
+  },
+
+  {
+    name: "section",
+    label: "Section",
+    options: ["A","B","C"]
+  },
+
+  {
     name: "category",
     label: "Category",
-    type: "select",
-    options: ["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang Parent"]
-  },
+    options: [
+      "ST",
+      "PVTG",
+      "DNT/NT/SNT",
+      "Orphan",
+      "LWE",
+      "Divyang Parent"
+    ]
+  }
 ];
 // ================= ACADEMIC RESULT =================
-=======
-    {
-      name: "class",
-      label: "Class",
-      options: ["6", "7", "8", "9", "10", "11", "12"],
-    },
-    {
-      name: "section",
-      label: "Section",
-      options: ["A", "B", "C"],
-    },
-    { name: "st", label: "ST Students", type: "number" },
-    { name: "pvtg", label: "PVTG Students", type: "number" },
-    { name: "dnt", label: "DNT/NT/SNT Students", type: "number" },
-    {
-      name: "others",
-      label: "Orphan / LWE / Divyang Parent",
-      type: "number",
-    },
-  ];
-  // ================= ACADEMIC RESULT =================
->>>>>>> cae2281f9eda170d29061dffe9ec5ebade693dff
   const academicFields = [
     { name: "year", label: "Academic Year" },
     { name: "appeared", label: "Students Appeared", type: "number" },
     { name: "passed", label: "Students Passed", type: "number" },
+    
     {
       name: "passPercent",
       label: "Pass %",
       type: "number",
       readOnly: true,
     },
-  ];
 
-  // ================= TEACHING STAFF =================
-  const teachingStaffSummaryFields = [
-    {
-      name: "post",
-      label: "Post",
-      type: "select", // good practice to mention type
-      options: [
-        "Principal",
-        "Vice Principal",
-        "PGT",
-        "TGT",
-        "Music Teacher",
-        "Art Teacher",
-        "Physical Education Teacher",
-      ],
-    },
-    {
-      name: "total",
-      label: "Total",
-      type: "number",
-    },
-    {
-      name: "filled",
-      label: "Filled",
-      type: "number",
-    },
-    {
-      name: "vacant",
-      label: "Vacant",
-      type: "number",
-      readOnly: true,
-    },
-    { name: "name", label: "Staff Name" },
-    { name: "dob", label: "Date of Birth", type: "date" },
-    { name: "doj", label: "Date of Joining", type: "date" },
-    { name: "email", label: "Email" },
-    { name: "contact", label: "Contact Number" },
   ];
+  const achievementLevels = [
+  "School Level",
+  "District Level",
+  "State Level",
+  "National Level",
 
+  // Olympiads
+  "Mathematics Olympiad",
+  "Physics Olympiad",
+  "Chemistry Olympiad",
+  "Biology Olympiad",
+  "Astronomy Olympiad",
+  "Junior Science Olympiad",
+
+  // Board Exams
+  "Board Topper",
+  "Board Merit List",
+
+  // National Entrance Exams
+  "JEE Mains",
+  "JEE Advanced",
+  "NEET",
+  "CUET",
+  "NDA",
+  "CLAT",
+
+  // Other Competitive Exams
+  "NTSE",
+  "KVPY",
+  "INSPIRE Scholarship",
+  "National Talent Exam",
+
+  // Sports / Cultural
+  "National Sports Championship",
+  "State Sports Championship",
+  "National Cultural Competition"
+];
+
+
+ // ================= TEACHING STAFF =================
+const teachingStaffSummaryFields = [
+  {
+    name: "post",
+    label: "Post",
+    type: "select",
+    options: [
+      "Principal",
+      "Vice Principal",
+      "PGT",
+      "TGT",
+      "Music Teacher",
+      "Art Teacher",
+      "Physical Education Teacher",
+    ],
+  },
+
+  { name: "name", label: "Staff Name" },
+  { name: "dob", label: "Date of Birth", type: "date" },
+  { name: "doj", label: "Date of Joining", type: "date" },
+  { name: "email", label: "Email" },
+  { name: "contact", label: "Contact Number" },
+
+  {
+    name: "total",
+    label: "Total Teaching Staff",
+    type: "number",
+  },
+  {
+    name: "filled",
+    label: "Filled",
+    type: "number",
+  },
+  {
+    name: "vacant",
+    label: "Vacant",
+    type: "number",
+    readOnly: true,
+  },
+];
   // ================= NON TEACHING STAFF DETAILS =================
   const nonTeachingStaffDetailFields = [
-    {
-      name: "post",
-      label: "Post",
-      type: "select", // good practice to mention type
-      options: [
-        "Accountant",
-        "UDC/LDC",
-        "Lab Assistant",
-        "Librarian",
-        "Councellor",
-        "Cook",
-        "Security Guard",
-        "Sweeper",
-        "Driver",
-        "Helper",
-        "Chowkidar",
-        "Staff Nurse",
-        "Hostel Warden",
-      ],
-    },
-    {
-      name: "total",
-      label: "Total",
-      type: "number",
-    },
-    {
-      name: "filled",
-      label: "Filled",
-      type: "number",
-    },
-    {
-      name: "vacant",
-      label: "Vacant",
-      type: "number",
-      readOnly: true,
-    },
-    { name: "name", label: "Staff Name" },
-    { name: "dob", label: "Date of Birth", type: "date" },
-    { name: "doj", label: "Date of Joining", type: "date" },
-    { name: "email", label: "Email" },
-    { name: "contact", label: "Contact Number" },
-  ];
+  {
+    name: "post",
+    label: "Post",
+    type: "select",
+    options: [
+      "Accountant",
+      "UDC/LDC",
+      "Lab Assistant",
+      "Librarian",
+      "Councellor",
+      "Cook",
+      "Security Guard",
+      "Sweeper",
+      "Driver",
+      "Helper",
+      "Chowkidar",
+      "Staff Nurse",
+      "Hostel Warden"
+    ],
+  },
 
+  { name: "name", label: "Staff Name" },
+  { name: "dob", label: "Date of Birth", type: "date" },
+  { name: "doj", label: "Date of Joining", type: "date" },
+  { name: "email", label: "Email" },
+  { name: "contact", label: "Contact Number" },
+
+  {
+    name: "total",
+    label: "Total Non-Teaching Staff",
+    type: "number",
+  },
+  {
+    name: "filled",
+    label: "Filled",
+    type: "number",
+  },
+  {
+    name: "vacant",
+    label: "Vacant",
+    type: "number",
+    readOnly: true,
+  },
+];
+  
   // ================= OPERATIONAL COST =================
   const operationalCostFields = [
-    { name: "electricity", label: "Electricity Cost", type: "number" },
-    { name: "water", label: "Water Cost", type: "number" },
-    { name: "internet", label: "Internet Cost", type: "number" },
-    { name: "maintenance", label: "Maintenance Cost", type: "number" },
-    { name: "mess", label: "Mess Cost", type: "number" },
-    {
-      name: "totalMonthlyCost",
-      label: "Total Monthly Cost",
-      type: "number",
-      readOnly: true,
+    { name:"Year", label: "Year",
+      options:[
+        "2024-2025",
+        "2025-2026",
+        "2026-2027"
+      ],
+    },
+    { name:"month", label: "Month",
+      options:[
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ],
+    },
+    { name: "operationalcost", label: "Operational Cost",
+      options:[
+        "Electricity",
+        "Water",
+        "Internet",
+        "Maintenance",
+        "Establishment",
+        "Miscellaneous",
+        "Others"
+      ], 
     },
   ];
 
@@ -583,15 +766,18 @@ const EMRSForm = () => {
         readOnly: field.readOnly || false,
       }}
     />
-  ));
+
+  ))
+
 
   return (
     <Container
+      maxWidth="xl"
       sx={{
-        mt: 1,
+        mt: 4,
         mb: 4,
         backgroundColor: "#f1f5f9",
-        padding: 1,
+        padding: 3,
         borderRadius: 3,
       }}
     >
@@ -660,28 +846,36 @@ const EMRSForm = () => {
                 </Typography>
               </Grid>
             </Grid>
-            <Grid container spacing={2} mb={4}>
-              {emrsBasicFields.map((fieldItem) => (
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        error={!!error}
-                        helperText={error ? error.message : ""}
-                      />
-                    )}
-                  />
-                </Grid>
+           <Grid container spacing={2} mb={4}>
+  {emrsBasicFields.map((fieldItem) => (
+    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+      <Controller
+        name={fieldItem.name}
+        control={control}
+        defaultValue=""
+        rules={{ required: `${fieldItem.label} is required` }}
+        render={({ field, fieldState: { error } }) => (
+          <TextField
+            {...field}
+            label={fieldItem.label}
+            fullWidth
+            size="small"
+            select={!!fieldItem.options}
+            error={!!error}
+            helperText={error ? error.message : ""}
+          >
+            {fieldItem.options &&
+              fieldItem.options.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
               ))}
-            </Grid>
+          </TextField>
+        )}
+      />
+    </Grid>
+  ))}
+</Grid>
             {/* ================= EMRS LOCATION SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -700,226 +894,236 @@ const EMRSForm = () => {
                 </Typography>
               </Grid>
             </Grid>
-            <Grid container spacing={2} mb={4}>
-              {/* Pincode */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="pincode"
-                  control={control}
-                  defaultValue=""
-                  rules={{ required: "Pincode is required" }}
-                  render={({ field, fieldState: { error } }) => (
-                    <TextField
-                      {...field}
-                      label="Pincode"
-                      fullWidth
-                      size="small"
-                      onChange={(e) => {
-                        field.onChange(e);
-                        onPincodeChange(e);
-                      }}
-                      error={!!error}
-                      helperText={error ? error.message : ""}
-                    />
-                  )}
-                />
-              </Grid>
+           <Grid container spacing={2} mb={4}>
+  
+  {/* Pincode */}
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="pincode"
+      control={control}
+      defaultValue=""
+      rules={{ required: "Pincode is required" }}
+      render={({ field, fieldState: { error } }) => (
+        <TextField
+          {...field}
+          label="Pincode"
+          fullWidth
+          size="small"
+          onChange={(e) => {
+            field.onChange(e);
+            onPincodeChange(e);
+          }}
+          error={!!error}
+          helperText={error ? error.message : ""}
+        />
+      )}
+    />
+  </Grid>
 
-              {/* District */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="district"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="District"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
+  {/* District */}
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="district"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="District" fullWidth size="small" />
+      )}
+    />
+  </Grid>
 
-              {/* Block */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="block"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Block"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
+  {/* Block */}
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="block"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Block" fullWidth size="small" />
+      )}
+    />
+  </Grid>
 
-              {/* Gram Panchayat */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="grampanchayat"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Gram Panchayat"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+  {/* Gram Panchayat */}
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="grampanchayat"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Gram Panchayat" fullWidth size="small" />
+      )}
+    />
+  </Grid>
 
-            {/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
+</Grid>
 
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Infrastructure Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="totalClassrooms"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Total Classrooms"
-                      type="number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="scienceLab"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Science Lab"
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      fullWidth
-                    >
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
+{/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="computerLab"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Computer Lab"
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      fullWidth
-                    >
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
+<Grid container spacing={3}>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="library"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Library"
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      fullWidth
-                    >
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
+  {/* Heading Row */}
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Infrastructure Details
+    </Typography>
+  </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="playground"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Playground"
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      fullWidth
-                    >
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
+</Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="smartClassroom"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      label="Smart Classroom"
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      fullWidth
-                    >
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-            </Grid>
-            {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
-            <Grid container spacing={2} sx={{mt:2}}>
+{/* Fields Row (New Line) */}
+<Grid container spacing={3} mb={4}>
+
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="totalClassrooms"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField
+          {...field}
+          label="Total Classrooms"
+          type="number"
+          fullWidth
+          size="small"
+        />
+      )}
+    />
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={3}>
+  <Controller
+    name="classroomWithSmartClass"
+    control={control}
+    defaultValue=""
+    render={({ field }) => (
+      <TextField
+        {...field}
+        label="Classroom with Smart Class"
+        type="number"
+        fullWidth
+        size="small"
+      />
+    )}
+  />
+</Grid>
+
+<Grid item xs={12} sm={6} md={3}>
+  <Controller
+    name="classroomWithProjector"
+    control={control}
+    defaultValue=""
+    render={({ field }) => (
+      <TextField
+        {...field}
+        label="Classroom with Projector"
+        type="number"
+        fullWidth
+        size="small"
+      />
+    )}
+  />
+</Grid>
+
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="scienceLab"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Science Lab" fullWidth size="small">
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )}
+    />
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="computerLab"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Computer Lab" fullWidth size="small">
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )}
+    />
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="library"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Library" fullWidth size="small">
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )}
+    />
+  </Grid>
+  <Grid item xs={12} sm={6} md={3}>
+  <Controller
+    name="booksInLibrary"
+    control={control}
+    defaultValue=""
+    render={({ field }) => (
+      <TextField
+        {...field}
+        label="No. of Books in Library"
+        type="number"
+        fullWidth
+        size="small"
+      />
+    )}
+  />
+</Grid>
+
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="playground"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Playground" fullWidth size="small">
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )}
+    />
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={3}>
+    <Controller
+      name="smartClassroom"
+      control={control}
+      defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Smart Classroom" fullWidth size="small">
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )}
+    />
+  </Grid>
+
+</Grid>   
+       {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
+            <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -944,36 +1148,41 @@ const EMRSForm = () => {
                     control={control}
                     defaultValue=""
                     rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        select={
-                          fieldItem.name === "cctvInstalled" ||
-                          fieldItem.name === "securityGuardAvailable"
-                        }
-                        error={!!error}
-                        helperText={error ? error.message : ""}
-                      >
-                        {(fieldItem.name === "cctvInstalled" ||
-                          fieldItem.name === "securityGuardAvailable") && [
-                          <MenuItem key="yes" value="Yes">
-                            Yes
-                          </MenuItem>,
-                          <MenuItem key="no" value="No">
-                            No
-                          </MenuItem>,
-                        ]}
-                      </TextField>
-                    )}
-                  />
+                   render={({ field, fieldState: { error } }) => (
+  <TextField
+  {...field}
+  label={fieldItem.label}
+  fullWidth
+  size="small"
+  type={fieldItem.type || "text"}
+  multiline={fieldItem.multiline || false}
+  rows={fieldItem.rows || 1}
+  select={
+    fieldItem.name === "cctvInstalled" ||
+    fieldItem.name === "securityAgency"
+  }
+  error={!!error}
+  helperText={error ? error.message : ""}
+>
+    {(fieldItem.name === "cctvInstalled" ||
+      fieldItem.name === "securityAgency") && [
+      <MenuItem key="yes" value="Yes">
+        Yes
+      </MenuItem>,
+      <MenuItem key="no" value="No">
+        No
+      </MenuItem>,
+      
+    ]}
+  </TextField>
+)}
+      />              
+                  
                 </Grid>
               ))}
             </Grid>
 
-            {/* ================= STUDENT ENROLLEMENT SECTION ================= */}
+           {/* ================= STUDENT ENROLLEMENT SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
@@ -992,64 +1201,8 @@ const EMRSForm = () => {
               </Grid>
             </Grid>
             <Grid container spacing={2} mb={4}>
-              {enrollmentFields.map((fieldItem) => (
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        type={fieldItem.type || "text"}
-                        select={!!fieldItem.options}
-                        error={!!error}
-                        helperText={error ? error.message : ""}
-                        InputProps={{
-                          readOnly: fieldItem.readOnly || false,
-                        }}
-                        sx={{ minWidth: 220 }}
-                      >
-                        {fieldItem.options &&
-                          fieldItem.options.map((option) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                      </TextField>
-                    )}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* ================= STUDENT RESERVATION DETAILS SECTION ================= */}
-<<<<<<< HEAD
-           <Grid container spacing={2}>
-  <Grid item xs={12}>
-    <Typography
-      variant="h6"
-      sx={{
-        background: "linear-gradient(to right, #1976d2, #42a5f5)",
-        color: "#fff",
-        padding: "8px 16px",
-        borderRadius: 2,
-        fontWeight: 600,
-        mb: 2,
-      }}
-    >
-      Student Reservation Details
-    </Typography>
-  </Grid>
-</Grid>
-
-<Grid container spacing={2} mb={4}>
-  {reservationFields.map((fieldItem) => (
-    <Grid item xs={12} sm={6} md={3} key={fieldItem.name}>
+  {enrollmentFields.map((fieldItem) => (
+    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
       <Controller
         name={fieldItem.name}
         control={control}
@@ -1061,21 +1214,29 @@ const EMRSForm = () => {
             label={fieldItem.label}
             fullWidth
             size="small"
-            type={fieldItem.type === "text" ? "text" : undefined}
-            select={fieldItem.type === "select"}
+            type={fieldItem.type || "text"}
+            select={!!fieldItem.options}
             error={!!error}
             helperText={error ? error.message : ""}
+            InputProps={{
+              readOnly: fieldItem.readOnly || false,
+            }}
           >
-            {fieldItem.type === "select" && (
-              <MenuItem value="">Select</MenuItem>
-            )}
-
             {fieldItem.options &&
               fieldItem.options.map((option) => (
                 <MenuItem key={option} value={option}>
                   {option}
                 </MenuItem>
-=======
+              ))}
+          </TextField>
+        )}
+      />
+    </Grid>
+  ))}
+</Grid>
+
+
+            {/* ================= STUDENT RESERVATION DETAILS SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
@@ -1102,35 +1263,28 @@ const EMRSForm = () => {
                     defaultValue=""
                     rules={{ required: `${fieldItem.label} is required` }}
                     render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        sx={{minWidth:220}}
-                        type={fieldItem.type || "text"}
-                        select={!!fieldItem.options}
-                        error={!!error}
-                        helperText={error ? error.message : ""}
-                      >
-                        {fieldItem.options &&
-                          fieldItem.options.map((option) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                      </TextField>
-                    )}
+  <TextField
+    {...field}
+    label={fieldItem.label}
+    fullWidth
+    size="small"
+    type={fieldItem.type || "text"}
+    select={!!fieldItem.options}
+    error={!!error}
+    helperText={error ? error.message : ""}
+  >
+    {fieldItem.options &&
+      fieldItem.options.map((option) => (
+        <MenuItem key={option} value={option}>
+          {option}
+        </MenuItem>
+      ))}
+  </TextField>
+)}
                   />
                 </Grid>
->>>>>>> cae2281f9eda170d29061dffe9ec5ebade693dff
               ))}
-          </TextField>
-        )}
-      />
-    </Grid>
-  ))}
-</Grid>
+            </Grid>
 
             {/* ================= ACADEMIC PERFORMANCE DETAILS SECTION ================= */}
             <Grid container spacing={2}>
@@ -1148,49 +1302,59 @@ const EMRSForm = () => {
                 >
                   Academic Performance Details
                 </Typography>
+                
               </Grid>
             </Grid>
-            <Grid container spacing={2} mb={4}>
-              {academicFields.map((fieldItem) => (
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        error={!!error}
-                        helperText={error ? error.message : ""}
+            <Grid container spacing={2} mb={2}>
+  {academicFields.map((fieldItem) => (
+    <Grid item xs={12} sm={6} md={3} key={fieldItem.name}>
+      <Controller
+        name={fieldItem.name}
+        control={control}
+        defaultValue=""
+        render={({ field }) => (
+          <TextField
+            {...field}
+            label={fieldItem.label}
+            fullWidth
+            size="small"
                       />
                     )}
                   />
                 </Grid>
+
               ))}
 
-              {/* ================= DROPOUT DETAILS ================= */}
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                      color: "#fff",
-                      padding: "8px 16px",
-                      borderRadius: 2,
-                      fontWeight: 600,
-                      mb: 2,
-                    }}
-                  >
-                    Dropout Details (Class VI–XII)
-                  </Typography>
-                </Grid>
-              </Grid>
-
+              <Button
+  variant="contained"
+  onClick={handleAddAcademicRows}
+  sx={{ mb: 2 }}
+>
+  Add Row
+</Button>
+            
+             {/* ================= DROPOUT DETAILS ================= */}
+<Grid container spacing={2} sx={{ width: "100%", mt: 2 }}>
+  <Grid item xs={12}>
+    <Box sx={{ width: "100%", mt: 2 }}>
+      <Typography
+        variant="h6"
+        sx={{
+          display: "block",
+          width: "fit-content",
+          background: "linear-gradient(to right, #1976d2, #42a5f5)",
+          color: "#fff",
+          padding: "8px 16px",
+          borderRadius: 2,
+          fontWeight: 600,
+          mt: 2
+        }}
+      >
+        Dropout Details (Class VI–XII)
+      </Typography>
+    </Box>
+  </Grid>
+</Grid>
               {dropoutRows.map((row, index) => (
                 <Grid container spacing={2} key={index} mb={2}>
                   <Grid item xs={12} md={2}>
@@ -1206,48 +1370,46 @@ const EMRSForm = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      select
-                      label="Class"
-                      fullWidth
-                      size="small"
-                      sx={{minWidth:220}}
-                      value={row.class}
-                      onChange={(e) => {
-                        const updated = [...dropoutRows];
-                        updated[index].class = e.target.value;
-                        setDropoutRows(updated);
-                      }}
-                    >
-                      {["6", "7", "8", "9", "10", "11", "12"].map((cls) => (
-                        <MenuItem key={cls} value={cls}>
-                          {cls}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      select
-                      sx={{minWidth:220}}
-                      label="Section"
-                      fullWidth
-                      size="small"
-                      value={row.section}
-                      onChange={(e) => {
-                        const updated = [...dropoutRows];
-                        updated[index].section = e.target.value;
-                        setDropoutRows(updated);
-                      }}
-                    >
-                      {["A", "B", "C"].map((sec) => (
-                        <MenuItem key={sec} value={sec}>
-                          {sec}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
+                 <Grid item xs={12} sm={6} md={4}>
+  <TextField
+    select
+    label="Class"
+    fullWidth
+    size="small"
+    value={row.class}
+    onChange={(e) => {
+      const updated = [...dropoutRows];
+      updated[index].class = e.target.value;
+      setDropoutRows(updated);
+    }}
+  >
+    {["6", "7", "8", "9", "10", "11", "12"].map((cls) => (
+      <MenuItem key={cls} value={cls}>
+        {cls}
+      </MenuItem>
+    ))}
+  </TextField>
+</Grid>
+<Grid item xs={12} sm={6} md={4}>
+  <TextField
+    select
+    label="Section"
+    fullWidth
+    size="small"
+    value={row.section}
+    onChange={(e) => {
+      const updated = [...dropoutRows];
+      updated[index].section = e.target.value;
+      setDropoutRows(updated);
+    }}
+  >
+    {["A", "B", "C"].map((sec) => (
+      <MenuItem key={sec} value={sec}>
+        {sec}
+      </MenuItem>
+    ))}
+  </TextField>
+</Grid>
                   <Grid item xs={12} md={3}>
                     <TextField
                       label="Student Name"
@@ -1276,29 +1438,24 @@ const EMRSForm = () => {
                 </Grid>
               ))}
 
-              <Grid container>
-                <Grid item xs={12}>
-                  <Box mt={2} mb={4}>
-                    <Button
-                      variant="outlined"
-                      onClick={() =>
-                        setDropoutRows([
-                          ...dropoutRows,
-                          {
-                            year: "",
-                            class: "",
-                            section: "",
-                            studentName: "",
-                            reason: "",
-                          },
-                        ])
-                      }
-                    >
-                      + Add Dropout
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
+              {/* Add Dropout Button in Next Line */}
+<Grid container>
+  <Grid item xs={12}>
+    <Box mt={1} mb={4}>
+      <Button
+        variant="outlined"
+        onClick={() =>
+          setDropoutRows([
+            ...dropoutRows,
+            { year: "", class: "", section: "", studentName: "", reason: "" }
+          ])
+        }
+      >
+        + Add Dropout
+      </Button>
+    </Box>
+  </Grid>
+</Grid>
 
               {/* ================= STUDENT MIGRATION ================= */}
               <Grid container spacing={2}>
@@ -1318,75 +1475,109 @@ const EMRSForm = () => {
                   </Typography>
                 </Grid>
 
+
                 {migrationRows.map((row, index) => (
-                  <Grid container spacing={2} key={index} mb={2}>
-                    <Grid item xs={12} md={2}>
-                      <TextField
-                        label="Year"
-                        fullWidth
-                        size="small"
-                        onChange={(e) => {
-                          const updated = [...migrationRows];
-                          updated[index].year = e.target.value;
-                          setMigrationRows(updated);
-                        }}
-                      />
-                    </Grid>
+  <Grid container spacing={2} key={index} mb={2}>
 
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        label="Student Name"
-                        fullWidth
-                        size="small"
-                        onChange={(e) => {
-                          const updated = [...migrationRows];
-                          updated[index].studentName = e.target.value;
-                          setMigrationRows(updated);
-                        }}
-                      />
-                    </Grid>
+    {/* Year */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Year"
+        fullWidth
+        size="small"
+        value={row.year}
+        onChange={(e) => {
+          const updated = [...migrationRows];
+          updated[index].year = e.target.value;
+          setMigrationRows(updated);
+        }}
+      />
+    </Grid>
 
-                    <Grid item xs={12} md={2}>
-                      <TextField
-                        label="From Class"
-                        fullWidth
-                        size="small"
-                        onChange={(e) => {
-                          const updated = [...migrationRows];
-                          updated[index].migratedfrom = e.target.value;
-                          setMigrationRows(updated);
-                        }}
-                      />
-                    </Grid>
+    {/* Student Name */}
+    <Grid item xs={12} md={3}>
+      <TextField
+        label="Student Name"
+        fullWidth
+        size="small"
+        value={row.studentName}
+        onChange={(e) => {
+          const updated = [...migrationRows];
+          updated[index].studentName = e.target.value;
+          setMigrationRows(updated);
+        }}
+      />
+    </Grid>
 
-                    <Grid item xs={12} md={3}>
-                      <TextField
-                        label="Transferred To"
-                        fullWidth
-                        size="small"
-                        onChange={(e) => {
-                          const updated = [...migrationRows];
-                          updated[index].transferredTo = e.target.value;
-                          setMigrationRows(updated);
-                        }}
-                      />
-                    </Grid>
+    {/* Class (Added after Student Name) */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        select
+        label="Class"
+        fullWidth
+        size="small"
+        value={row.class}
+        onChange={(e) => {
+          const updated = [...migrationRows];
+          updated[index].class = e.target.value;
+          setMigrationRows(updated);
+        }}
+      >
+        {["6","7","8","9","10","11","12"].map((cls) => (
+          <MenuItem key={cls} value={cls}>
+            {cls}
+          </MenuItem>
+        ))}
+      </TextField>
+    </Grid>
 
-                    <Grid item xs={12} md={2}>
-                      <TextField
-                        label="Reason"
-                        fullWidth
-                        size="small"
-                        onChange={(e) => {
-                          const updated = [...migrationRows];
-                          updated[index].reason = e.target.value;
-                          setMigrationRows(updated);
-                        }}
-                      />
-                    </Grid>
-                  </Grid>
-                ))}
+    {/* Migrated From */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Migrated From"
+        fullWidth
+        size="small"
+        value={row.migratedfrom}
+        onChange={(e) => {
+          const updated = [...migrationRows];
+          updated[index].migratedfrom = e.target.value;
+          setMigrationRows(updated);
+        }}
+      />
+    </Grid>
 
+    {/* Transferred To */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Transferred To"
+        fullWidth
+        size="small"
+        value={row.transferredTo}
+        onChange={(e) => {
+          const updated = [...migrationRows];
+          updated[index].transferredTo = e.target.value;
+          setMigrationRows(updated);
+        }}
+      />
+    </Grid>
+
+    {/* Reason */}
+    <Grid item xs={12} md={3}>
+      <TextField
+        label="Reason"
+        fullWidth
+        size="small"
+        value={row.reason}
+        onChange={(e) => {
+          const updated = [...migrationRows];
+          updated[index].reason = e.target.value;
+          setMigrationRows(updated);
+        }}
+      />
+    </Grid>
+
+  </Grid>
+))}
                 <Grid container>
                   <Grid item xs={12}>
                     <Box mt={2} mb={4}>
@@ -1395,13 +1586,7 @@ const EMRSForm = () => {
                         onClick={() =>
                           setMigrationRows([
                             ...migrationRows,
-                            {
-                              year: "",
-                              studentName: "",
-                              fromClass: "",
-                              transferredTo: "",
-                              reason: "",
-                            },
+                            { year: "", studentName: "", migratedfrom: "", transferredTo: "", reason: "" }
                           ])
                         }
                       >
@@ -1434,10 +1619,7 @@ const EMRSForm = () => {
               {achievementRows.map((row, index) => (
                 <Grid container spacing={2} key={index} mb={2}>
                   <Grid item xs={12} md={3}>
-                    <TextField
-                      label="Student Name"
-                      fullWidth
-                      size="small"
+                    <TextField label="Student Name" fullWidth size="small"
                       onChange={(e) => {
                         const updated = [...achievementRows];
                         updated[index].studentName = e.target.value;
@@ -1447,10 +1629,7 @@ const EMRSForm = () => {
                   </Grid>
 
                   <Grid item xs={12} md={2}>
-                    <TextField
-                      label="Class"
-                      fullWidth
-                      size="small"
+                    <TextField label="Class" fullWidth size="small"
                       onChange={(e) => {
                         const updated = [...achievementRows];
                         updated[index].class = e.target.value;
@@ -1460,10 +1639,7 @@ const EMRSForm = () => {
                   </Grid>
 
                   <Grid item xs={12} md={3}>
-                    <TextField
-                      label="Event Name"
-                      fullWidth
-                      size="small"
+                    <TextField label="Event Name" fullWidth size="small"
                       onChange={(e) => {
                         const updated = [...achievementRows];
                         updated[index].eventName = e.target.value;
@@ -1472,24 +1648,28 @@ const EMRSForm = () => {
                     />
                   </Grid>
 
+                 <Grid item xs={12} sm={6} md={3}>
+  <TextField
+    select
+    label="Level / Exam"
+    fullWidth
+    size="small"
+    value={row.level}
+    onChange={(e) => {
+      const updated = [...achievementRows];
+      updated[index].level = e.target.value;
+      setAchievementRows(updated);
+    }}
+  >
+    {achievementLevels.map((level) => (
+      <MenuItem key={level} value={level}>
+        {level}
+      </MenuItem>
+    ))}
+  </TextField>
+</Grid>
                   <Grid item xs={12} md={2}>
-                    <TextField
-                      label="Level"
-                      fullWidth
-                      size="small"
-                      onChange={(e) => {
-                        const updated = [...achievementRows];
-                        updated[index].level = e.target.value;
-                        setAchievementRows(updated);
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      label="Recognition"
-                      fullWidth
-                      size="small"
+                    <TextField label="Recognition" fullWidth size="small"
                       onChange={(e) => {
                         const updated = [...achievementRows];
                         updated[index].recognition = e.target.value;
@@ -1506,13 +1686,7 @@ const EMRSForm = () => {
                 onClick={() =>
                   setAchievementRows([
                     ...achievementRows,
-                    {
-                      studentName: "",
-                      class: "",
-                      eventName: "",
-                      level: "",
-                      recognition: "",
-                    },
+                    { studentName: "", class: "", eventName: "", level: "", recognition: "" }
                   ])
                 }
               >
@@ -1522,201 +1696,293 @@ const EMRSForm = () => {
 
             {/* ================= TEACHING STAFF DETAILS SECTION ================= */}
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Teaching Staff Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={4}>
-              {teachingStaffSummaryFields.map((field) => (
-                <Grid item xs={12} sm={3} key={field.name}>
-                  {field.type === "select" ? (
-                    <TextField
-                      select
-                      fullWidth
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      label={field.label}
-                      {...register(field.name)}
-                    >
-                      <MenuItem value="">Select</MenuItem>
-                      {field.options.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    <TextField
-                      fullWidth
-                      type={field.type}
-                      size="small"
-                      label={field.label}
-                      {...register(field.name)}
-                      InputProps={{ readOnly: field.readOnly }}
-                    />
-                  )}
-                </Grid>
-              ))}
-            </Grid>
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Teaching Staff Details
+    </Typography>
+  </Grid>
+</Grid>
 
-            {/* Add Post Button */}
-            <Grid container>
-              <Grid item xs={12}>
-                <Box mt={1} mb={4}>
-                  <Button
-                    variant="outlined"
-                    sx={{ mb: 4 }}
-                    onClick={() =>
-                      setteachingRows([
-                        ...teachingRows,
-                        {
-                          post: "",
-                          total: "",
-                          filled: "",
-                          vacant: "",
-                          staffName: "",
-                          dob: "",
-                          doj: "",
-                          email: "",
-                          contactNumber: "",
-                        },
-                      ])
-                    }
-                  >
-                    + Add Post
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
+{/* Teaching Staff Fields */}
+{teachingRows.map((row, index) => (
+  <Grid container spacing={2} mb={2} key={index}>
+
+    {/* ===== FIRST ROW (STAFF DETAILS) ===== */}
+    {teachingStaffSummaryFields
+      .filter(
+        (field) =>
+          field.name !== "total" &&
+          field.name !== "filled" &&
+          field.name !== "vacant"
+      )
+      .map((field) => (
+        <Grid item xs={12} sm={3} key={field.name}>
+          {field.type === "select" ? (
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label={field.label}
+              value={row[field.name]}
+              onChange={(e) => {
+                const updatedRows = [...teachingRows];
+                updatedRows[index][field.name] = e.target.value;
+                setteachingRows(updatedRows);
+              }}
+            >
+              <MenuItem value="">Select</MenuItem>
+              {field.options.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : (
+            <TextField
+              fullWidth
+              size="small"
+              type={field.type}
+              label={field.label}
+              value={row[field.name]}
+              InputProps={{ readOnly: field.readOnly }}
+              onChange={(e) => {
+                const updatedRows = [...teachingRows];
+                updatedRows[index][field.name] = e.target.value;
+                setteachingRows(updatedRows);
+              }}
+            />
+          )}
+        </Grid>
+      ))}
+
+    {/* ===== SECOND ROW (TOTAL / FILLED / VACANT) ===== */}
+    <Grid container spacing={2} mt={1}>
+      {teachingStaffSummaryFields
+        .filter(
+          (field) =>
+            field.name === "total" ||
+            field.name === "filled" ||
+            field.name === "vacant"
+        )
+        .map((field) => (
+          <Grid item xs={12} sm={4} key={field.name}>
+            <TextField
+              fullWidth
+              size="small"
+              type={field.type}
+              label={field.label}
+              value={row[field.name]}
+              InputProps={{ readOnly: field.readOnly }}
+              onChange={(e) => {
+                const updatedRows = [...teachingRows];
+                updatedRows[index][field.name] = e.target.value;
+                setteachingRows(updatedRows);
+              }}
+            />
+          </Grid>
+        ))}
+    </Grid>
+
+  </Grid>
+))}
+{/* Add Post Button */}
+<Grid container>
+  <Grid item xs={12}>
+    <Box mt={1} mb={4}>
+      <Button
+        variant="outlined"
+        sx={{ mb: 4 }}
+                onClick={() =>
+                  setteachingRows([
+                    ...teachingRows,
+                    { post: "",
+  name: "",
+  dob: "",
+  doj: "",
+  email: "",
+  contact: "",
+  total: "",
+  filled: "",
+  vacant: ""
+}                ])
+                }
+              >
+        + Add Post
+      </Button>
+    </Box>
+  </Grid>
+</Grid>
             {/* =================NON TEACHING STAFF DETAILS SECTION ================= */}
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Non-Teaching Staff Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={4}>
-              {nonTeachingStaffDetailFields.map((field) => (
-                <Grid item xs={12} sm={3} key={field.name}>
-                  {field.type === "select" ? (
-                    <TextField
-                      select
-                      fullWidth
-                      size="small"
-                      sx={{ minWidth: 220 }}
-                      label={field.label}
-                      {...register(field.name)}
-                    >
-                      <MenuItem value="">Select</MenuItem>
-                      {field.options.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type={field.type}
-                      label={field.label}
-                      {...register(field.name)}
-                      InputProps={{ readOnly: field.readOnly }}
-                    />
-                  )}
-                </Grid>
-              ))}
-            </Grid>
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Non-Teaching Staff Details
+    </Typography>
+  </Grid>
+</Grid>
 
-            {/* Add Post Button */}
-            <Grid container>
-              <Grid item xs={12}>
-                <Box mt={1} mb={4}>
-                  <Button
-                    variant="outlined"
-                    sx={{ mb: 4 }}
-                    onClick={() =>
-                      setnonTeachingRows([
-                        ...nonTeachingRows,
-                        {
-                          post: "",
-                          name: "",
-                          dob: "",
-                          doj: "",
-                          email: "",
-                          contact: "",
-                        },
-                      ])
-                    }
-                  >
-                    + Add Post
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
-            {/* =================OPERATIONAL COST DETAILS SECTION ================= */}
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Operational Cost Details
-                </Typography>
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={4}>
-              {operationalCostFields.map((fieldItem) => (
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        error={!!error}
-                        helperText={error ? error.message : ""}
-                      />
-                    )}
-                  />
-                </Grid>
+{/* Non Teaching Staff Fields */}
+{nonTeachingRows.map((row, index) => (
+  <Grid container spacing={2} mb={2} key={index}>
+
+    {/* ===== FIRST ROW (DETAILS) ===== */}
+    {nonTeachingStaffDetailFields
+      .filter(
+        (field) =>
+          field.name !== "total" &&
+          field.name !== "filled" &&
+          field.name !== "vacant"
+      )
+      .map((field) => (
+        <Grid item xs={12} sm={3} key={field.name}>
+          <TextField
+            fullWidth
+            size="small"
+            type={field.type}
+            label={field.label}
+            value={row[field.name]}
+            onChange={(e) => {
+              const updatedRows = [...nonTeachingRows];
+              updatedRows[index][field.name] = e.target.value;
+              setnonTeachingRows(updatedRows);
+            }}
+          />
+        </Grid>
+      ))}
+
+    {/* ===== SECOND ROW (TOTAL / FILLED / VACANT) ===== */}
+    <Grid container spacing={2} mt={1}>
+      {nonTeachingStaffDetailFields
+        .filter(
+          (field) =>
+            field.name === "total" ||
+            field.name === "filled" ||
+            field.name === "vacant"
+        )
+        .map((field) => (
+          <Grid item xs={12} sm={4} key={field.name}>
+            <TextField
+              fullWidth
+              size="small"
+              type={field.type}
+              label={field.label}
+              value={row[field.name]}
+              InputProps={{ readOnly: field.readOnly }}
+              onChange={(e) => {
+                const updatedRows = [...nonTeachingRows];
+                updatedRows[index][field.name] = e.target.value;
+                setnonTeachingRows(updatedRows);
+              }}
+            />
+          </Grid>
+        ))}
+    </Grid>
+
+  </Grid>
+))}
+{/* Add Post Button */}
+<Grid container>
+  <Grid item xs={12}>
+    <Box mt={1} mb={4}>
+      <Button
+        variant="outlined"
+         sx={{ mb: 4 }}
+                onClick={() =>
+                  setnonTeachingRows([
+                    ...nonTeachingRows,
+                    {
+  post: "",
+  name: "",
+  dob: "",
+  doj: "",
+  email: "",
+  contact: "",
+  total: "",
+  filled: "",
+  vacant: ""
+}
+                  ])
+                }
+              >
+        + Add Post
+      </Button>
+    </Box>
+  </Grid>
+</Grid>
+           
+            {/* ================= OPERATIONAL COST DETAILS ================= */}
+<Grid container spacing={2}>
+  <Grid item xs={12}>
+    <Typography
+      variant="h6"
+      sx={{
+        background: "linear-gradient(to right, #1976d2, #42a5f5)",
+        color: "#fff",
+        padding: "8px 16px",
+        borderRadius: 2,
+        fontWeight: 600,
+        mb: 2,
+      }}
+    >
+      Operational Cost Details
+    </Typography>
+  </Grid>
+</Grid>
+
+<Grid container spacing={2} mb={4}>
+  {operationalCostFields.map((fieldItem) => (
+    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+      <Controller
+        name={fieldItem.name}
+        control={control}
+        defaultValue=""
+        rules={{ required: `${fieldItem.label} is required` }}
+        render={({ field, fieldState: { error } }) => (
+          <TextField
+            {...field}
+            label={fieldItem.label}
+            type={fieldItem.type || "text"}
+            select={!!fieldItem.options}
+            fullWidth
+            size="small"
+            error={!!error}
+            helperText={error ? error.message : ""}
+            InputProps={{
+              readOnly: fieldItem.readOnly || false,
+            }}
+          >
+            {fieldItem.options &&
+              fieldItem.options.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
               ))}
-            </Grid>
+          </TextField>
+        )}
+      />
+    </Grid>
+  ))}
+</Grid>
 
             {/* ================= IMAGE UPLOAD SECTION ================= */}
             <Grid container spacing={2}>
@@ -1747,6 +2013,7 @@ const EMRSForm = () => {
               </Button>
             </Grid>
 
+
             {/* Preview */}
             {watch("emrsImage") && (
               <Grid item xs={12} md={4}>
@@ -1757,7 +2024,7 @@ const EMRSForm = () => {
                     width: "100%",
                     height: "150px",
                     objectFit: "cover",
-                    borderRadius: "10px",
+                    borderRadius: "10px"
                   }}
                 />
               </Grid>
@@ -1780,9 +2047,12 @@ const EMRSForm = () => {
                 </Button>
               </Box>
             </Grid>
+
+
           </form>
         </CardContent>
       </Card>
+
 
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
         <DialogTitle>Select Image Option</DialogTitle>
