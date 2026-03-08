@@ -18,10 +18,7 @@ import {
   Paper
 } from '@mui/material';
 
-import GoogleIcon from '@mui/icons-material/Google';
-import FacebookIcon from '@mui/icons-material/Facebook';
-
-export default function SignInPage() {
+export default function AdminSignInPage() {
 
   const navigate = useNavigate();
 
@@ -91,7 +88,7 @@ export default function SignInPage() {
         >
 
           <Typography variant="h5" fontWeight={600} gutterBottom>
-            Sign in
+            Admin Sign in
           </Typography>
 
           <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
@@ -163,45 +160,6 @@ export default function SignInPage() {
                 Forgot your password?
               </Link>
             </Box>
-
-            <Divider sx={{ mb: 2, color: '#9aa4bf' }}>or</Divider>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              sx={{ mb: 1, color: '#fff', borderColor: '#2a3553' }}
-            >
-              Sign in with Google
-            </Button>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<FacebookIcon />}
-              sx={{ color: '#fff', borderColor: '#2a3553' }}
-            >
-              Sign in with Facebook
-            </Button>
-
-            <Box textAlign="center" mt={3}>
-              <Typography variant="body2" color="#9aa4bf">
-                Don’t have an account?{' '}
-                <Link component={RouterLink} to="/signup" underline="hover" color="#4ea8ff">
-                  Sign up
-                </Link>
-              </Typography>
-            </Box>
-
-            <Box textAlign="center" mt={3}>
-              <Typography variant="body2" color="#9aa4bf">
-                Login as Admin{' '}
-                <Link component={RouterLink} to="/admin/signin" underline="hover" color="#4ea8ff">
-                  Click here
-                </Link>
-              </Typography>
-            </Box>
-
           </Box>
 
         </Paper>

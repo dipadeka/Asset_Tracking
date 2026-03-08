@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import SignInPage from "./pages/auth/login/login";
 import SignUpPage from "./pages/auth/signup";
 import ForgotPasswordPage from "./pages/auth/forgotPassword";
 
+import AdminSignInPage from "./pages/auth/admin/login";
 import DashboardLayout from "./pages/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
@@ -12,15 +15,16 @@ import EMRSForm from "./pages/EMRSForm";
 function App() {
   return (
     <>
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* <Login /> */}
 
       {/* Routing syntax  */}
       <BrowserRouter>
         <Routes>
-
           {/* AUTH PAGES */}
           <Route path="/" element={<SignInPage />} />
           <Route path="/signin" element={<SignInPage />} />
+          <Route path="/admin/signin" element={<AdminSignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
