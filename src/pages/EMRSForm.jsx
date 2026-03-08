@@ -27,87 +27,104 @@ const EMRSForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reservationRows, setReservationRows] = useState([
-  {
-    name: "",
-    class: "",
-    section: "",
-    category: ""
-  }
-]);
+    {
+      name: "",
+      class: "",
+      section: "",
+      category: ""
+    }
+  ]);
   const { control, handleSubmit, setValue, watch, register } = useForm({});
   // ================= DROPOUT / MIGRATION / ACHIEVEMENT STATES =================
-  const [dropoutRows, setDropoutRows] = useState([
-    { year: "", class: "",section: "", studentName: "", reason: "" }
-  ]);
-
-  const [migrationRows, setMigrationRows] = useState([
-    { year: "", studentName: "",class: "", migratedfrom: "", transferredTo: "", reason: "" }
-  ]);
- 
-   const [academicRows, setAcademicRows] = useState([
-  {
-    year: "",
-    boardClass: "",
-    appeared: "",
-    passed: "",
-    passPercent: "",
-    above75: "",
-    below50: ""
-  }
-]);
-
-  const [achievementRows, setAchievementRows] = useState([
-    { studentName: "", class: "", eventName: "", level: "", recognition: "" }
-
-  ]);
-
-const [teachingRows, setteachingRows] = useState([
-  {
-    post: "",
-     staffName: "",
-    dob: "",
-    doj: "",
-    email: "",
-    contactNumber: "",
-    total: "",
-    filled: "",
-    vacant: ""
-   
-  }
-]);
-  const [nonTeachingRows, setnonTeachingRows] = useState([
-  { post: "", name: "", dob: "", doj: "", email: "", contact: "" }
-]);
-
-const handleAcademicChange = (index, field, value) => {
-  const updatedRows = [...academicRows];
-
-  updatedRows[index][field] = value;
-
-  const appeared = Number(updatedRows[index].appeared || 0);
-  const passed = Number(updatedRows[index].passed || 0);
-
-  updatedRows[index].passPercent =
-    appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
-
-  setAcademicRows(updatedRows);
-};   // ✅ CLOSE FUNCTION
-
-
-const handleAddAcademicRows = () => {
-  setAcademicRows([
-    ...academicRows,
+  const [enrollmentRows, setEnrollmentRows] = useState([
     {
-      year: "",
+      academicYear: "",
+      class: "",
+      section: "",
+      sanctionedCapacity: "",
+      currentEnrollment: "",
+      category: "",
+      // Academic Performance
       boardClass: "",
       appeared: "",
       passed: "",
       passPercent: "",
       above75: "",
-      below50: ""
+      below50: "",
+      stream: "",
+      distinctions: "",
+      topScorer: "",
+      topScore: "",
+      // Dropouts
+      dropouts: [{ rollNo: "", studentName: "", reason: "", guardianContactNo: "" }],
+      // Migrations
+      migrations: [{ studentName: "", migratedFrom: "", transferredTo: "", reason: "" }],
+      // Achievements
+      achievements: [{ studentName: "", eventName: "", level: "", recognition: "" }]
     }
   ]);
-};const handleAddNonTeachingSummary = () => {
+
+  const [extraCurricularRows, setExtraCurricularRows] = useState([
+    {
+      academicYear: "",
+      initiativeName: "",
+      collaboratingPartner: "",
+      areasOfDevelopment: [],
+      description: "",
+      targetStudents: "",
+      status: ""
+    }
+  ]);
+
+  const [hospitalizationRows, setHospitalizationRows] = useState([
+    {
+      studentName: "",
+      rollNo: "",
+      class: "",
+      section: "",
+      admissionDate: "",
+      dischargeDate: "",
+      reasonForHospitalization: "",
+      hospitalEmpanelled: "",
+      empanellementValidity: "",
+      treatmentDetails: "",
+      doctorName: "",
+      estimatedCost: "",
+      amountClaimed: "",
+      claimStatus: "",
+      guardianName: "",
+      guardianContact: ""
+    }
+  ]);
+
+
+  const [teachingRows, setteachingRows] = useState([
+    {
+      post: "",
+      staffName: "",
+      dob: "",
+      doj: "",
+      email: "",
+      contactNumber: "",
+      total: "",
+      filled: "",
+      vacant: "",
+      academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+      professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+      tetQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
+    }
+  ]);
+  const [nonTeachingRows, setnonTeachingRows] = useState([
+    {
+      post: "", name: "", dob: "", doj: "", email: "", contact: "",
+      total: "", filled: "", vacant: "",
+      academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+      professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+      tetQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
+    }
+  ]);
+
+  const handleAddNonTeachingSummary = () => {
     setNonTeachingSummaryRows([
       ...nonTeachingSummaryRows,
       { post: "", total: "", filled: "", vacant: "" }
@@ -119,106 +136,100 @@ const handleAddAcademicRows = () => {
     EMRSid: data.EMRSid?.trim(),
     udaisecode: Number(data.udaisecode),
     schoolname: data.schoolname?.trim(),
-  schooltype: data.schooltype?.trim(),        // dropdown value
-  affiliation: data.affiliation?.trim(),      // dropdown value
-  principalName: data.principalName?.trim(),
-  contactno: data.contactno?.trim(),
-  email: data.email?.trim()
-});
-    
+    schooltype: data.schooltype?.trim(),        // dropdown value
+    affiliation: data.affiliation?.trim(),      // dropdown value
+    principalName: data.principalName?.trim(),
+    contactno: data.contactno?.trim(),
+    email: data.email?.trim()
+  });
+
 
   const prepareLocationDetails = (data) => ({
-  state: data.state,
-  district: data.district,
-  block: data.block,
-  grampanchayat: data.grampanchayat,
-  village: data.village
-});
-const prepareInfrastructureDetails = (data) => ({
-  totalClassrooms: Number(data.totalClassrooms || 0),
+    state: data.state,
+    district: data.district,
+    block: data.block,
+    grampanchayat: data.grampanchayat,
+    village: data.village
+  });
+  const prepareInfrastructureDetails = (data) => ({
+    totalClassrooms: Number(data.totalClassrooms || 0),
 
-  classroomWithSmartClass: Number(data.classroomWithSmartClass || 0),
-  classroomWithProjector: Number(data.classroomWithProjector || 0),
+    classroomWithSmartClass: Number(data.classroomWithSmartClass || 0),
+    classroomWithProjector: Number(data.classroomWithProjector || 0),
 
-  scienceLab: data.scienceLab || "",
-  computerLab: data.computerLab || "",
+    scienceLab: data.scienceLab || "",
+    computerLab: data.computerLab || "",
 
-  library: data.library || "",
-  booksInLibrary: Number(data.booksInLibrary || 0),
+    library: data.library || "",
+    booksInLibrary: Number(data.booksInLibrary || 0),
 
-  playground: data.playground || ""
-});
-const prepareHostelAdministration = (data) => ({
-  boysHostelCapacity: Number(data.boysHostelCapacity || 0),
-
-  girlsHostelCapacity: Number(data.girlsHostelCapacity || 0),
-
-  bedsAvailable: Number(data.bedsAvailable || 0),
-
-  currentOccupancy: Number(data.currentOccupancy || 0),
-
-  cctvInstalled: data.cctvInstalled || "",
-
-  noOfCCTV: Number(data.noOfCCTV || 0),
-
-  securityAgency: data.securityAgency || "",
-
-  girlsWarden: {
-    name: data.girlsWardenName?.trim() || "",
-    email: data.girlsWardenEmail?.trim() || "",
-    contact: data.girlsWardenContact || ""
-  },
-
-  boysWarden: {
-    name: data.boysWardenName?.trim() || "",
-    email: data.boysWardenEmail?.trim() || "",
-    contact: data.boysWardenContact || ""
-  },
-
-  otherAmenities: data.otherAmenities?.trim() || ""
-
-});
+    playground: data.playground || "",
+    auditorium: data.auditorium || "",
+    medicalroom: data.medicalroom || ""
+  });
+  const prepareHostelAdministration = (data) => ({
+    boysHostel: {
+      capacity: Number(data.boysHostelCapacity || 0),
+      bedsAvailable: Number(data.boysBedsAvailable || 0),
+      currentOccupancy: Number(data.boysCurrentOccupancy || 0),
+      cctvInstalled: data.boysCCTVInstalled,
+      noOfCCTV: Number(data.boysNoOfCCTV || 0),
+      securityAgency: data.boysSecurityAgency,
+      warden: {
+        name: data.boysWardenName,
+        email: data.boysWardenEmail,
+        contact: data.boysWardenContact
+      }
+    },
+    girlsHostel: {
+      capacity: Number(data.girlsHostelCapacity || 0),
+      bedsAvailable: Number(data.girlsBedsAvailable || 0),
+      currentOccupancy: Number(data.girlsCurrentOccupancy || 0),
+      cctvInstalled: data.girlsCCTVInstalled,
+      noOfCCTV: Number(data.girlsNoOfCCTV || 0),
+      securityAgency: data.girlsSecurityAgency,
+      warden: {
+        name: data.girlsWardenName,
+        email: data.girlsWardenEmail,
+        contact: data.girlsWardenContact
+      }
+    }
+  });
   const prepareClassStrength = (rows) => {
-  return rows.map((row) => {
+    return rows.map((row) => {
 
-    const sanctionedCapacity = Number(row.sanctionedCapacity || 0);
-    const currentEnrollment = Number(row.currentEnrollment || 0);
+      const sanctionedCapacity = Number(row.sanctionedCapacity || 0);
+      const currentEnrollment = Number(row.currentEnrollment || 0);
 
-    return {
-      academicYear: row.academicYear,
-      class: row.class,
-      section: row.section,
-      sanctionedCapacity,
-      currentEnrollment
+      return {
+        academicYear: row.academicYear,
+        class: row.class,
+        section: row.section,
+        sanctionedCapacity,
+        currentEnrollment,
+        category: row.category
 
-    };
-  });
-};
-  const prepareReservationDetails = (rows) => {
-  return rows.map((row) => ({
-    name: row.name,
-    class: row.class,
-    section: row.section,
-    category: row.category
-  }));
-};
+      };
+    });
+  };
+
   const prepareAcademicResults = (results) => {
-  return results.map((item) => {
-    const appeared = Number(item.appeared || 0);
-    const passed = Number(item.passed || 0);
+    return results.map((item) => {
+      const appeared = Number(item.appeared || 0);
+      const passed = Number(item.passed || 0);
 
-    return {
-      year: item.year,
-      boardClass: item.boardClass,
-      appeared,
-      passed,
-      passPercent:
-        appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : 0,
-      above75: Number(item.above75 || 0),
-      below50: Number(item.below50 || 0)
-    };
-  });
-};
+      return {
+        year: item.year,
+        boardClass: item.boardClass,
+        appeared,
+        passed,
+        passPercent:
+          appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : 0,
+        above75: Number(item.above75 || 0),
+        below50: Number(item.below50 || 0)
+      };
+    });
+  };
   const prepareDropouts = (dropouts) => {
     return dropouts.map((item) => ({
       year: item.year,
@@ -237,7 +248,7 @@ const prepareHostelAdministration = (data) => ({
       reason: item.reason
     }));
   };
-  
+
   const prepareAchievements = (achievements) => {
     return achievements.map((item) => ({
       studentName: item.studentName?.trim(),
@@ -247,6 +258,38 @@ const prepareHostelAdministration = (data) => ({
       recognition: item.recognition
     }));
   };
+  const prepareExtraCurricular = (rows) => {
+    return rows.map((item) => ({
+      academicYear: item.academicYear,
+      initiativeName: item.initiativeName?.trim(),
+      collaboratingPartner: item.collaboratingPartner?.trim(),
+      areasOfDevelopment: item.areasOfDevelopment,
+      description: item.description?.trim(),
+      targetStudents: item.targetStudents?.trim(),
+      status: item.status
+    }));
+  };
+  const prepareHospitalization = (rows) => {
+    return rows.map((item) => ({
+      studentName: item.studentName?.trim(),
+      rollNo: item.rollNo,
+      class: item.class,
+      section: item.section,
+      admissionDate: item.admissionDate,
+      dischargeDate: item.dischargeDate,
+      reasonForHospitalization: item.reasonForHospitalization?.trim(),
+      hospitalEmpanelled: item.hospitalEmpanelled?.trim(),
+      empanellementValidity: item.empanellementValidity,
+      treatmentDetails: item.treatmentDetails?.trim(),
+      doctorName: item.doctorName?.trim(),
+      estimatedCost: Number(item.estimatedCost || 0),
+      amountClaimed: Number(item.amountClaimed || 0),
+      claimStatus: item.claimStatus,
+      guardianName: item.guardianName?.trim(),
+      guardianContact: item.guardianContact
+    }));
+  };
+
   const prepareTeachingStaffSummary = (summary) => {
     return summary.map((item) => {
       const total = Number(item.total || 0);
@@ -302,6 +345,7 @@ const prepareHostelAdministration = (data) => ({
     const internet = Number(cost.internet || 0);
     const maintenance = Number(cost.maintenance || 0);
     const mess = Number(cost.mess || 0);
+    const amount = Number(cost.amount || 0)
 
     return {
       electricity,
@@ -309,8 +353,7 @@ const prepareHostelAdministration = (data) => ({
       internet,
       maintenance,
       mess,
-      totalMonthlyCost:
-        electricity + water + internet + maintenance + mess
+      totalMonthlyCost
     };
   };
   const preparePayload = (data) => {
@@ -319,22 +362,36 @@ const prepareHostelAdministration = (data) => ({
       locationDetais: prepareLocationDetails(data),
       InfrastructureDetails: prepareInfrastructureDetails(data),
       HostelAdministration: prepareHostelAdministration(data),
-      EnrollmentSummary: prepareEnrollmentSummary(data),
-      ClassStrength: prepareClassStrength(data),
-      ReservationDetails: prepareReservationDetails(reservationRows),
-      AcademicResults: prepareAcademicResults(academicRows),
-      Dropouts: prepareDropouts(dropoutRows),
-      Migrations: prepareMigrations(migrationRows),
-      Achievements: prepareAchievements(achievementRows),
+      ClassStrength: enrollmentRows.map((row) => ({
+        academicYear: row.academicYear,
+        class: row.class,
+        section: row.section,
+        sanctionedCapacity: Number(row.sanctionedCapacity || 0),
+        currentEnrollment: Number(row.currentEnrollment || 0),
+        category: row.category,
+        academicPerformance: {
+          boardClass: row.boardClass,
+          appeared: Number(row.appeared || 0),
+          passed: Number(row.passed || 0),
+          passPercent: row.passPercent,
+          above75: Number(row.above75 || 0),
+          below50: Number(row.below50 || 0)
+        },
+        dropouts: row.dropouts,
+        migrations: row.migrations,
+        achievements: row.achievements
+      })),
+      ExtraCurricular: prepareExtraCurricular(extraCurricularRows),
       teachingStaff: {
-        Summary: prepareTeachingStaffSummary(data.teachingSummary),
-        Details: prepareTeachingStaffDetails(data.teachingDetails)
+        Summary: prepareTeachingStaffSummary(teachingRows),
+        Details: prepareTeachingStaffDetails(teachingRows)
       },
+      Hospitalization: prepareHospitalization(hospitalizationRows),
       nonTeachingStaff: {
-        Summary: prepareNonTeachingSummary(data.nonTeachingSummary),
-        Details: prepareNonTeachingDetails(data.nonTeachingDetails)
+        Summary: prepareNonTeachingSummary(nonTeachingRows),
+        Details: prepareNonTeachingDetails(nonTeachingRows)
       },
-      OperationalCost: prepareOperationalCost(data.operationalCost)
+      OperationalCost: prepareOperationalCost(data)
     };
   };
 
@@ -399,31 +456,31 @@ const prepareHostelAdministration = (data) => ({
 
 
 
-
-
   // ================= EMRS BASIC DETAILS =================
   const emrsBasicFields = [
     { name: "EMRScode", label: "EMRS Code" },
     { name: "EMRSid", label: "EMRS ID" },
     { name: "udaisecode", label: "UDISE Code" },
     { name: "schoolname", label: "School Name" },
-    { name: "schooltype", label: "School Type",  type: "select",
-    options: [
+    {
+      name: "schooltype", label: "School Type", type: "select",
+      options: [
         "Girls",
         "Boys",
         "Co-Ed",
       ],
     },
-    { name: "Affiliation", label: "Affiliation",  type: "select",
+    {
+      name: "Affiliation", label: "Affiliation", type: "select",
       options: [
         "SEBA",
         "CBSE",
         "ICSC",
       ],
     },
-    { name: "NameofthePrincipal", label: "Principal Name"},
-    { name: "contactno", label: "Contact Number", type: "number"},
-    { name: "emailid", label: "Email-id"},
+    { name: "NameofthePrincipal", label: "Principal Name" },
+    { name: "contactno", label: "Contact Number", type: "number" },
+    { name: "emailid", label: "Email-id" },
 
   ];
   // ================= EMRS LOCATION =================
@@ -434,157 +491,208 @@ const prepareHostelAdministration = (data) => ({
     { name: "village", label: "Village" },
   ];
   //=================INFRASTRUCTURE DETAILS ==============//
-  const emrsInfrastructureFields=[
-    { name: " TotalClassrooms", label: "Total Classrooms"},
-    { name: "ClassroomwithSmartclass", label: "Classroom with Smart Class"},
-    { name: "classroomwithprojector", label: "Classroom with Projector"},
-     {name: "ScienceLab", label: "Science Lab",
-      options: [
-        "Yes",
-        "No",
-      ],
-    }, 
-    {name: "ComputerLab", label: "Computer Lab",
-      options: [
-        "Yes",
-        "No",
-      ],
-    }, 
-{name: "Library", label: "Library",
-      options: [
-        "Yes",
-        "No",
-      ],
-    }, 
+  const emrsInfrastructureFields = [
+    { name: " TotalClassrooms", label: "Total Classrooms" },
+    { name: "ClassroomwithSmartclass", label: "Classroom with Smart Class" },
+    { name: "classroomwithprojector", label: "Classroom with Projector" },
     {
-    name: "booksInLibrary",
-    label: "No of Books in Library",
-    type: "number"
-  },
-    {name: "Playground", label: "Playground",
+      name: "ScienceLab", label: "Science Lab",
       options: [
         "Yes",
         "No",
       ],
-    }, 
+    },
+    {
+      name: "ComputerLab", label: "Computer Lab",
+      options: [
+        "Yes",
+        "No",
+      ],
+    },
+    {
+      name: "Library", label: "Library",
+      options: [
+        "Yes",
+        "No",
+      ],
+    },
+    {
+      name: "booksInLibrary",
+      label: "No of Books in Library",
+      type: "number"
+    },
+    {
+      name: "Playground", label: "Playground",
+      options: [
+        "Yes",
+        "No",
+      ],
+    },
+    {
+      name: "auditorium", label: "Auditorium",
+      options: [
+        "Yes",
+        "No",
+      ],
+    },
+    {
+      name: "medicalroom", label: "Medical Room",
+      options: [
+        "Yes",
+        "No",
+      ],
+    },
   ];
-   // ================= HOSTEL ADMINISTRATION DETAILS =================
-  const emrsHostelFields = [
+  // ================= HOSTEL ADMINISTRATION DETAILS =================
+  // ================= BOYS HOSTEL =================
 
-  { name: "boysHostelCapacity", label: "Boys Hostel Capacity", type: "number" },
-  { name: "girlsHostelCapacity", label: "Girls Hostel Capacity", type: "number" },
+  const boysHostelFields = [
 
-  { name: "bedsAvailable", label: "No of Beds Available", type: "number" },
+    { name: "boysHostelCapacity", label: "Boys Hostel Capacity", type: "number" },
 
-  { name: "currentOccupancy", label: "Current Occupancy", type: "number" },
+    { name: "boysBedsAvailable", label: "Beds Available", type: "number" },
 
-  {
-    name: "cctvInstalled",
-    label: "CCTV Installed",
-    options: ["Yes", "No"],
-  },
+    { name: "boysCurrentOccupancy", label: "Current Occupancy", type: "number" },
 
-  { name: "noOfCCTV", label: "No of CCTV Installed", type: "number" },
+    {
+      name: "boysCCTVInstalled",
+      label: "CCTV Installed",
+      options: ["Yes", "No"]
+    },
 
-  {
-    name: "securityAgency",
-    label: "Security Agency Available",
-    options: ["Yes", "No"],
-  },
+    { name: "boysNoOfCCTV", label: "No of CCTV Installed", type: "number" },
 
-  { name: "girlsWardenName", label: "Girls Hostel Warden Name" },
-  { name: "girlsWardenEmail", label: "Girls Hostel Warden Email" },
-  { name: "girlsWardenContact", label: "Girls Hostel Warden Contact No", type: "number" },
+    {
+      name: "boysSecurityAgency",
+      label: "Security Agency Available",
+      options: ["Yes", "No"]
+    },
 
-  { name: "boysWardenName", label: "Boys Hostel Warden Name" },
-  { name: "boysWardenEmail", label: "Boys Hostel Warden Email" },
-  { name: "boysWardenContact", label: "Boys Hostel Warden Contact No", type: "number" },
+    { name: "boysWardenName", label: "Boys Warden Name" },
 
-  {
-  name: "otherAmenities",
-  label: "Other Amenities to be Made Available",
-  multiline: true,
-  rows: 3
+    { name: "boysWardenEmail", label: "Boys Warden Email" },
+
+   { name: "boysWardenContact", label: "Boys Warden Contact", type: "number" },
+
+{
+  name: "boysWaterStorage",
+  label: "Water Storage Capacity Available",
+  options: ["Yes", "No"]
+},
+
+{
+  name: "boysBackupPower",
+  label: "Backup Power Available",
+  options: ["Yes", "No"]
 }
 
-]; 
 
+  ];
+
+
+  // ================= GIRLS HOSTEL =================
+
+  const girlsHostelFields = [
+
+    { name: "girlsHostelCapacity", label: "Girls Hostel Capacity", type: "number" },
+
+    { name: "girlsBedsAvailable", label: "Beds Available", type: "number" },
+
+    { name: "girlsCurrentOccupancy", label: "Current Occupancy", type: "number" },
+
+    {
+      name: "girlsCCTVInstalled",
+      label: "CCTV Installed",
+      options: ["Yes", "No"]
+    },
+
+    { name: "girlsNoOfCCTV", label: "No of CCTV Installed", type: "number" },
+
+    {
+      name: "girlsSecurityAgency",
+      label: "Security Agency Available",
+      options: ["Yes", "No"]
+    },
+
+    { name: "girlsWardenName", label: "Girls Warden Name" },
+
+    { name: "girlsWardenEmail", label: "Girls Warden Email" },
+
+   { name: "girlsWardenContact", label: "Girls Warden Contact", type: "number" },
+
+{
+  name: "girlsWaterStorage",
+  label: "Water Storage Capacity Available",
+  options: ["Yes", "No"]
+},
+
+{
+  name: "girlsBackupPower",
+  label: "Backup Power Available",
+  options: ["Yes", "No"]
+}
+
+  ];
   // ================= ENROLLMENT SUMMARY =================
-const enrollmentFields = [
+  const enrollmentFields = [
 
-  {
-    name: "academicYear",
-    label: "Academic Year",
-    options: [
-      "2024-2025",
-      "2025-2026",
-      "2026-2027",
-      "2027-2028",
-      "2028-2029",
-      "2029-2030"
-    ]
-  },
+    {
+      name: "academicYear",
+      label: "Academic Year",
+      options: [
+        "2024-2025",
+        "2025-2026",
+        "2026-2027",
+        "2027-2028",
+        "2028-2029",
+        "2029-2030"
+      ]
+    },
 
-  {
-    name: "class",
-    label: "Class",
-    options: ["6","7","8","9","10","11","12"]
-  },
+    {
+      name: "class",
+      label: "Class",
+      options: ["6", "7", "8", "9", "10", "11", "12"]
+    },
 
-  {
-    name: "section",
-    label: "Section",
-    options: ["A","B","C"]
-  },
+    {
+      name: "section",
+      label: "Section",
+      options: ["A", "B", "C"]
+    },
 
-  {
-    name: "sanctionedCapacity",
-    label: "Sanctioned Capacity",
-    type: "number"
-  },
+    {
+      name: "sanctionedCapacity",
+      label: "Sanctioned Capacity",
+      type: "number"
+    },
 
-  {
-    name: "currentEnrollment",
-    label: "Current Enrollment",
-    type: "number"
-  }
+    {
+      name: "currentEnrollment",
+      label: "Current Enrollment",
+      type: "number"
+    },
+    {
+      name: "category",
+      label: "Category",
+      options: [
+        "ST",
+        "PVTG",
+        "DNT/NT/SNT",
+        "Orphan",
+        "LWE",
+        "Divyang Parent"
+      ]
+    }
+  ];
 
-];
-// ================= RESERVATION DETAILS =================
-  const reservationFields = [
-  { name: "Student Name", label: "Student Name" },
 
-  {
-    name: "class",
-    label: "Class",
-    options: ["6","7","8","9","10","11","12"]
-  },
-
-  {
-    name: "section",
-    label: "Section",
-    options: ["A","B","C"]
-  },
-
-  {
-    name: "category",
-    label: "Category",
-    options: [
-      "ST",
-      "PVTG",
-      "DNT/NT/SNT",
-      "Orphan",
-      "LWE",
-      "Divyang Parent"
-    ]
-  }
-];
-// ================= ACADEMIC RESULT =================
+  // ================= ACADEMIC RESULT =================
   const academicFields = [
     { name: "year", label: "Academic Year" },
     { name: "appeared", label: "Students Appeared", type: "number" },
     { name: "passed", label: "Students Passed", type: "number" },
-    
+
     {
       name: "passPercent",
       label: "Pass %",
@@ -594,142 +702,144 @@ const enrollmentFields = [
 
   ];
   const achievementLevels = [
-  "School Level",
-  "District Level",
-  "State Level",
-  "National Level",
+    "School Level",
+    "District Level",
+    "State Level",
+    "National Level",
 
-  // Olympiads
-  "Mathematics Olympiad",
-  "Physics Olympiad",
-  "Chemistry Olympiad",
-  "Biology Olympiad",
-  "Astronomy Olympiad",
-  "Junior Science Olympiad",
+    // Olympiads
+    "Mathematics Olympiad",
+    "Physics Olympiad",
+    "Chemistry Olympiad",
+    "Biology Olympiad",
+    "Astronomy Olympiad",
+    "Junior Science Olympiad",
 
-  // Board Exams
-  "Board Topper",
-  "Board Merit List",
+    // Board Exams
+    "Board Topper",
+    "Board Merit List",
 
-  // National Entrance Exams
-  "JEE Mains",
-  "JEE Advanced",
-  "NEET",
-  "CUET",
-  "NDA",
-  "CLAT",
+    // National Entrance Exams
+    "JEE Mains",
+    "JEE Advanced",
+    "NEET",
+    "CUET",
+    "NDA",
+    "CLAT",
 
-  // Other Competitive Exams
-  "NTSE",
-  "KVPY",
-  "INSPIRE Scholarship",
-  "National Talent Exam",
+    // Other Competitive Exams
+    "NTSE",
+    "KVPY",
+    "INSPIRE Scholarship",
+    "National Talent Exam",
 
-  // Sports / Cultural
-  "National Sports Championship",
-  "State Sports Championship",
-  "National Cultural Competition"
-];
+    // Sports / Cultural
+    "National Sports Championship",
+    "State Sports Championship",
+    "National Cultural Competition"
+  ];
 
 
- // ================= TEACHING STAFF =================
-const teachingStaffSummaryFields = [
-  {
-    name: "post",
-    label: "Post",
-    type: "select",
-    options: [
-      "Principal",
-      "Vice Principal",
-      "PGT",
-      "TGT",
-      "Music Teacher",
-      "Art Teacher",
-      "Physical Education Teacher",
-    ],
-  },
+  // ================= TEACHING STAFF =================
+  const teachingStaffSummaryFields = [
+    {
+      name: "post",
+      label: "Post",
+      type: "select",
+      options: [
+        "Principal",
+        "Vice Principal",
+        "PGT",
+        "TGT",
+        "Music Teacher",
+        "Art Teacher",
+        "Physical Education Teacher",
+      ],
+    },
 
-  { name: "name", label: "Staff Name" },
-  { name: "dob", label: "Date of Birth", type: "date" },
-  { name: "doj", label: "Date of Joining", type: "date" },
-  { name: "email", label: "Email" },
-  { name: "contact", label: "Contact Number" },
+    { name: "name", label: "Staff Name" },
+    { name: "dob", label: "Date of Birth", type: "date" },
+    { name: "doj", label: "Date of Joining", type: "date" },
+    { name: "email", label: "Email" },
+    { name: "contact", label: "Contact Number" },
 
-  {
-    name: "total",
-    label: "Total Teaching Staff",
-    type: "number",
-  },
-  {
-    name: "filled",
-    label: "Filled",
-    type: "number",
-  },
-  {
-    name: "vacant",
-    label: "Vacant",
-    type: "number",
-    readOnly: true,
-  },
-];
+    {
+      name: "total",
+      label: "Total Teaching Staff",
+      type: "number",
+    },
+    {
+      name: "filled",
+      label: "Filled",
+      type: "number",
+    },
+    {
+      name: "vacant",
+      label: "Vacant",
+      type: "number",
+      readOnly: true,
+    },
+  ];
   // ================= NON TEACHING STAFF DETAILS =================
   const nonTeachingStaffDetailFields = [
-  {
-    name: "post",
-    label: "Post",
-    type: "select",
-    options: [
-      "Accountant",
-      "UDC/LDC",
-      "Lab Assistant",
-      "Librarian",
-      "Councellor",
-      "Cook",
-      "Security Guard",
-      "Sweeper",
-      "Driver",
-      "Helper",
-      "Chowkidar",
-      "Staff Nurse",
-      "Hostel Warden"
-    ],
-  },
+    {
+      name: "post",
+      label: "Post",
+      type: "select",
+      options: [
+        "Accountant",
+        "UDC/LDC",
+        "Lab Assistant",
+        "Librarian",
+        "Councellor",
+        "Cook",
+        "Security Guard",
+        "Sweeper",
+        "Driver",
+        "Helper",
+        "Chowkidar",
+        "Staff Nurse",
+        "Hostel Warden"
+      ],
+    },
 
-  { name: "name", label: "Staff Name" },
-  { name: "dob", label: "Date of Birth", type: "date" },
-  { name: "doj", label: "Date of Joining", type: "date" },
-  { name: "email", label: "Email" },
-  { name: "contact", label: "Contact Number" },
+    { name: "name", label: "Staff Name" },
+    { name: "dob", label: "Date of Birth", type: "date" },
+    { name: "doj", label: "Date of Joining", type: "date" },
+    { name: "email", label: "Email" },
+    { name: "contact", label: "Contact Number" },
 
-  {
-    name: "total",
-    label: "Total Non-Teaching Staff",
-    type: "number",
-  },
-  {
-    name: "filled",
-    label: "Filled",
-    type: "number",
-  },
-  {
-    name: "vacant",
-    label: "Vacant",
-    type: "number",
-    readOnly: true,
-  },
-];
-  
+    {
+      name: "total",
+      label: "Total Non-Teaching Staff",
+      type: "number",
+    },
+    {
+      name: "filled",
+      label: "Filled",
+      type: "number",
+    },
+    {
+      name: "vacant",
+      label: "Vacant",
+      type: "number",
+      readOnly: true,
+    },
+  ];
+
   // ================= OPERATIONAL COST =================
   const operationalCostFields = [
-    { name:"Year", label: "Year",
-      options:[
+    {
+      name: "Year", label: "Year",
+      options: [
         "2024-2025",
         "2025-2026",
         "2026-2027"
       ],
     },
-    { name:"month", label: "Month",
-      options:[
+    {
+      name: "month", label: "Month",
+      options: [
         "January",
         "February",
         "March",
@@ -744,8 +854,9 @@ const teachingStaffSummaryFields = [
         "December"
       ],
     },
-    { name: "operationalcost", label: "Operational Cost",
-      options:[
+    {
+      name: "operationalcost", label: "Operational Cost",
+      options: [
         "Electricity",
         "Water",
         "Internet",
@@ -753,8 +864,9 @@ const teachingStaffSummaryFields = [
         "Establishment",
         "Miscellaneous",
         "Others"
-      ], 
+      ],
     },
+    { name: "amount", label: "Amount", type: "number" },
   ];
 
   emrsBasicFields.map((field) => (
@@ -768,11 +880,277 @@ const teachingStaffSummaryFields = [
     />
 
   ))
+  const qualificationOptions = [
+    "10th", "12th", "B.A", "B.Sc", "B.Com", "B.Ed", "M.A", "M.Sc", "M.Com", "M.Ed",
+    "BCA", "MCA", "B.Tech", "M.Tech", "MBA", "Ph.D", "Diploma", "Other"
+  ];
 
+  const tetQualificationOptions = [
+    "CTET Paper I", "CTET Paper II", "STET Paper I", "STET Paper II", "Other"
+  ];
+
+  const professionalQualificationOptions = [
+    "B.Ed", "D.El.Ed", "NTT", "BTC", "JBT", "M.Ed", "B.P.Ed", "M.P.Ed", "Other"
+  ];
+
+  const passingYears = Array.from({ length: 40 }, (_, i) => String(new Date().getFullYear() - i));
+
+  const renderQualificationTables = (staffRows, setStaffRows, staffIndex, showTET = true) => {
+    const row = staffRows[staffIndex];
+
+    const thStyle = {
+      backgroundColor: "#1976d2", color: "#fff", padding: "8px 6px",
+      textAlign: "center", fontSize: "12px", fontWeight: 600,
+      border: "1px solid #1565c0", whiteSpace: "nowrap"
+    };
+    const tdStyle = { padding: "3px", border: "1px solid #cbd5e1" };
+    const tdCenterStyle = { textAlign: "center", padding: "6px", border: "1px solid #cbd5e1", fontSize: "13px" };
+
+    const updateField = (qualType, qIndex, field, value) => {
+      const u = [...staffRows];
+      u[staffIndex][qualType][qIndex][field] = value;
+      setStaffRows(u);
+    };
+
+    const addRow = (qualType, emptyObj) => {
+      const u = [...staffRows];
+      u[staffIndex][qualType].push(emptyObj);
+      setStaffRows(u);
+    };
+
+    const resetRow = (qualType, qIndex, emptyObj) => {
+      const u = [...staffRows];
+      u[staffIndex][qualType][qIndex] = { ...emptyObj };
+      setStaffRows(u);
+    };
+
+    const ActionButtons = ({ qualType, qIndex, emptyObj }) => (
+      <Box display="flex" gap={0.5} justifyContent="center">
+        <Button variant="contained" size="small"
+          sx={{ minWidth: 0, px: 1, py: 0.3, fontSize: "13px", backgroundColor: "#f59e0b", "&:hover": { backgroundColor: "#d97706" } }}
+          onClick={() => { const u = [...staffRows]; u[staffIndex][qualType].splice(qIndex + 1, 0, { ...emptyObj }); setStaffRows(u); }}>
+          +
+        </Button>
+        <Button variant="outlined" size="small"
+          sx={{ minWidth: 0, px: 1, py: 0.3, fontSize: "13px", borderColor: "#1976d2", color: "#1976d2" }}
+          onClick={() => resetRow(qualType, qIndex, emptyObj)}>
+          ↺
+        </Button>
+      </Box>
+    );
+
+    const emptyAcademic = { qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" };
+    const emptyProfessional = { qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
+    const emptyTET = { qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
+
+    return (
+      <Box mt={2}>
+
+        {/* ── ACADEMIC QUALIFICATION ── */}
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>
+          Academic Qualification
+        </Typography>
+        <Box sx={{ overflowX: "auto", mb: 2 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["S.No", "Qualification", "Course", "Registration No.", "Roll No.", "College", "Marks Obtained (%)", "University", "Passing Year", "Action"].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {row.academicQualifications.map((q, qIndex) => (
+                <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                  <td style={tdCenterStyle}>{qIndex + 1}</td>
+                  <td style={tdStyle}>
+                    <TextField select fullWidth size="small" value={q.qualification}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "qualification", e.target.value)}
+                      sx={{ minWidth: 110 }}>
+                      {qualificationOptions.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+                    </TextField>
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.course}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "course", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.registrationNo}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "registrationNo", e.target.value)}
+                      sx={{ minWidth: 110 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.rollNo}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "rollNo", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.college}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "college", e.target.value)}
+                      sx={{ minWidth: 120 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" type="number" value={q.marksObtained}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "marksObtained", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.university}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "university", e.target.value)}
+                      sx={{ minWidth: 120 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField select fullWidth size="small" value={q.passingYear}
+                      onChange={(e) => updateField("academicQualifications", qIndex, "passingYear", e.target.value)}
+                      sx={{ minWidth: 100 }}>
+                      {passingYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+                    </TextField>
+                  </td>
+                  <td style={tdCenterStyle}>
+                    <ActionButtons qualType="academicQualifications" qIndex={qIndex} emptyObj={emptyAcademic} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+
+        {/* ── PROFESSIONAL QUALIFICATION ── */}
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>
+          Professional Qualification
+        </Typography>
+        <Box sx={{ overflowX: "auto", mb: 2 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["S.No", "Qualification", "Registration No.", "Roll No.", "Exam Conducted By", "Passing Year", "Marks Obtained (%)", "Affiliation Body", "Action"].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {row.professionalQualifications.map((q, qIndex) => (
+                <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                  <td style={tdCenterStyle}>{qIndex + 1}</td>
+                  <td style={tdStyle}>
+                    <TextField select fullWidth size="small" value={q.qualification}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "qualification", e.target.value)}
+                      sx={{ minWidth: 110 }}>
+                      {professionalQualificationOptions.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+                    </TextField>
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.registrationNo}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "registrationNo", e.target.value)}
+                      sx={{ minWidth: 110 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.rollNo}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "rollNo", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.examConductedBy}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "examConductedBy", e.target.value)}
+                      sx={{ minWidth: 120 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField select fullWidth size="small" value={q.passingYear}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "passingYear", e.target.value)}
+                      sx={{ minWidth: 100 }}>
+                      {passingYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+                    </TextField>
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" type="number" value={q.marksObtained}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "marksObtained", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.affiliationBody}
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "affiliationBody", e.target.value)}
+                      sx={{ minWidth: 120 }} />
+                  </td>
+                  <td style={tdCenterStyle}>
+                    <ActionButtons qualType="professionalQualifications" qIndex={qIndex} emptyObj={emptyProfessional} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+        {/* ── TET QUALIFICATION ── */}
+        {showTET && <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>
+          TET Qualification
+        </Typography>}
+        {showTET && <Box sx={{ overflowX: "auto", mb: 1 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["S.No", "Qualification", "Registration No.", "Roll No.", "Exam Conducted By", "Passing Year", "Marks Obtained (%)", "Affiliation Body", "Action"].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {row.tetQualifications.map((q, qIndex) => (
+                <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                  <td style={tdCenterStyle}>{qIndex + 1}</td>
+                  <td style={tdStyle}>
+                    <TextField select fullWidth size="small" value={q.qualification}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "qualification", e.target.value)}
+                      sx={{ minWidth: 130 }}>
+                      {tetQualificationOptions.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+                    </TextField>
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.registrationNo}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "registrationNo", e.target.value)}
+                      sx={{ minWidth: 110 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.rollNo}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "rollNo", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.examConductedBy}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "examConductedBy", e.target.value)}
+                      sx={{ minWidth: 120 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField select fullWidth size="small" value={q.passingYear}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "passingYear", e.target.value)}
+                      sx={{ minWidth: 100 }}>
+                      {passingYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+                    </TextField>
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" type="number" value={q.marksObtained}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "marksObtained", e.target.value)}
+                      sx={{ minWidth: 90 }} />
+                  </td>
+                  <td style={tdStyle}>
+                    <TextField fullWidth size="small" value={q.affiliationBody}
+                      onChange={(e) => updateField("tetQualifications", qIndex, "affiliationBody", e.target.value)}
+                      sx={{ minWidth: 120 }} />
+                  </td>
+                  <td style={tdCenterStyle}>
+                    <ActionButtons qualType="tetQualifications" qIndex={qIndex} emptyObj={emptyTET} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>}
+
+      </Box>
+    );
+  };
 
   return (
     <Container
-      maxWidth="xl"
       sx={{
         mt: 4,
         mb: 4,
@@ -846,36 +1224,36 @@ const teachingStaffSummaryFields = [
                 </Typography>
               </Grid>
             </Grid>
-           <Grid container spacing={2} mb={4}>
-  {emrsBasicFields.map((fieldItem) => (
-    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-      <Controller
-        name={fieldItem.name}
-        control={control}
-        defaultValue=""
-        rules={{ required: `${fieldItem.label} is required` }}
-        render={({ field, fieldState: { error } }) => (
-          <TextField
-            {...field}
-            label={fieldItem.label}
-            fullWidth
-            size="small"
-            select={!!fieldItem.options}
-            error={!!error}
-            helperText={error ? error.message : ""}
-          >
-            {fieldItem.options &&
-              fieldItem.options.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
+            <Grid container spacing={2} mb={4}>
+              {emrsBasicFields.map((fieldItem) => (
+                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+                  <Controller
+                    name={fieldItem.name}
+                    control={control}
+                    defaultValue=""
+                    rules={{ required: `${fieldItem.label} is required` }}
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        label={fieldItem.label}
+                        fullWidth
+                        size="small" sx={{ minWidth: 220 }}
+                        select={!!fieldItem.options}
+                        error={!!error}
+                        helperText={error ? error.message : ""}
+                      >
+                        {fieldItem.options &&
+                          fieldItem.options.map((option) => (
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+                          ))}
+                      </TextField>
+                    )}
+                  />
+                </Grid>
               ))}
-          </TextField>
-        )}
-      />
-    </Grid>
-  ))}
-</Grid>
+            </Grid>
             {/* ================= EMRS LOCATION SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -894,236 +1272,75 @@ const teachingStaffSummaryFields = [
                 </Typography>
               </Grid>
             </Grid>
-           <Grid container spacing={2} mb={4}>
-  
-  {/* Pincode */}
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="pincode"
-      control={control}
-      defaultValue=""
-      rules={{ required: "Pincode is required" }}
-      render={({ field, fieldState: { error } }) => (
-        <TextField
-          {...field}
-          label="Pincode"
-          fullWidth
-          size="small"
-          onChange={(e) => {
-            field.onChange(e);
-            onPincodeChange(e);
-          }}
-          error={!!error}
-          helperText={error ? error.message : ""}
-        />
-      )}
-    />
-  </Grid>
+            <Grid container spacing={2} mb={4}>
 
-  {/* District */}
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="district"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} label="District" fullWidth size="small" />
-      )}
-    />
-  </Grid>
+              {/* Pincode */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="pincode"
+                  control={control}
+                  defaultValue=""
+                  rules={{ required: "Pincode is required" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      label="Pincode"
+                      fullWidth
+                      size="small"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        onPincodeChange(e);
+                      }}
+                      error={!!error}
+                      helperText={error ? error.message : ""}
+                    />
+                  )}
+                />
+              </Grid>
 
-  {/* Block */}
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="block"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} label="Block" fullWidth size="small" />
-      )}
-    />
-  </Grid>
+              {/* District */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="district"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} label="District" fullWidth size="small" />
+                  )}
+                />
+              </Grid>
 
-  {/* Gram Panchayat */}
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="grampanchayat"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} label="Gram Panchayat" fullWidth size="small" />
-      )}
-    />
-  </Grid>
+              {/* Block */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="block"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} label="Block" fullWidth size="small" />
+                  )}
+                />
+              </Grid>
 
-</Grid>
+              {/* Gram Panchayat */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="grampanchayat"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} label="Gram Panchayat" fullWidth size="small" />
+                  )}
+                />
+              </Grid>
 
-{/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
+            </Grid>
 
-<Grid container spacing={3}>
+            {/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
 
-  {/* Heading Row */}
-  <Grid item xs={12}>
-    <Typography
-      variant="h6"
-      sx={{
-        background: "linear-gradient(to right, #1976d2, #42a5f5)",
-        color: "#fff",
-        padding: "8px 16px",
-        borderRadius: 2,
-        fontWeight: 600,
-        mb: 2,
-      }}
-    >
-      Infrastructure Details
-    </Typography>
-  </Grid>
+            <Grid container spacing={3}>
 
-</Grid>
-
-{/* Fields Row (New Line) */}
-<Grid container spacing={3} mb={4}>
-
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="totalClassrooms"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField
-          {...field}
-          label="Total Classrooms"
-          type="number"
-          fullWidth
-          size="small"
-        />
-      )}
-    />
-  </Grid>
-
-  <Grid item xs={12} sm={6} md={3}>
-  <Controller
-    name="classroomWithSmartClass"
-    control={control}
-    defaultValue=""
-    render={({ field }) => (
-      <TextField
-        {...field}
-        label="Classroom with Smart Class"
-        type="number"
-        fullWidth
-        size="small"
-      />
-    )}
-  />
-</Grid>
-
-<Grid item xs={12} sm={6} md={3}>
-  <Controller
-    name="classroomWithProjector"
-    control={control}
-    defaultValue=""
-    render={({ field }) => (
-      <TextField
-        {...field}
-        label="Classroom with Projector"
-        type="number"
-        fullWidth
-        size="small"
-      />
-    )}
-  />
-</Grid>
-
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="scienceLab"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} select label="Science Lab" fullWidth size="small">
-          <MenuItem value="Yes">Yes</MenuItem>
-          <MenuItem value="No">No</MenuItem>
-        </TextField>
-      )}
-    />
-  </Grid>
-
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="computerLab"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} select label="Computer Lab" fullWidth size="small">
-          <MenuItem value="Yes">Yes</MenuItem>
-          <MenuItem value="No">No</MenuItem>
-        </TextField>
-      )}
-    />
-  </Grid>
-
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="library"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} select label="Library" fullWidth size="small">
-          <MenuItem value="Yes">Yes</MenuItem>
-          <MenuItem value="No">No</MenuItem>
-        </TextField>
-      )}
-    />
-  </Grid>
-  <Grid item xs={12} sm={6} md={3}>
-  <Controller
-    name="booksInLibrary"
-    control={control}
-    defaultValue=""
-    render={({ field }) => (
-      <TextField
-        {...field}
-        label="No. of Books in Library"
-        type="number"
-        fullWidth
-        size="small"
-      />
-    )}
-  />
-</Grid>
-
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="playground"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} select label="Playground" fullWidth size="small">
-          <MenuItem value="Yes">Yes</MenuItem>
-          <MenuItem value="No">No</MenuItem>
-        </TextField>
-      )}
-    />
-  </Grid>
-
-  <Grid item xs={12} sm={6} md={3}>
-    <Controller
-      name="smartClassroom"
-      control={control}
-      defaultValue=""
-      render={({ field }) => (
-        <TextField {...field} select label="Smart Classroom" fullWidth size="small">
-          <MenuItem value="Yes">Yes</MenuItem>
-          <MenuItem value="No">No</MenuItem>
-        </TextField>
-      )}
-    />
-  </Grid>
-
-</Grid>   
-       {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
-            <Grid container spacing={2}>
+              {/* Heading Row */}
               <Grid item xs={12}>
                 <Typography
                   variant="h6"
@@ -1136,53 +1353,288 @@ const teachingStaffSummaryFields = [
                     mb: 2,
                   }}
                 >
+                  Infrastructure Details
+                </Typography>
+              </Grid>
+
+            </Grid>
+
+            {/* Fields Row (New Line) */}
+            <Grid container spacing={3} mb={4}>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="totalClassrooms"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Total Classrooms"
+                      type="number"
+                      fullWidth
+                      size="small"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="classroomWithSmartClass"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Classroom with Smart Class"
+                      type="number"
+                      fullWidth
+                      size="small"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="classroomWithProjector"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Classroom with Projector"
+                      type="number"
+                      fullWidth
+                      size="small"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="scienceLab"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} select label="Science Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="computerLab"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} select label="Computer Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="library"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} select label="Library" fullWidth size="small" sx={{ minWidth: 220 }}>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="booksInLibrary"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="No. of Books in Library"
+                      type="number"
+                      fullWidth
+                      size="small"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="playground"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} select label="Playground" fullWidth size="small" sx={{ minWidth: 220 }}>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="Auditorium"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} select label="Auditorium" fullWidth size="small" sx={{ minWidth: 220 }}>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="Medical Room"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} select label="Medical Room" fullWidth size="small" sx={{ minWidth: 220 }}>
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  )}
+                />
+              </Grid>
+
+            </Grid>
+            {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2
+                  }}
+                >
                   Hostel Administration
                 </Typography>
               </Grid>
             </Grid>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+            >
+              Boys Hostel Details
+            </Typography>
+
             <Grid container spacing={2} mb={4}>
-              {emrsHostelFields.map((fieldItem) => (
+              {boysHostelFields.map((fieldItem) => (
+
                 <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+
                   <Controller
                     name={fieldItem.name}
                     control={control}
                     defaultValue=""
                     rules={{ required: `${fieldItem.label} is required` }}
-                   render={({ field, fieldState: { error } }) => (
-  <TextField
-  {...field}
-  label={fieldItem.label}
-  fullWidth
-  size="small"
-  type={fieldItem.type || "text"}
-  multiline={fieldItem.multiline || false}
-  rows={fieldItem.rows || 1}
-  select={
-    fieldItem.name === "cctvInstalled" ||
-    fieldItem.name === "securityAgency"
-  }
-  error={!!error}
-  helperText={error ? error.message : ""}
->
-    {(fieldItem.name === "cctvInstalled" ||
-      fieldItem.name === "securityAgency") && [
-      <MenuItem key="yes" value="Yes">
-        Yes
-      </MenuItem>,
-      <MenuItem key="no" value="No">
-        No
-      </MenuItem>,
-      
-    ]}
-  </TextField>
-)}
-      />              
-                  
+
+                    render={({ field }) => (
+
+                      <TextField
+                        {...field}
+                        label={fieldItem.label}
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        type={fieldItem.type || "text"}
+                        select={!!fieldItem.options}
+                      >
+
+                        {fieldItem.options &&
+                          fieldItem.options.map((option) => (
+
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+
+                          ))}
+
+                      </TextField>
+
+                    )}
+
+                  />
+
                 </Grid>
+
               ))}
+
+            </Grid>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+            >
+              Girls Hostel Details
+            </Typography>
+
+            <Grid container spacing={2} mb={4}>
+
+              {girlsHostelFields.map((fieldItem) => (
+
+                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+
+                  <Controller
+                    name={fieldItem.name}
+                    control={control}
+                    defaultValue=""
+                    rules={{ required: `${fieldItem.label} is required` }}
+
+                    render={({ field }) => (
+
+                      <TextField
+                        {...field}
+                        label={fieldItem.label}
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        type={fieldItem.type || "text"}
+                        select={!!fieldItem.options}
+                      >
+
+                        {fieldItem.options &&
+                          fieldItem.options.map((option) => (
+
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+
+                          ))}
+
+                      </TextField>
+
+                    )}
+
+                  />
+
+                </Grid>
+
+              ))}
+
             </Grid>
 
-           {/* ================= STUDENT ENROLLEMENT SECTION ================= */}
+            {/* ================= UNIFIED STUDENT ENROLLMENT SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
@@ -1200,43 +1652,404 @@ const teachingStaffSummaryFields = [
                 </Typography>
               </Grid>
             </Grid>
-            <Grid container spacing={2} mb={4}>
-  {enrollmentFields.map((fieldItem) => (
-    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-      <Controller
-        name={fieldItem.name}
-        control={control}
-        defaultValue=""
-        rules={{ required: `${fieldItem.label} is required` }}
-        render={({ field, fieldState: { error } }) => (
-          <TextField
-            {...field}
-            label={fieldItem.label}
-            fullWidth
-            size="small"
-            type={fieldItem.type || "text"}
-            select={!!fieldItem.options}
-            error={!!error}
-            helperText={error ? error.message : ""}
-            InputProps={{
-              readOnly: fieldItem.readOnly || false,
-            }}
-          >
-            {fieldItem.options &&
-              fieldItem.options.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-          </TextField>
-        )}
-      />
-    </Grid>
-  ))}
-</Grid>
 
+            {enrollmentRows.map((row, rowIndex) => (
+              <Box
+                key={rowIndex}
+                sx={{
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 2,
+                  padding: 3,
+                  mb: 3,
+                  backgroundColor: "#fff"
+                }}
+              >
+                {/* ── ENROLLMENT HEADER ── */}
+                <Grid container spacing={2} mb={3}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField select label="Academic Year" fullWidth size="small" sx={{ minWidth: 220 }} value={row.academicYear}
+                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].academicYear = e.target.value; setEnrollmentRows(u); }}>
+                      {["2024-2025", "2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"].map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField select label="Class" fullWidth size="small" sx={{ minWidth: 220 }} value={row.class}
+                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].class = e.target.value; setEnrollmentRows(u); }}>
+                      {["6", "7", "8", "9", "10", "11", "12"].map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField select label="Section" fullWidth size="small" sx={{ minWidth: 220 }} value={row.section}
+                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].section = e.target.value; setEnrollmentRows(u); }}>
+                      {["A", "B", "C"].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField label="Sanctioned Capacity" type="number" fullWidth size="small" value={row.sanctionedCapacity}
+                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].sanctionedCapacity = e.target.value; setEnrollmentRows(u); }} />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField label="Current Enrollment" type="number" fullWidth size="small" value={row.currentEnrollment}
+                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].currentEnrollment = e.target.value; setEnrollmentRows(u); }} />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField select label="Category" fullWidth size="small" sx={{ minWidth: 220 }} value={row.category}
+                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].category = e.target.value; setEnrollmentRows(u); }}>
+                      {["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang Parent"].map(cat => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                </Grid>
 
-            {/* ================= STUDENT RESERVATION DETAILS SECTION ================= */}
+                {/* ── ACADEMIC PERFORMANCE ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Academic Performance
+                </Typography>
+
+                {/* ── CLASS 6, 7, 8, 9 — Annual Exam ── */}
+                {["6", "7", "8", "9"].includes(row.class) && (
+                  <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 3, backgroundColor: "#f8fafc" }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 2 }}>
+                      Annual Exam Performance — Class {row.class}
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Students Appeared" type="number" fullWidth size="small" value={row.appeared}
+                          onChange={(e) => {
+                            const u = [...enrollmentRows];
+                            u[rowIndex].appeared = e.target.value;
+                            const appeared = Number(e.target.value || 0);
+                            const passed = Number(u[rowIndex].passed || 0);
+                            u[rowIndex].passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+                            setEnrollmentRows(u);
+                          }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Students Passed" type="number" fullWidth size="small" value={row.passed}
+                          onChange={(e) => {
+                            const u = [...enrollmentRows];
+                            u[rowIndex].passed = e.target.value;
+                            const passed = Number(e.target.value || 0);
+                            const appeared = Number(u[rowIndex].appeared || 0);
+                            u[rowIndex].passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+                            setEnrollmentRows(u);
+                          }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Pass %" fullWidth size="small" value={row.passPercent} InputProps={{ readOnly: true }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Above 75%" type="number" fullWidth size="small" value={row.above75}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].above75 = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Below 50%" type="number" fullWidth size="small" value={row.below50}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].below50 = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
+                {/* ── CLASS 10 — Board Exam ── */}
+                {row.class === "10" && (
+                  <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 3, backgroundColor: "#f8fafc" }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 2 }}>
+                      Board Exam Performance — Class 10
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Students Appeared" type="number" fullWidth size="small" value={row.appeared}
+                          onChange={(e) => {
+                            const u = [...enrollmentRows];
+                            u[rowIndex].appeared = e.target.value;
+                            const appeared = Number(e.target.value || 0);
+                            const passed = Number(u[rowIndex].passed || 0);
+                            u[rowIndex].passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+                            setEnrollmentRows(u);
+                          }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Students Passed" type="number" fullWidth size="small" value={row.passed}
+                          onChange={(e) => {
+                            const u = [...enrollmentRows];
+                            u[rowIndex].passed = e.target.value;
+                            const passed = Number(e.target.value || 0);
+                            const appeared = Number(u[rowIndex].appeared || 0);
+                            u[rowIndex].passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+                            setEnrollmentRows(u);
+                          }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Pass %" fullWidth size="small" value={row.passPercent} InputProps={{ readOnly: true }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Above 75%" type="number" fullWidth size="small" value={row.above75}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].above75 = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Below 50%" type="number" fullWidth size="small" value={row.below50}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].below50 = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Distinctions (≥ 75%)" type="number" fullWidth size="small" value={row.distinctions || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].distinctions = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Top Scorer Name" fullWidth size="small" value={row.topScorer || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].topScorer = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Top Score (%)" type="number" fullWidth size="small" value={row.topScore || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].topScore = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
+                {/* ── CLASS 11 & 12 — Board Exam by Stream ── */}
+                {["11", "12"].includes(row.class) && (
+                  <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 3, backgroundColor: "#f8fafc" }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 2 }}>
+                      Board Exam Performance — Class {row.class} (Stream-wise)
+                    </Typography>
+
+                    {/* Stream selector */}
+                    <Grid container spacing={2} mb={2}>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField select label="Stream" fullWidth size="small" sx={{ minWidth: 220 }}
+                          value={row.stream || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].stream = e.target.value; setEnrollmentRows(u); }}>
+                          {["Science", "Commerce", "Arts"].map(s => (
+                            <MenuItem key={s} value={s}>{s}</MenuItem>
+                          ))}
+                        </TextField>
+                      </Grid>
+                    </Grid>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Students Appeared" type="number" fullWidth size="small" value={row.appeared}
+                          onChange={(e) => {
+                            const u = [...enrollmentRows];
+                            u[rowIndex].appeared = e.target.value;
+                            const appeared = Number(e.target.value || 0);
+                            const passed = Number(u[rowIndex].passed || 0);
+                            u[rowIndex].passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+                            setEnrollmentRows(u);
+                          }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Students Passed" type="number" fullWidth size="small" value={row.passed}
+                          onChange={(e) => {
+                            const u = [...enrollmentRows];
+                            u[rowIndex].passed = e.target.value;
+                            const passed = Number(e.target.value || 0);
+                            const appeared = Number(u[rowIndex].appeared || 0);
+                            u[rowIndex].passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
+                            setEnrollmentRows(u);
+                          }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Pass %" fullWidth size="small" value={row.passPercent} InputProps={{ readOnly: true }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Above 75%" type="number" fullWidth size="small" value={row.above75}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].above75 = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Below 50%" type="number" fullWidth size="small" value={row.below50}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].below50 = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Distinctions (≥ 75%)" type="number" fullWidth size="small" value={row.distinctions || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].distinctions = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Top Scorer Name" fullWidth size="small" value={row.topScorer || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].topScorer = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField label="Top Score (%)" type="number" fullWidth size="small" value={row.topScore || ""}
+                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].topScore = e.target.value; setEnrollmentRows(u); }} />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
+                {/* Fallback if no class selected yet */}
+                {!row.class && (
+                  <Typography variant="body2" sx={{ color: "#94a3b8", mb: 3, fontStyle: "italic" }}>
+                    Please select a Class above to fill Academic Performance.
+                  </Typography>
+                )}
+                {/* ── DROPOUT DETAILS ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Dropout Details
+                </Typography>
+                {row.dropouts.map((dropout, dIndex) => (
+                  <Grid container spacing={2} mb={2} key={dIndex}>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        label="Roll No"
+                        fullWidth
+                        size="small"
+                        value={dropout.rollNo}
+                        onChange={(e) => {
+                          const u = [...enrollmentRows];
+                          u[rowIndex].dropouts[dIndex].rollNo = e.target.value;
+                          setEnrollmentRows(u);
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        label="Student Name"
+                        fullWidth
+                        size="small"
+                        value={dropout.studentName}
+                        onChange={(e) => {
+                          const u = [...enrollmentRows];
+                          u[rowIndex].dropouts[dIndex].studentName = e.target.value;
+                          setEnrollmentRows(u);
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        label="Reason of Dropout"
+                        fullWidth
+                        size="small"
+                        value={dropout.reason}
+                        onChange={(e) => {
+                          const u = [...enrollmentRows];
+                          u[rowIndex].dropouts[dIndex].reason = e.target.value;
+                          setEnrollmentRows(u);
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        label="Guardian Contact No"
+                        fullWidth
+                        size="small"
+                        type="number"
+                        value={dropout.guardianContactNo}
+                        onChange={(e) => {
+                          const u = [...enrollmentRows];
+                          u[rowIndex].dropouts[dIndex].guardianContactNo = e.target.value;
+                          setEnrollmentRows(u);
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                ))}
+                <Box mb={3}>
+                  <Button variant="outlined" size="small"
+                    onClick={() => {
+                      const u = [...enrollmentRows];
+                      u[rowIndex].dropouts.push({ rollNo: "", studentName: "", reason: "", guardianContactNo: "" });
+                      setEnrollmentRows(u);
+                    }}>
+                    + Add Dropout
+                  </Button>
+                </Box>
+
+                {/* ── MIGRATION DETAILS ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Migration Details
+                </Typography>
+                {row.migrations.map((migration, mIndex) => (
+                  <Grid container spacing={2} mb={1} key={mIndex}>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Student Name" fullWidth size="small" value={migration.studentName}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].migrations[mIndex].studentName = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Migrated From" fullWidth size="small" value={migration.migratedFrom}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].migrations[mIndex].migratedFrom = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Transferred To" fullWidth size="small" value={migration.transferredTo}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].migrations[mIndex].transferredTo = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Reason" fullWidth size="small" value={migration.reason}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].migrations[mIndex].reason = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                  </Grid>
+                ))}
+                <Box mb={3}>
+                  <Button variant="outlined" size="small"
+                    onClick={() => {
+                      const u = [...enrollmentRows];
+                      u[rowIndex].migrations.push({ studentName: "", migratedFrom: "", transferredTo: "", reason: "" });
+                      setEnrollmentRows(u);
+                    }}>
+                    + Add Migration
+                  </Button>
+                </Box>
+
+                {/* ── STUDENT ACHIEVEMENTS ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Student Special Achievements
+                </Typography>
+                {row.achievements.map((achievement, aIndex) => (
+                  <Grid container spacing={2} mb={1} key={aIndex}>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Student Name" fullWidth size="small" value={achievement.studentName}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].achievements[aIndex].studentName = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Event Name" fullWidth size="small" value={achievement.eventName}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].achievements[aIndex].eventName = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField select label="Level / Exam" fullWidth size="small" sx={{ minWidth: 220 }} value={achievement.level}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].achievements[aIndex].level = e.target.value; setEnrollmentRows(u); }}>
+                        {achievementLevels.map(level => <MenuItem key={level} value={level}>{level}</MenuItem>)}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField label="Recognition" fullWidth size="small" value={achievement.recognition}
+                        onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].achievements[aIndex].recognition = e.target.value; setEnrollmentRows(u); }} />
+                    </Grid>
+                  </Grid>
+                ))}
+                <Box>
+                  <Button variant="outlined" size="small"
+                    onClick={() => {
+                      const u = [...enrollmentRows];
+                      u[rowIndex].achievements.push({ studentName: "", eventName: "", level: "", recognition: "" });
+                      setEnrollmentRows(u);
+                    }}>
+                    + Add Achievement
+                  </Button>
+                </Box>
+
+              </Box>
+            ))}
+
+            {/* Add new Class/Section Block */}
+            <Box mb={4}>
+              <Button variant="contained"
+                onClick={() =>
+                  setEnrollmentRows([...enrollmentRows, {
+                    academicYear: "", class: "", section: "", sanctionedCapacity: "",
+                    currentEnrollment: "", category: "", boardClass: "", appeared: "",
+                    passed: "", passPercent: "", above75: "", below50: "",
+                    stream: "",
+                    distinctions: "",
+                    topScorer: "",
+                    topScore: "",
+                    dropouts: [{ rollNo: "", studentName: "", reason: "", guardianContactNo: "" }],
+                    migrations: [{ studentName: "", migratedFrom: "", transferredTo: "", reason: "" }],
+                    achievements: [{ studentName: "", eventName: "", level: "", recognition: "" }]
+                  }])
+                }>
+                + Add Class / Section
+              </Button>
+            </Box>
+
+            {/* ================= EXTRA CURRICULAR ACTIVITIES SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography
@@ -1250,12 +2063,818 @@ const teachingStaffSummaryFields = [
                     mb: 2,
                   }}
                 >
-                  Student Reservation Details
+                  Extra Curricular Activities
                 </Typography>
               </Grid>
             </Grid>
+
+            {extraCurricularRows.map((row, index) => (
+              <Box
+                key={index}
+                sx={{
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 2,
+                  padding: 3,
+                  mb: 2,
+                  backgroundColor: "#fff"
+                }}
+              >
+                <Grid container spacing={2}>
+
+                  {/* Academic Year */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      select
+                      label="Academic Year"
+                      fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      value={row.academicYear}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].academicYear = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    >
+                      {["2024-2025", "2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"].map(y => (
+                        <MenuItem key={y} value={y}>{y}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                  {/* Application / Initiative Name */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Name of the Program"
+                      fullWidth
+                      size="small"
+                      value={row.initiativeName}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].initiativeName = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  {/* Collaborating Partner */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Collaborating Partner"
+                      fullWidth
+                      size="small"
+                      value={row.collaboratingPartner}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].collaboratingPartner = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  {/* Areas of Development - multi select */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      select
+                      label="Areas of Development"
+                      fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      SelectProps={{ multiple: true }}
+                      value={row.areasOfDevelopment}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].areasOfDevelopment = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    >
+                      {[
+                        "Sports",
+                        "Culture",
+                        "Health & Wellness",
+                        "Value Education",
+                        "Computer Skills",
+                        "Personality Development",
+                        "Excursions",
+                        "Career Guidance",
+                        "Exposure",
+                        "Competitive Exam Training",
+                        "Enhancing Learning Skills",
+                        "Adventure Activities",
+                        "STEM Learning",
+                        "Innovation"
+                      ].map(area => (
+                        <MenuItem key={area} value={area}>{area}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                  {/* Description / Objectives */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Description / Objectives"
+                      fullWidth
+                      size="small"
+                      value={row.description}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].description = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  {/* Class */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Class"
+                      fullWidth
+                      size="small"
+                      value={row.targetStudents}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].targetStudents = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  {/* Status */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      select
+                      label="Status"
+                      fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      value={row.status}
+                      onChange={(e) => {
+                        const u = [...extraCurricularRows];
+                        u[index].status = e.target.value;
+                        setExtraCurricularRows(u);
+                      }}
+                    >
+                      {["Active", "In Progress", "Completed", "Planned"].map(s => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                </Grid>
+              </Box>
+            ))}
+
+            {/* Add Activity Button */}
+            <Box mb={4}>
+              <Button
+                variant="outlined"
+                onClick={() =>
+                  setExtraCurricularRows([
+                    ...extraCurricularRows,
+                    {
+                      academicYear: "",
+                      initiativeName: "",
+                      collaboratingPartner: "",
+                      areasOfDevelopment: [],
+                      description: "",
+                      targetStudents: "",
+                      status: ""
+                    }
+                  ])
+                }
+              >
+                + Add Activity
+              </Button>
+            </Box>
+
+            {/* ================= HOSPITALIZATION SECTION ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Hospitalization Details
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {hospitalizationRows.map((row, index) => (
+              <Box
+                key={index}
+                sx={{
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 2,
+                  padding: 3,
+                  mb: 2,
+                  backgroundColor: "#fff"
+                }}
+              >
+
+                {/* ── HOSPITAL INFO ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Hospital & Empanelment Details
+                </Typography>
+                <Grid container spacing={2} mb={2}>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Hospital Empanelled With"
+                      fullWidth
+                      size="small"
+                      value={row.hospitalEmpanelled}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].hospitalEmpanelled = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Validity of Empanelment"
+                      fullWidth
+                      size="small"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      value={row.empanellementValidity}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].empanellementValidity = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Doctor / Treating Physician"
+                      fullWidth
+                      size="small"
+                      value={row.doctorName}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].doctorName = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                </Grid>
+
+                {/* ── STUDENT INFO ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Student Information
+                </Typography>
+                <Grid container spacing={2} mb={2}>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      label="Student Name"
+                      fullWidth
+                      size="small"
+                      value={row.studentName}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].studentName = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      label="Roll No"
+                      fullWidth
+                      size="small"
+                      value={row.rollNo}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].rollNo = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      select
+                      label="Class"
+                      fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      value={row.class}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].class = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    >
+                      {["6", "7", "8", "9", "10", "11", "12"].map(c => (
+                        <MenuItem key={c} value={c}>{c}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      select
+                      label="Section"
+                      fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      value={row.section}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].section = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    >
+                      {["A", "B", "C"].map(s => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      label="Guardian Name"
+                      fullWidth
+                      size="small"
+                      value={row.guardianName}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].guardianName = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      label="Guardian Contact"
+                      fullWidth
+                      size="small"
+                      type="number"
+                      value={row.guardianContact}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].guardianContact = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                </Grid>
+                {/* ── ADMISSION INFO ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Admission & Treatment Details
+                </Typography>
+                <Grid container spacing={2} mb={2}>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Date of Admission"
+                      fullWidth
+                      size="small"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      value={row.admissionDate}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].admissionDate = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Date of Discharge"
+                      fullWidth
+                      size="small"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      value={row.dischargeDate}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].dischargeDate = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Reason for Hospitalization"
+                      fullWidth
+                      size="small"
+                      value={row.reasonForHospitalization}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].reasonForHospitalization = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Treatment Details"
+                      fullWidth
+                      size="small"
+                      value={row.treatmentDetails}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].treatmentDetails = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                </Grid>
+
+                {/* ── CLAIM INFO ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Cost & Claim Details
+                </Typography>
+                <Grid container spacing={2}>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Estimated Cost (₹)"
+                      fullWidth
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      type="number"
+                      value={row.estimatedCost}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].estimatedCost = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      label="Amount Claimed (₹)"
+                      fullWidth
+                      size="small"
+                      type="number"
+                      value={row.amountClaimed}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].amountClaimed = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      select
+                      label="Claim Status"
+                      fullWidth
+                      size="small"
+                      value={row.claimStatus}
+                      onChange={(e) => {
+                        const u = [...hospitalizationRows];
+                        u[index].claimStatus = e.target.value;
+                        setHospitalizationRows(u);
+                      }}
+                    >
+                      {["Pending", "Submitted", "Approved", "Rejected", "Partially Approved"].map(s => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+
+                </Grid>
+
+              </Box>
+            ))}
+
+            {/* Add Case Button */}
+            <Box mb={4}>
+              <Button
+                variant="outlined"
+                onClick={() =>
+                  setHospitalizationRows([
+                    ...hospitalizationRows,
+                    {
+                      studentName: "",
+                      rollNo: "",
+                      class: "",
+                      section: "",
+                      admissionDate: "",
+                      dischargeDate: "",
+                      reasonForHospitalization: "",
+                      hospitalEmpanelled: "",
+                      empanellementValidity: "",
+                      treatmentDetails: "",
+                      doctorName: "",
+                      estimatedCost: "",
+                      amountClaimed: "",
+                      claimStatus: "",
+                      guardianName: "",
+                      guardianContact: ""
+                    }
+                  ])
+                }
+              >
+                + Add Hospitalization Case
+              </Button>
+            </Box>
+
+            {/* ================= TEACHING STAFF DETAILS SECTION ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Teaching Staff Details
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {/* Teaching Staff Fields */}
+            {teachingRows.map((row, index) => (
+              <Box
+                key={index}
+                sx={{ border: "1px solid #cbd5e1", borderRadius: 2, p: 3, mb: 3, backgroundColor: "#fff" }}
+              >
+
+                {/* ── SECTION 1: PERSONAL & POST DETAILS ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Staff Details
+                </Typography>
+                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 2, backgroundColor: "#f8fafc" }}>
+                  <Grid container spacing={2}>
+                    {teachingStaffSummaryFields
+                      .filter(f => f.name !== "total" && f.name !== "filled" && f.name !== "vacant")
+                      .map((field) => (
+                        <Grid item xs={12} sm={6} md={4} key={field.name}>
+                          {field.type === "select" ? (
+                            <TextField
+                              select fullWidth size="small" sx={{ minWidth: 220 }} label={field.label}
+                              value={row[field.name]}
+                              onChange={(e) => {
+                                const updatedRows = [...teachingRows];
+                                updatedRows[index][field.name] = e.target.value;
+                                setteachingRows(updatedRows);
+                              }}
+                            >
+                              <MenuItem value="">Select</MenuItem>
+                              {field.options.map((option) => (
+                                <MenuItem key={option} value={option}>{option}</MenuItem>
+                              ))}
+                            </TextField>
+                          ) : (
+                            <TextField
+                              fullWidth size="small" sx={{ minWidth: 220 }} type={field.type} label={field.label}
+                              value={row[field.name]}
+                              InputProps={{ readOnly: field.readOnly }}
+                              onChange={(e) => {
+                                const updatedRows = [...teachingRows];
+                                updatedRows[index][field.name] = e.target.value;
+                                setteachingRows(updatedRows);
+                              }}
+                            />
+                          )}
+                        </Grid>
+                      ))}
+                  </Grid>
+                </Box>
+
+                {/* ── SECTION 2: SANCTIONED STRENGTH ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Sanctioned Strength
+                </Typography>
+                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 2, backgroundColor: "#f8fafc" }}>
+                  <Grid container spacing={2}>
+                    {teachingStaffSummaryFields
+                      .filter(f => f.name === "total" || f.name === "filled" || f.name === "vacant")
+                      .map((field) => (
+                        <Grid item xs={12} sm={4} key={field.name}>
+                          <TextField
+                            fullWidth size="small" type={field.type} label={field.label}
+                            value={field.name === "vacant"
+                              ? (Number(row.total || 0) - Number(row.filled || 0)) || ""
+                              : row[field.name]}
+                            InputProps={{ readOnly: field.readOnly }}
+                            onChange={(e) => {
+                              const updatedRows = [...teachingRows];
+                              updatedRows[index][field.name] = e.target.value;
+                              setteachingRows(updatedRows);
+                            }}
+                          />
+                        </Grid>
+                      ))}
+                  </Grid>
+                </Box>
+
+                {/* ── SECTION 3: EDUCATIONAL QUALIFICATION ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Educational Qualification
+                </Typography>
+                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, backgroundColor: "#f8fafc" }}>
+                  {renderQualificationTables(teachingRows, setteachingRows, index)}
+                </Box>
+
+              </Box>
+            ))}
+            {/* Add Post Button */}
+            <Grid container>
+              <Grid item xs={12}>
+                <Box mt={1} mb={4}>
+                  <Button
+                    variant="outlined"
+                    sx={{ mb: 4 }}
+                    onClick={() =>
+                      setteachingRows([
+                        ...teachingRows,
+                        {
+                          post: "", name: "", dob: "", doj: "", email: "", contact: "",
+                          total: "", filled: "", vacant: "",
+                          academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+                          professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+                          tetQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
+                        }])
+                    }
+                  >
+                    + Add Post
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+            {/* =================NON TEACHING STAFF DETAILS SECTION ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Non-Teaching Staff Details
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {/* Non Teaching Staff Fields */}
+            {nonTeachingRows.map((row, index) => (
+              <Box
+                key={index}
+                sx={{ border: "1px solid #cbd5e1", borderRadius: 2, p: 3, mb: 3, backgroundColor: "#fff" }}
+              >
+
+                {/* ── SECTION 1: STAFF DETAILS ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Staff Details
+                </Typography>
+                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 2, backgroundColor: "#f8fafc" }}>
+                  <Grid container spacing={2}>
+                    {nonTeachingStaffDetailFields
+                      .filter(f => f.name !== "total" && f.name !== "filled" && f.name !== "vacant")
+                      .map((field) => (
+                        <Grid item xs={12} sm={6} md={4} key={field.name}>
+                          {field.type === "select" ? (
+                            <TextField
+                              select fullWidth size="small" sx={{ minWidth: 220 }} label={field.label}
+                              value={row[field.name]}
+                              onChange={(e) => {
+                                const updatedRows = [...nonTeachingRows];
+                                updatedRows[index][field.name] = e.target.value;
+                                setnonTeachingRows(updatedRows);
+                              }}
+                            >
+                              <MenuItem value="">Select</MenuItem>
+                              {field.options.map((option) => (
+                                <MenuItem key={option} value={option}>{option}</MenuItem>
+                              ))}
+                            </TextField>
+                          ) : (
+                            <TextField
+                              fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label}
+                              value={row[field.name]}
+                              InputProps={{ readOnly: field.readOnly }}
+                              onChange={(e) => {
+                                const updatedRows = [...nonTeachingRows];
+                                updatedRows[index][field.name] = e.target.value;
+                                setnonTeachingRows(updatedRows);
+                              }}
+                            />
+                          )}
+                        </Grid>
+                      ))}
+                  </Grid>
+                </Box>
+
+                {/* ── SECTION 2: SANCTIONED STRENGTH ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Sanctioned Strength
+                </Typography>
+                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 2, backgroundColor: "#f8fafc" }}>
+                  <Grid container spacing={2}>
+                    {nonTeachingStaffDetailFields
+                      .filter(f => f.name === "total" || f.name === "filled" || f.name === "vacant")
+                      .map((field) => (
+                        <Grid item xs={12} sm={4} key={field.name}>
+                          <TextField
+                            fullWidth size="small" type={field.type} label={field.label}
+                            value={field.name === "vacant"
+                              ? (Number(row.total || 0) - Number(row.filled || 0)) || ""
+                              : row[field.name]}
+                            InputProps={{ readOnly: field.readOnly }}
+                            onChange={(e) => {
+                              const updatedRows = [...nonTeachingRows];
+                              updatedRows[index][field.name] = e.target.value;
+                              setnonTeachingRows(updatedRows);
+                            }}
+                          />
+                        </Grid>
+                      ))}
+                  </Grid>
+                </Box>
+
+                {/* ── SECTION 3: EDUCATIONAL QUALIFICATION ── */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+                  Educational Qualification
+                </Typography>
+                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, backgroundColor: "#f8fafc" }}>
+                  {renderQualificationTables(nonTeachingRows, setnonTeachingRows, index, false)}
+                </Box>
+
+              </Box>
+            ))}
+            {/* Add Post Button */}
+            <Grid container>
+              <Grid item xs={12}>
+                <Box mt={1} mb={4}>
+                  <Button
+                    variant="outlined"
+                    sx={{ mb: 4 }}
+                    onClick={() =>
+                      setnonTeachingRows([
+                        ...nonTeachingRows,
+                        {
+                          post: "", name: "", dob: "", doj: "", email: "", contact: "",
+                          total: "", filled: "", vacant: "",
+                          academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+                          professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+                        }
+                      ])
+                    }
+                  >
+                    + Add Post
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+
+            {/* ================= OPERATIONAL COST DETAILS ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                    color: "#fff",
+                    padding: "8px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  Operational Cost Details
+                </Typography>
+              </Grid>
+            </Grid>
+
             <Grid container spacing={2} mb={4}>
-              {reservationFields.map((fieldItem) => (
+              {operationalCostFields.map((fieldItem) => (
                 <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
                   <Controller
                     name={fieldItem.name}
@@ -1263,726 +2882,32 @@ const teachingStaffSummaryFields = [
                     defaultValue=""
                     rules={{ required: `${fieldItem.label} is required` }}
                     render={({ field, fieldState: { error } }) => (
-  <TextField
-    {...field}
-    label={fieldItem.label}
-    fullWidth
-    size="small"
-    type={fieldItem.type || "text"}
-    select={!!fieldItem.options}
-    error={!!error}
-    helperText={error ? error.message : ""}
-  >
-    {fieldItem.options &&
-      fieldItem.options.map((option) => (
-        <MenuItem key={option} value={option}>
-          {option}
-        </MenuItem>
-      ))}
-  </TextField>
-)}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* ================= ACADEMIC PERFORMANCE DETAILS SECTION ================= */}
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Academic Performance Details
-                </Typography>
-                
-              </Grid>
-            </Grid>
-            <Grid container spacing={2} mb={2}>
-  {academicFields.map((fieldItem) => (
-    <Grid item xs={12} sm={6} md={3} key={fieldItem.name}>
-      <Controller
-        name={fieldItem.name}
-        control={control}
-        defaultValue=""
-        render={({ field }) => (
-          <TextField
-            {...field}
-            label={fieldItem.label}
-            fullWidth
-            size="small"
-                      />
+                      <TextField
+                        {...field}
+                        label={fieldItem.label}
+                        type={fieldItem.type || "text"}
+                        select={!!fieldItem.options}
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        error={!!error}
+                        helperText={error ? error.message : ""}
+                        InputProps={{
+                          readOnly: fieldItem.readOnly || false,
+                        }}
+                      >
+                        {fieldItem.options &&
+                          fieldItem.options.map((option) => (
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+                          ))}
+                      </TextField>
                     )}
                   />
                 </Grid>
-
               ))}
-
-              <Button
-  variant="contained"
-  onClick={handleAddAcademicRows}
-  sx={{ mb: 2 }}
->
-  Add Row
-</Button>
-            
-             {/* ================= DROPOUT DETAILS ================= */}
-<Grid container spacing={2} sx={{ width: "100%", mt: 2 }}>
-  <Grid item xs={12}>
-    <Box sx={{ width: "100%", mt: 2 }}>
-      <Typography
-        variant="h6"
-        sx={{
-          display: "block",
-          width: "fit-content",
-          background: "linear-gradient(to right, #1976d2, #42a5f5)",
-          color: "#fff",
-          padding: "8px 16px",
-          borderRadius: 2,
-          fontWeight: 600,
-          mt: 2
-        }}
-      >
-        Dropout Details (Class VI–XII)
-      </Typography>
-    </Box>
-  </Grid>
-</Grid>
-              {dropoutRows.map((row, index) => (
-                <Grid container spacing={2} key={index} mb={2}>
-                  <Grid item xs={12} md={2}>
-                    <TextField
-                      label="Year"
-                      fullWidth
-                      size="small"
-                      onChange={(e) => {
-                        const updated = [...dropoutRows];
-                        updated[index].year = e.target.value;
-                        setDropoutRows(updated);
-                      }}
-                    />
-                  </Grid>
-
-                 <Grid item xs={12} sm={6} md={4}>
-  <TextField
-    select
-    label="Class"
-    fullWidth
-    size="small"
-    value={row.class}
-    onChange={(e) => {
-      const updated = [...dropoutRows];
-      updated[index].class = e.target.value;
-      setDropoutRows(updated);
-    }}
-  >
-    {["6", "7", "8", "9", "10", "11", "12"].map((cls) => (
-      <MenuItem key={cls} value={cls}>
-        {cls}
-      </MenuItem>
-    ))}
-  </TextField>
-</Grid>
-<Grid item xs={12} sm={6} md={4}>
-  <TextField
-    select
-    label="Section"
-    fullWidth
-    size="small"
-    value={row.section}
-    onChange={(e) => {
-      const updated = [...dropoutRows];
-      updated[index].section = e.target.value;
-      setDropoutRows(updated);
-    }}
-  >
-    {["A", "B", "C"].map((sec) => (
-      <MenuItem key={sec} value={sec}>
-        {sec}
-      </MenuItem>
-    ))}
-  </TextField>
-</Grid>
-                  <Grid item xs={12} md={3}>
-                    <TextField
-                      label="Student Name"
-                      fullWidth
-                      size="small"
-                      onChange={(e) => {
-                        const updated = [...dropoutRows];
-                        updated[index].studentName = e.target.value;
-                        setDropoutRows(updated);
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={3}>
-                    <TextField
-                      label="Reason"
-                      fullWidth
-                      size="small"
-                      onChange={(e) => {
-                        const updated = [...dropoutRows];
-                        updated[index].reason = e.target.value;
-                        setDropoutRows(updated);
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              ))}
-
-              {/* Add Dropout Button in Next Line */}
-<Grid container>
-  <Grid item xs={12}>
-    <Box mt={1} mb={4}>
-      <Button
-        variant="outlined"
-        onClick={() =>
-          setDropoutRows([
-            ...dropoutRows,
-            { year: "", class: "", section: "", studentName: "", reason: "" }
-          ])
-        }
-      >
-        + Add Dropout
-      </Button>
-    </Box>
-  </Grid>
-</Grid>
-
-              {/* ================= STUDENT MIGRATION ================= */}
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                      color: "#fff",
-                      padding: "8px 16px",
-                      borderRadius: 2,
-                      fontWeight: 600,
-                      mb: 2,
-                    }}
-                  >
-                    Student Migration Details
-                  </Typography>
-                </Grid>
-
-
-                {migrationRows.map((row, index) => (
-  <Grid container spacing={2} key={index} mb={2}>
-
-    {/* Year */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        label="Year"
-        fullWidth
-        size="small"
-        value={row.year}
-        onChange={(e) => {
-          const updated = [...migrationRows];
-          updated[index].year = e.target.value;
-          setMigrationRows(updated);
-        }}
-      />
-    </Grid>
-
-    {/* Student Name */}
-    <Grid item xs={12} md={3}>
-      <TextField
-        label="Student Name"
-        fullWidth
-        size="small"
-        value={row.studentName}
-        onChange={(e) => {
-          const updated = [...migrationRows];
-          updated[index].studentName = e.target.value;
-          setMigrationRows(updated);
-        }}
-      />
-    </Grid>
-
-    {/* Class (Added after Student Name) */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        select
-        label="Class"
-        fullWidth
-        size="small"
-        value={row.class}
-        onChange={(e) => {
-          const updated = [...migrationRows];
-          updated[index].class = e.target.value;
-          setMigrationRows(updated);
-        }}
-      >
-        {["6","7","8","9","10","11","12"].map((cls) => (
-          <MenuItem key={cls} value={cls}>
-            {cls}
-          </MenuItem>
-        ))}
-      </TextField>
-    </Grid>
-
-    {/* Migrated From */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        label="Migrated From"
-        fullWidth
-        size="small"
-        value={row.migratedfrom}
-        onChange={(e) => {
-          const updated = [...migrationRows];
-          updated[index].migratedfrom = e.target.value;
-          setMigrationRows(updated);
-        }}
-      />
-    </Grid>
-
-    {/* Transferred To */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        label="Transferred To"
-        fullWidth
-        size="small"
-        value={row.transferredTo}
-        onChange={(e) => {
-          const updated = [...migrationRows];
-          updated[index].transferredTo = e.target.value;
-          setMigrationRows(updated);
-        }}
-      />
-    </Grid>
-
-    {/* Reason */}
-    <Grid item xs={12} md={3}>
-      <TextField
-        label="Reason"
-        fullWidth
-        size="small"
-        value={row.reason}
-        onChange={(e) => {
-          const updated = [...migrationRows];
-          updated[index].reason = e.target.value;
-          setMigrationRows(updated);
-        }}
-      />
-    </Grid>
-
-  </Grid>
-))}
-                <Grid container>
-                  <Grid item xs={12}>
-                    <Box mt={2} mb={4}>
-                      <Button
-                        variant="outlined"
-                        onClick={() =>
-                          setMigrationRows([
-                            ...migrationRows,
-                            { year: "", studentName: "", migratedfrom: "", transferredTo: "", reason: "" }
-                          ])
-                        }
-                      >
-                        + Add Migration
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Grid>
-
-              {/* ================= STUDENT ACHIEVEMENTS ================= */}
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                      color: "#fff",
-                      padding: "8px 16px",
-                      borderRadius: 2,
-                      fontWeight: 600,
-                      mb: 2,
-                    }}
-                  >
-                    Student Special Achievements
-                  </Typography>
-                </Grid>
-              </Grid>
-
-              {achievementRows.map((row, index) => (
-                <Grid container spacing={2} key={index} mb={2}>
-                  <Grid item xs={12} md={3}>
-                    <TextField label="Student Name" fullWidth size="small"
-                      onChange={(e) => {
-                        const updated = [...achievementRows];
-                        updated[index].studentName = e.target.value;
-                        setAchievementRows(updated);
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={2}>
-                    <TextField label="Class" fullWidth size="small"
-                      onChange={(e) => {
-                        const updated = [...achievementRows];
-                        updated[index].class = e.target.value;
-                        setAchievementRows(updated);
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} md={3}>
-                    <TextField label="Event Name" fullWidth size="small"
-                      onChange={(e) => {
-                        const updated = [...achievementRows];
-                        updated[index].eventName = e.target.value;
-                        setAchievementRows(updated);
-                      }}
-                    />
-                  </Grid>
-
-                 <Grid item xs={12} sm={6} md={3}>
-  <TextField
-    select
-    label="Level / Exam"
-    fullWidth
-    size="small"
-    value={row.level}
-    onChange={(e) => {
-      const updated = [...achievementRows];
-      updated[index].level = e.target.value;
-      setAchievementRows(updated);
-    }}
-  >
-    {achievementLevels.map((level) => (
-      <MenuItem key={level} value={level}>
-        {level}
-      </MenuItem>
-    ))}
-  </TextField>
-</Grid>
-                  <Grid item xs={12} md={2}>
-                    <TextField label="Recognition" fullWidth size="small"
-                      onChange={(e) => {
-                        const updated = [...achievementRows];
-                        updated[index].recognition = e.target.value;
-                        setAchievementRows(updated);
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              ))}
-
-              <Button
-                variant="outlined"
-                sx={{ mb: 4 }}
-                onClick={() =>
-                  setAchievementRows([
-                    ...achievementRows,
-                    { studentName: "", class: "", eventName: "", level: "", recognition: "" }
-                  ])
-                }
-              >
-                + Add Achievement
-              </Button>
             </Grid>
-
-            {/* ================= TEACHING STAFF DETAILS SECTION ================= */}
-            <Grid container spacing={2}>
-  <Grid item xs={12}>
-    <Typography
-      variant="h6"
-      sx={{
-        background: "linear-gradient(to right, #1976d2, #42a5f5)",
-        color: "#fff",
-        padding: "8px 16px",
-        borderRadius: 2,
-        fontWeight: 600,
-        mb: 2,
-      }}
-    >
-      Teaching Staff Details
-    </Typography>
-  </Grid>
-</Grid>
-
-{/* Teaching Staff Fields */}
-{teachingRows.map((row, index) => (
-  <Grid container spacing={2} mb={2} key={index}>
-
-    {/* ===== FIRST ROW (STAFF DETAILS) ===== */}
-    {teachingStaffSummaryFields
-      .filter(
-        (field) =>
-          field.name !== "total" &&
-          field.name !== "filled" &&
-          field.name !== "vacant"
-      )
-      .map((field) => (
-        <Grid item xs={12} sm={3} key={field.name}>
-          {field.type === "select" ? (
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label={field.label}
-              value={row[field.name]}
-              onChange={(e) => {
-                const updatedRows = [...teachingRows];
-                updatedRows[index][field.name] = e.target.value;
-                setteachingRows(updatedRows);
-              }}
-            >
-              <MenuItem value="">Select</MenuItem>
-              {field.options.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-            </TextField>
-          ) : (
-            <TextField
-              fullWidth
-              size="small"
-              type={field.type}
-              label={field.label}
-              value={row[field.name]}
-              InputProps={{ readOnly: field.readOnly }}
-              onChange={(e) => {
-                const updatedRows = [...teachingRows];
-                updatedRows[index][field.name] = e.target.value;
-                setteachingRows(updatedRows);
-              }}
-            />
-          )}
-        </Grid>
-      ))}
-
-    {/* ===== SECOND ROW (TOTAL / FILLED / VACANT) ===== */}
-    <Grid container spacing={2} mt={1}>
-      {teachingStaffSummaryFields
-        .filter(
-          (field) =>
-            field.name === "total" ||
-            field.name === "filled" ||
-            field.name === "vacant"
-        )
-        .map((field) => (
-          <Grid item xs={12} sm={4} key={field.name}>
-            <TextField
-              fullWidth
-              size="small"
-              type={field.type}
-              label={field.label}
-              value={row[field.name]}
-              InputProps={{ readOnly: field.readOnly }}
-              onChange={(e) => {
-                const updatedRows = [...teachingRows];
-                updatedRows[index][field.name] = e.target.value;
-                setteachingRows(updatedRows);
-              }}
-            />
-          </Grid>
-        ))}
-    </Grid>
-
-  </Grid>
-))}
-{/* Add Post Button */}
-<Grid container>
-  <Grid item xs={12}>
-    <Box mt={1} mb={4}>
-      <Button
-        variant="outlined"
-        sx={{ mb: 4 }}
-                onClick={() =>
-                  setteachingRows([
-                    ...teachingRows,
-                    { post: "",
-  name: "",
-  dob: "",
-  doj: "",
-  email: "",
-  contact: "",
-  total: "",
-  filled: "",
-  vacant: ""
-}                ])
-                }
-              >
-        + Add Post
-      </Button>
-    </Box>
-  </Grid>
-</Grid>
-            {/* =================NON TEACHING STAFF DETAILS SECTION ================= */}
-            <Grid container spacing={2}>
-  <Grid item xs={12}>
-    <Typography
-      variant="h6"
-      sx={{
-        background: "linear-gradient(to right, #1976d2, #42a5f5)",
-        color: "#fff",
-        padding: "8px 16px",
-        borderRadius: 2,
-        fontWeight: 600,
-        mb: 2,
-      }}
-    >
-      Non-Teaching Staff Details
-    </Typography>
-  </Grid>
-</Grid>
-
-{/* Non Teaching Staff Fields */}
-{nonTeachingRows.map((row, index) => (
-  <Grid container spacing={2} mb={2} key={index}>
-
-    {/* ===== FIRST ROW (DETAILS) ===== */}
-    {nonTeachingStaffDetailFields
-      .filter(
-        (field) =>
-          field.name !== "total" &&
-          field.name !== "filled" &&
-          field.name !== "vacant"
-      )
-      .map((field) => (
-        <Grid item xs={12} sm={3} key={field.name}>
-          <TextField
-            fullWidth
-            size="small"
-            type={field.type}
-            label={field.label}
-            value={row[field.name]}
-            onChange={(e) => {
-              const updatedRows = [...nonTeachingRows];
-              updatedRows[index][field.name] = e.target.value;
-              setnonTeachingRows(updatedRows);
-            }}
-          />
-        </Grid>
-      ))}
-
-    {/* ===== SECOND ROW (TOTAL / FILLED / VACANT) ===== */}
-    <Grid container spacing={2} mt={1}>
-      {nonTeachingStaffDetailFields
-        .filter(
-          (field) =>
-            field.name === "total" ||
-            field.name === "filled" ||
-            field.name === "vacant"
-        )
-        .map((field) => (
-          <Grid item xs={12} sm={4} key={field.name}>
-            <TextField
-              fullWidth
-              size="small"
-              type={field.type}
-              label={field.label}
-              value={row[field.name]}
-              InputProps={{ readOnly: field.readOnly }}
-              onChange={(e) => {
-                const updatedRows = [...nonTeachingRows];
-                updatedRows[index][field.name] = e.target.value;
-                setnonTeachingRows(updatedRows);
-              }}
-            />
-          </Grid>
-        ))}
-    </Grid>
-
-  </Grid>
-))}
-{/* Add Post Button */}
-<Grid container>
-  <Grid item xs={12}>
-    <Box mt={1} mb={4}>
-      <Button
-        variant="outlined"
-         sx={{ mb: 4 }}
-                onClick={() =>
-                  setnonTeachingRows([
-                    ...nonTeachingRows,
-                    {
-  post: "",
-  name: "",
-  dob: "",
-  doj: "",
-  email: "",
-  contact: "",
-  total: "",
-  filled: "",
-  vacant: ""
-}
-                  ])
-                }
-              >
-        + Add Post
-      </Button>
-    </Box>
-  </Grid>
-</Grid>
-           
-            {/* ================= OPERATIONAL COST DETAILS ================= */}
-<Grid container spacing={2}>
-  <Grid item xs={12}>
-    <Typography
-      variant="h6"
-      sx={{
-        background: "linear-gradient(to right, #1976d2, #42a5f5)",
-        color: "#fff",
-        padding: "8px 16px",
-        borderRadius: 2,
-        fontWeight: 600,
-        mb: 2,
-      }}
-    >
-      Operational Cost Details
-    </Typography>
-  </Grid>
-</Grid>
-
-<Grid container spacing={2} mb={4}>
-  {operationalCostFields.map((fieldItem) => (
-    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-      <Controller
-        name={fieldItem.name}
-        control={control}
-        defaultValue=""
-        rules={{ required: `${fieldItem.label} is required` }}
-        render={({ field, fieldState: { error } }) => (
-          <TextField
-            {...field}
-            label={fieldItem.label}
-            type={fieldItem.type || "text"}
-            select={!!fieldItem.options}
-            fullWidth
-            size="small"
-            error={!!error}
-            helperText={error ? error.message : ""}
-            InputProps={{
-              readOnly: fieldItem.readOnly || false,
-            }}
-          >
-            {fieldItem.options &&
-              fieldItem.options.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option}
-                </MenuItem>
-              ))}
-          </TextField>
-        )}
-      />
-    </Grid>
-  ))}
-</Grid>
 
             {/* ================= IMAGE UPLOAD SECTION ================= */}
             <Grid container spacing={2}>
@@ -2095,7 +3020,8 @@ const teachingStaffSummaryFields = [
         </DialogActions>
       </Dialog>
     </Container>
-  );
+  )
 };
+
 
 export default EMRSForm;
