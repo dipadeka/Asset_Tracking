@@ -19,6 +19,7 @@ import {
   AccountBalance,
 } from "@mui/icons-material";
 
+import { toast } from "react-toastify";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Sidebar = () => {
@@ -27,8 +28,15 @@ const Sidebar = () => {
   const [openScheme, setOpenScheme] = useState(false);
 
   const logoutUser = () => {
+    // remove stored auth data
     localStorage.removeItem("token");
-    navigate("/");
+    localStorage.removeItem("user");
+
+    // show message
+    toast.success("Logged out successfully");
+
+    // redirect to login page
+    navigate("/signin", { replace: true });
   };
 
   const isActive = (path) => location.pathname === path;
@@ -42,17 +50,20 @@ const Sidebar = () => {
         color: "#fff",
         display: "flex",
         flexDirection: "column",
-        p: 2
+        p: 2,
       }}
     >
       {/* TOP SECTION */}
       <Box>
-        <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 , textAlign:'center'}}>
+        <Typography
+          variant="h6"
+          fontWeight="bold"
+          sx={{ mb: 3, textAlign: "center" }}
+        >
           Asset Portal
         </Typography>
 
         <List>
-
           {/* New Application */}
           <ListItemButton
             selected={isActive("/dashboard/new")}
@@ -111,7 +122,6 @@ const Sidebar = () => {
           {/* Scheme Children */}
           <Collapse in={openScheme}>
             <List component="div" disablePadding>
-
               <ListItemButton
                 selected={isActive("/dashboard/emrs")}
                 onClick={() => navigate("/dashboard/emrs")}
@@ -126,7 +136,6 @@ const Sidebar = () => {
               >
                 <ListItemText sx={{ pl: 3 }} primary="EMRS" />
               </ListItemButton>
-
             </List>
           </Collapse>
         </List>

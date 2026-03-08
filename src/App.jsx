@@ -12,6 +12,7 @@ import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
 import EMRSForm from "./pages/EMRSForm";
 
+import ProtectedRoute from "./pages/routes/protected-routes";
 function App() {
   return (
     <>
@@ -29,11 +30,20 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/*  DASHBOARD WITH SIDEBAR + TOPBAR */}
-          <Route path="dashboard" element={<DashboardLayout />}>
+          {/* PROTECTED DASHBOARD */}
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="new" element={<NewApplication />} />
             <Route path="applied" element={<AlreadyApplied />} />
             <Route path="EMRS" element={<EMRSForm />} />
           </Route>
+          
         </Routes>
       </BrowserRouter>
     </>
