@@ -533,54 +533,161 @@ const AssetForm = () => {
                 </Grid>
               ))}
 
+          
               {/* Status */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="status"
-                  control={control}
-                  defaultValue=""
-                  rules={{ required: "Status is required" }}
-                  render={({ field, fieldState: { error } }) => (
-                    <FormControl
-                      fullWidth
-                      size="small"
-                      error={!!error}
-                      sx={{ minWidth: 220 }}
-                    >
-                      <InputLabel>Status</InputLabel>
-                      <Select {...field} label="Status">
-                        <MenuItem value="Planned">Planned</MenuItem>
-                        <MenuItem value="Work In Progress">
-                          Work In Progress
-                        </MenuItem>
-                        <MenuItem value="Completed">Completed</MenuItem>
-                      </Select>
-                      <Typography variant="caption" color="error">
-                        {error?.message}
-                      </Typography>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
+<Grid item xs={12} sm={6} md={3}>
+  <Controller
+    name="status"
+    control={control}
+    defaultValue=""
+    rules={{ required: "Status is required" }}
+    render={({ field, fieldState: { error } }) => (
+      <FormControl fullWidth size="small" error={!!error} sx={{ minWidth: 220 }}>
+        <InputLabel>Status</InputLabel>
+        <Select
+          {...field}
+          label="Status"
+          sx={{
+            background:
+              field.value === "Completed"       ? "#dcfce7" :
+              field.value === "Work In Progress" ? "#fef3c7" :
+              field.value === "Planned"          ? "#f1f5f9" :
+              "white",
+            fontWeight: 600,
+            color:
+              field.value === "Completed"       ? "#16a34a" :
+              field.value === "Work In Progress" ? "#d97706" :
+              field.value === "Planned"          ? "#64748b" :
+              "inherit",
+          }}
+        >
+          <MenuItem value="Planned">⏳ Planned</MenuItem>
+          <MenuItem value="Work In Progress">🔄 Work In Progress</MenuItem>
+          <MenuItem value="Completed">✅ Completed</MenuItem>
+        </Select>
+        <Typography variant="caption" color="error">
+          {error?.message}
+        </Typography>
+      </FormControl>
+    )}
+  />
+</Grid>
 
               <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="completionPercentage"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Completion %"
-                      fullWidth
-                      size="small"
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
+  <Controller
+    name="completionPercentage"
+    control={control}
+    defaultValue=""
+    render={({ field }) => (
+      <Box>
+        {/* % Input */}
+        <TextField
+          {...field}
+          label="Completion %"
+          fullWidth
+          size="small"
+          InputProps={{ readOnly: true }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              background:
+                Number(field.value) === 100 ? "#dcfce7" :
+                Number(field.value) >= 50   ? "#fef3c7" :
+                Number(field.value) > 0     ? "#eff6ff" :
+                "#f8fafc",
+            },
+            "& input": {
+              fontWeight: 800,
+              color:
+                Number(field.value) === 100 ? "#16a34a" :
+                Number(field.value) >= 50   ? "#d97706" :
+                Number(field.value) > 0     ? "#1d4ed8" :
+                "#64748b",
+            }
+          }}
+        />
+
+        {/* Progress Bar — only shows when status is selected */}
+        {status && (
+          <Box sx={{ mt: 1 }}>
+
+            {/* Bar Track */}
+            <Box sx={{
+              height: 10, borderRadius: 5,
+              background: "#e2e8f0", overflow: "hidden",
+              border: "1px solid #e2e8f0"
+            }}>
+              <Box sx={{
+                height: "100%",
+                width: `${field.value || 0}%`,
+                borderRadius: 5,
+                transition: "width 0.5s ease",
+                background:
+                  Number(field.value) === 100 ? "linear-gradient(90deg,#22c55e,#16a34a)" :
+                  Number(field.value) >= 50   ? "linear-gradient(90deg,#fbbf24,#d97706)" :
+                  Number(field.value) > 0     ? "linear-gradient(90deg,#60a5fa,#1d4ed8)" :
+                  "#cbd5e1",
+                boxShadow:
+                  Number(field.value) === 100 ? "0 0 8px #22c55e80" :
+                  Number(field.value) >= 50   ? "0 0 8px #fbbf2480" :
+                  "none"
+              }} />
+            </Box>
+
+            {/* Badge + % label */}
+            <Box sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mt: 0.5
+            }}>
+              <Typography sx={{
+                fontSize: 11, fontWeight: 700,
+                px: 1.5, py: 0.3, borderRadius: 10,
+                background:
+                  status === "Completed"        ? "#dcfce7" :
+                  status === "Work In Progress"  ? "#fef3c7" :
+                  "#f1f5f9",
+                color:
+                  status === "Completed"        ? "#16a34a" :
+                  status === "Work In Progress"  ? "#d97706" :
+                  "#64748b",
+                border: `1px solid ${
+                  status === "Completed"        ? "#86efac" :
+                  status === "Work In Progress"  ? "#fcd34d" :
+                  "#e2e8f0"}`
+              }}>
+                {status === "Completed"        ? "✅ Completed" :
+                 status === "Work In Progress"  ? "🔄 In Progress" :
+                 "⏳ Planned"}
+              </Typography>
+
+              <Typography sx={{
+                fontSize: 16, fontWeight: 800,
+                color:
+                  Number(field.value) === 100 ? "#16a34a" :
+                  Number(field.value) >= 50   ? "#d97706" :
+                  "#64748b"
+              }}>
+                {field.value || 0}%
+              </Typography>
+            </Box>
+
+            {/* Helper text */}
+            <Typography sx={{
+              fontSize: 11, color: "#94a3b8",
+              fontStyle: "italic", mt: 0.5
+            }}>
+              {status === "Completed"        && "✅ Project fully completed"}
+              {status === "Work In Progress"  && "🔄 50% auto-set — edit if needed"}
+              {status === "Planned"           && "📋 Work has not begun yet"}
+            </Typography>
+
+          </Box>
+        )}
+      </Box>
+    )}
+  />
+</Grid>
 
               {/* Remarks */}
               <Grid item xs={12} md={6}>

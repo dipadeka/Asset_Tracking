@@ -26,6 +26,7 @@ import { GirlSharp } from "@mui/icons-material";
 const EMRSForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  
   const [reservationRows, setReservationRows] = useState([
     {
       name: "",
@@ -34,6 +35,7 @@ const EMRSForm = () => {
       category: ""
     }
   ]);
+
   const { control, handleSubmit, setValue, watch, register } = useForm({});
   // ================= DROPOUT / MIGRATION / ACHIEVEMENT STATES =================
   const [enrollmentRows, setEnrollmentRows] = useState([
@@ -50,13 +52,14 @@ const EMRSForm = () => {
       passed: "",
       passPercent: "",
       above75: "",
+      above75Error: "",
       below50: "",
       stream: "",
       distinctions: "",
       topScorer: "",
       topScore: "",
       // Dropouts
-      dropouts: [{ rollNo: "", studentName: "", reason: "", guardianContactNo: "" }],
+     dropouts: [{ studentName: "", rollNo: "", reason: "", guardianName: "", guardianContactNo: "", pinCode: "", district: "", postOffice: "", gramPanchayat: "", village: "" }],
       // Migrations
       migrations: [{ studentName: "", migratedFrom: "", transferredTo: "", reason: "" }],
       // Achievements
@@ -88,6 +91,7 @@ const EMRSForm = () => {
       hospitalEmpanelled: "",
       empanellementValidity: "",
       treatmentDetails: "",
+       empanelmentDepartment: "",
       doctorName: "",
       estimatedCost: "",
       amountClaimed: "",
@@ -109,20 +113,60 @@ const EMRSForm = () => {
       total: "",
       filled: "",
       vacant: "",
-      academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
-      professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
-      tetQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
+      academicQualifications: [{ post:"", staffname:" ",  qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+      professionalQualifications: [{  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+      tetQualifications: [{  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
     }
   ]);
   const [nonTeachingRows, setnonTeachingRows] = useState([
     {
       post: "", name: "", dob: "", doj: "", email: "", contact: "",
       total: "", filled: "", vacant: "",
-      academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
-      professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
-      tetQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
+      academicQualifications: [{  post:"", staffname:" ", qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+      professionalQualifications: [{  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+      tetQualifications: [{  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
     }
   ]);
+  // ================= CONSTRUCTION STATUS STATE =================
+  const [constructionRows, setConstructionRows] = useState({
+    school: [
+      { component: "Classrooms",   units: "6 rooms",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Teachers Lab", units: "2 rooms",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Student Lab",  units: "2 labs",    status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Library",      units: "1 library", status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+     { component: "Science Lab",      units: "1 lab",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+{ component: "↳ Biology Lab",    units: "1 lab",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+{ component: "↳ Chemistry Lab",  units: "1 lab",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+{ component: "↳ Physics Lab",    units: "1 lab",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Auditorium",   units: "1 hall",    status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Infirmary",    units: "1 room",    status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+    ],
+    residence: [
+      { component: "Boys Hostel",  units: "50 beds",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Girls Hostel",  units: "50 beds",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Water System",    units: "2 tanks",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Warden Office",   units: "1 office",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Recreation Area", units: "1 area",    status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Laundry Area",    units: "1 area",    status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Kitchen",         units: "1 kitchen", status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Staff Housing",   units: "10 units",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+    ],
+    outdoor: [
+      { component: "Compound Wall",  units: "500 m",     status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Garden",         units: "2000 sqm",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Worker Toilets", units: "4 units",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Parking",        units: "500 sqm",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+    ],
+      utilities: [
+  { component: "Electrical System",      units: "1 system", status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+  { component: "↳ Transformer Installed", units: "1 unit",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+  { component: "↳ Digiset Installed",     units: "1 unit",   status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Water Tanks",       units: "2 tanks",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Sewage System",     units: "1 plant",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Rainwater Harvest", units: "1 system", status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+      { component: "Security Cabin",    units: "1 cabin",  status: "Not Started", progress: 0, startDate: "", endDate: "", assignedTo: "", budget: "", remarks: "" },
+    ]
+  });
 
   const handleAddNonTeachingSummary = () => {
     setNonTeachingSummaryRows([
@@ -356,13 +400,81 @@ const EMRSForm = () => {
       totalMonthlyCost
     };
   };
-  const preparePayload = (data) => {
-    return {
-      BasicDetails: prepareBasicDetails(data),
-      locationDetais: prepareLocationDetails(data),
-      InfrastructureDetails: prepareInfrastructureDetails(data),
-      HostelAdministration: prepareHostelAdministration(data),
-      ClassStrength: enrollmentRows.map((row) => ({
+  
+  const onSubmit = async (data) => {
+  setLoading(true);
+  console.log("Form Data:", data);
+
+  try {
+    const payload = {
+      // ── BASIC DETAILS ──
+      EMRScode: Number(data.EMRScode),
+      EMRSid: data.EMRSid?.trim(),
+      udaisecode: Number(data.udaisecode),
+      schoolname: data.schoolname?.trim(),
+      schooltype: data.schooltype?.trim(),
+      affiliation: data.Affiliation?.trim(),
+      principalName: data.NameofthePrincipal?.trim(),
+      contactno: data.contactno?.trim(),
+      email: data.emailid?.trim(),
+
+      // ── LOCATION DETAILS ──
+      pincode: data.pincode,
+      state: data.state,
+      district: data.district,
+      block: data.block,
+      grampanchayat: data.grampanchayat,
+
+      // ── INFRASTRUCTURE DETAILS ──
+      totalClassrooms: Number(data.totalClassrooms || 0),
+      classroomWithSmartClass: Number(data.classroomWithSmartClass || 0),
+      classroomWithProjector: Number(data.classroomWithProjector || 0),
+      scienceLab: data.scienceLab,
+biologyLab: data.biologyLab,
+chemistryLab: data.chemistryLab,
+physicsLab: data.physicsLab,
+      computerLab: data.computerLab,
+      library: data.library,
+      booksInLibrary: Number(data.booksInLibrary || 0),
+     playground: data.playground,
+  playgroundArea: Number(data.playgroundArea || 0),
+      auditorium: data.Auditorium,
+      medicalRoom: data["Medical Room"],
+
+      // ── HOSTEL ADMINISTRATION ──
+      boysHostel: {
+        capacity: Number(data.boysHostelCapacity || 0),
+        bedsAvailable: Number(data.boysBedsAvailable || 0),
+        currentOccupancy: Number(data.boysCurrentOccupancy || 0),
+        cctvInstalled: data.boysCCTVInstalled,
+        noOfCCTV: Number(data.boysNoOfCCTV || 0),
+        securityAgency: data.boysSecurityAgency,
+securityAgencyName: data.boysSecurityAgencyName || null,
+securityAgencyContact: data.boysSecurityAgencyContact || null,
+      
+        warden: {
+          name: data.boysWardenName?.trim(),
+          email: data.boysWardenEmail?.trim(),
+          contact: data.boysWardenContact
+        }
+      },
+      girlsHostel: {
+        capacity: Number(data.girlsHostelCapacity || 0),
+        bedsAvailable: Number(data.girlsBedsAvailable || 0),
+        currentOccupancy: Number(data.girlsCurrentOccupancy || 0),
+        cctvInstalled: data.girlsCCTVInstalled,
+        noOfCCTV: Number(data.girlsNoOfCCTV || 0),
+        securityAgency: data.girlsSecurityAgency,
+       
+        warden: {
+          name: data.girlsWardenName?.trim(),
+          email: data.girlsWardenEmail?.trim(),
+          contact: data.girlsWardenContact
+        }
+      },
+
+      // ── CLASS STRENGTH + ACADEMIC PERFORMANCE ──
+      classStrength: enrollmentRows.map((row) => ({
         academicYear: row.academicYear,
         class: row.class,
         section: row.section,
@@ -370,63 +482,143 @@ const EMRSForm = () => {
         currentEnrollment: Number(row.currentEnrollment || 0),
         category: row.category,
         academicPerformance: {
-          boardClass: row.boardClass,
           appeared: Number(row.appeared || 0),
           passed: Number(row.passed || 0),
           passPercent: row.passPercent,
           above75: Number(row.above75 || 0),
-          below50: Number(row.below50 || 0)
+          below50: Number(row.below50 || 0),
+          stream: row.stream || null,
+          distinctions: Number(row.distinctions || 0),
+          topScorer: row.topScorer || null,
+          topScore: Number(row.topScore || 0)
         },
-        dropouts: row.dropouts,
-        migrations: row.migrations,
-        achievements: row.achievements
+        dropouts: row.dropouts.map((d) => ({
+          rollNo: d.rollNo,
+          studentName: d.studentName?.trim(),
+          reason: d.reason?.trim(),
+          guardianContactNo: d.guardianContactNo
+        })),
+        migrations: row.migrations.map((m) => ({
+          studentName: m.studentName?.trim(),
+          migratedFrom: m.migratedFrom?.trim(),
+          transferredTo: m.transferredTo?.trim(),
+          reason: m.reason?.trim()
+        })),
+        achievements: row.achievements.map((a) => ({
+          studentName: a.studentName?.trim(),
+          eventName: a.eventName?.trim(),
+          level: a.level,
+          recognition: a.recognition?.trim()
+        }))
       })),
-      ExtraCurricular: prepareExtraCurricular(extraCurricularRows),
-      teachingStaff: {
-        Summary: prepareTeachingStaffSummary(teachingRows),
-        Details: prepareTeachingStaffDetails(teachingRows)
-      },
-      Hospitalization: prepareHospitalization(hospitalizationRows),
-      nonTeachingStaff: {
-        Summary: prepareNonTeachingSummary(nonTeachingRows),
-        Details: prepareNonTeachingDetails(nonTeachingRows)
-      },
-      OperationalCost: prepareOperationalCost(data)
-    };
-  };
 
-  const onSubmit = (data) => {
-    const payload = preparePayload(data);
-    console.log("FINAL EMRS PAYLOAD:", payload);
-  };
-  const submitEMRS = async (payload) => {
-    try {
-      setLoading(true);   // 🟢 START LOADER
+      // ── EXTRA CURRICULAR ──
+      extraCurricular: extraCurricularRows.map((item) => ({
+        academicYear: item.academicYear,
+        initiativeName: item.initiativeName?.trim(),
+        collaboratingPartner: item.collaboratingPartner?.trim(),
+        areasOfDevelopment: item.areasOfDevelopment,
+        description: item.description?.trim(),
+        targetStudents: item.targetStudents?.trim(),
+        status: item.status
+      })),
 
-      const response = await fetch("/api/emrs/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
+      // ── HOSPITALIZATION ──
+      hospitalization: hospitalizationRows.map((item) => ({
+        studentName: item.studentName?.trim(),
+        rollNo: item.rollNo,
+        class: item.class,
+        section: item.section,
+        admissionDate: item.admissionDate,
+        dischargeDate: item.dischargeDate,
+        reasonForHospitalization: item.reasonForHospitalization?.trim(),
+        hospitalEmpanelled: item.hospitalEmpanelled?.trim(),
+        empanellementValidity: item.empanellementValidity,
+        treatmentDetails: item.treatmentDetails?.trim(),
+        doctorName: item.doctorName?.trim(),
+        estimatedCost: Number(item.estimatedCost || 0),
+        amountClaimed: Number(item.amountClaimed || 0),
+        claimStatus: item.claimStatus,
+        guardianName: item.guardianName?.trim(),
+        guardianContact: item.guardianContact
+      })),
+
+      // ── TEACHING STAFF ──
+      teachingStaff: teachingRows.map((staff) => ({
+        post: staff.post,
+        name: staff.name?.trim(),
+        dob: staff.dob,
+        doj: staff.doj,
+        email: staff.email?.trim(),
+        contact: staff.contact,
+        total: Number(staff.total || 0),
+        filled: Number(staff.filled || 0),
+        vacant: Number(staff.total || 0) - Number(staff.filled || 0),
+        academicQualifications: staff.academicQualifications,
+        professionalQualifications: staff.professionalQualifications,
+        tetQualifications: staff.tetQualifications
+      })),
+
+      // ── NON-TEACHING STAFF ──
+      nonTeachingStaff: nonTeachingRows.map((staff) => ({
+        post: staff.post,
+        name: staff.name?.trim(),
+        dob: staff.dob,
+        doj: staff.doj,
+        email: staff.email?.trim(),
+        contact: staff.contact,
+        total: Number(staff.total || 0),
+        filled: Number(staff.filled || 0),
+        vacant: Number(staff.total || 0) - Number(staff.filled || 0),
+        academicQualifications: staff.academicQualifications,
+        professionalQualifications: staff.professionalQualifications
+      })),
+
+      // ── OPERATIONAL COST ──
+      operationalCost: {
+        year: data.Year,
+        month: data.month,
+        costType: data.operationalcost,
+        amount: Number(data.amount || 0)
+      },
+      // ── CONSTRUCTION STATUS ──
+        constructionStatus: {
+          projectStartDate: data.projectStartDate || null,
+          expectedEndDate:  data.projectEndDate   || null,
+          totalBudget:      Number(data.totalProjectBudget || 0),
+          school:    constructionRows.school,
+          residence: constructionRows.residence,
+          outdoor:   constructionRows.outdoor,
+          utilities: constructionRows.utilities,
         },
-        body: JSON.stringify(payload)
-      });
+    };
 
-      const result = await response.json();
+    console.log("FINAL EMRS PAYLOAD:", payload);
 
-      if (!response.ok) {
-        throw new Error(result.message || "Something went wrong");
-      }
+    const response = await fetch("/api/emrs/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
 
-      alert("EMRS Data Submitted Successfully ✅");
-      console.log("EMRS RESPONSE:", result);
+    const result = await response.json();
 
-    } catch (error) {
-      console.error("Error:", error.message);
-      alert("Failed to Submit EMRS Data ❌");
-    } finally {
-      setLoading(false);   // 🔴 STOP LOADER
+    if (!response.ok) {
+      throw new Error(result.message || "Something went wrong");
     }
-  };
+
+    alert("EMRS Data Submitted Successfully ✅");
+    console.log("EMRS RESPONSE:", result);
+
+  } catch (error) {
+    console.error("Error:", error.message);
+    alert("Failed to Submit EMRS Data ❌ " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ================= PINCODE AUTO FILL =================
   const onPincodeChange = async (e) => {
@@ -453,7 +645,179 @@ const EMRSForm = () => {
       console.error("Error fetching location data:", error);
     }
   };
+// ================= SYNC INFRA → CONSTRUCTION =================
+  const syncInfraToConstruction = (fieldName, value) => {
+    const map = {
+      scienceLab:     { cat: "school", component: "Science Lab" },
+      library:        { cat: "school", component: "Library" },
+      Auditorium:     { cat: "school", component: "Auditorium" },
+      "Medical Room": { cat: "school", component: "Infirmary" },
+    };
+    if (map[fieldName] && value === "Yes") {
+      const { cat, component } = map[fieldName];
+      setConstructionRows(prev => ({
+        ...prev,
+        [cat]: prev[cat].map(r =>
+          r.component === component && r.status === "Not Started"
+            ? { ...r, status: "In Progress" }
+            : r
+        )
+      }));
+    }
+  };
 
+  // ================= CONSTRUCTION TABLE RENDERER =================
+  const CONSTRUCTION_CONFIG = {
+    school:    { label: "School Block",    icon: "🏫", color: "#1976d2", light: "#e3f2fd" },
+    residence: { label: "Residence Block", icon: "🏠", color: "#7b1fa2", light: "#f3e5f5" },
+    outdoor:   { label: "Outdoor Block",   icon: "🌳", color: "#2e7d32", light: "#e8f5e9" },
+    utilities: { label: "Utilities Block", icon: "⚡", color: "#e65100", light: "#fff3e0" },
+  };
+
+  const CONSTRUCTION_STATUS_STYLE = {
+    "Completed":   { color: "#16a34a", bg: "#dcfce7" },
+    "In Progress": { color: "#d97706", bg: "#fef3c7" },
+    "Not Started": { color: "#6b7280", bg: "#f3f4f6" },
+    "On Hold":     { color: "#7c3aed", bg: "#ede9fe" },
+    "Cancelled":   { color: "#dc2626", bg: "#fee2e2" },
+  };
+
+  const renderConstructionTable = (catKey) => {
+    const cfg = CONSTRUCTION_CONFIG[catKey];
+    const rows = constructionRows[catKey];
+
+    const updateRow = (idx, field, val) => {
+      setConstructionRows(prev => {
+        const updated = [...prev[catKey]];
+        updated[idx] = { ...updated[idx], [field]: val };
+        if (field === "status" && val === "Completed")   updated[idx].progress = 100;
+        if (field === "status" && val === "Not Started") updated[idx].progress = 0;
+        return { ...prev, [catKey]: updated };
+      });
+    };
+
+    const thStyle = {
+      background: cfg.color, color: "#fff", padding: "9px 10px",
+      fontSize: 12, fontWeight: 600, textAlign: "left",
+      whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.2)"
+    };
+    const tdStyle = {
+      padding: "8px 10px", fontSize: 13, verticalAlign: "middle",
+      borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #f1f5f9"
+    };
+    const nativeInput = {
+      width: "100%", border: "1px solid #e2e8f0", borderRadius: 6,
+      padding: "5px 8px", fontSize: 12, fontFamily: "inherit",
+      outline: "none", boxSizing: "border-box", background: "#fff"
+    };
+
+    return (
+      <Box key={catKey} mb={3}>
+        <Box sx={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: cfg.light, border: `1px solid ${cfg.color}30`,
+          borderRadius: "10px 10px 0 0", px: 2, py: 1.5
+        }}>
+          <Typography sx={{ fontWeight: 700, color: cfg.color, fontSize: 15 }}>
+            {cfg.icon}  {cfg.label}
+          </Typography>
+          <Box display="flex" gap={1}>
+            <Typography sx={{ background: "#dcfce7", color: "#16a34a", px: 1.5, py: 0.3, borderRadius: 10, fontSize: 12, fontWeight: 600 }}>
+              ✅ {rows.filter(r => r.status === "Completed").length} Done
+            </Typography>
+            <Typography sx={{ background: "#fef3c7", color: "#d97706", px: 1.5, py: 0.3, borderRadius: 10, fontSize: 12, fontWeight: 600 }}>
+              🔄 {rows.filter(r => r.status === "In Progress").length} Active
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ overflowX: "auto", border: `1px solid ${cfg.color}25`, borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1050 }}>
+            <thead>
+              <tr>
+                {["S.No","Component","Units","Status","Progress (%)","Start Date","End Date","Assigned To","Budget (₹)","Remarks"].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#9ca3af", fontWeight: 600, width: 40 }}>{i + 1}</td>
+                  <td style={{ ...tdStyle, minWidth: 130 }}>
+  {row.component.startsWith("↳") ? (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, pl: 2 }}>
+      <Box sx={{ width: 3, height: 3, borderRadius: "50%", background: "#94a3b8", mt: "1px" }} />
+      <Typography sx={{ fontSize: 12, color: "#64748b", fontStyle: "italic" }}>
+        {row.component.replace("↳ ", "")}
+      </Typography>
+    </Box>
+  ) : (
+    <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{row.component}</Typography>
+  )}
+</td>
+
+                  <td style={{ ...tdStyle, minWidth: 100 }}>
+  <input
+    type="text"
+    value={row.units}
+    onChange={e => updateRow(i, "units", e.target.value)}
+    style={nativeInput}
+    placeholder="e.g. 2 rooms"
+  />
+</td>
+                  <td style={{ ...tdStyle, minWidth: 130 }}>
+                    <select
+                      value={row.status}
+                      onChange={e => updateRow(i, "status", e.target.value)}
+                      style={{
+                        ...nativeInput,
+                        background: CONSTRUCTION_STATUS_STYLE[row.status]?.bg || "#f3f4f6",
+                        color: CONSTRUCTION_STATUS_STYLE[row.status]?.color || "#6b7280",
+                        fontWeight: 600, cursor: "pointer"
+                      }}
+                    >
+                      {["Not Started","In Progress","Completed","On Hold","Cancelled"].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ ...tdStyle, minWidth: 120 }}>
+                    <input
+                      type="number" min={0} max={100} value={row.progress}
+                      onChange={e => updateRow(i, "progress", Math.min(100, Math.max(0, Number(e.target.value))))}
+                      style={nativeInput}
+                    />
+                    <Box sx={{ mt: 0.5, height: 5, background: "#e5e7eb", borderRadius: 2, overflow: "hidden" }}>
+                      <Box sx={{
+                        height: "100%", borderRadius: 2, transition: "width 0.3s",
+                        width: `${row.progress}%`,
+                        background: row.progress === 100 ? "#16a34a" : row.progress > 0 ? "#f59e0b" : "#d1d5db"
+                      }} />
+                    </Box>
+                  </td>
+                  <td style={{ ...tdStyle, minWidth: 120 }}>
+                    <input type="date" value={row.startDate} onChange={e => updateRow(i, "startDate", e.target.value)} style={nativeInput} />
+                  </td>
+                  <td style={{ ...tdStyle, minWidth: 120 }}>
+                    <input type="date" value={row.endDate} onChange={e => updateRow(i, "endDate", e.target.value)} style={nativeInput} />
+                  </td>
+                  <td style={{ ...tdStyle, minWidth: 130 }}>
+                    <input type="text" value={row.assignedTo} onChange={e => updateRow(i, "assignedTo", e.target.value)} placeholder="Name / Agency" style={nativeInput} />
+                  </td>
+                  <td style={{ ...tdStyle, minWidth: 110 }}>
+                    <input type="number" value={row.budget} onChange={e => updateRow(i, "budget", e.target.value)} placeholder="0" style={nativeInput} />
+                  </td>
+                  <td style={{ ...tdStyle, minWidth: 130 }}>
+                    <input type="text" value={row.remarks} onChange={e => updateRow(i, "remarks", e.target.value)} placeholder="Optional" style={nativeInput} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+      </Box>
+    );
+  };
 
 
   // ================= EMRS BASIC DETAILS =================
@@ -574,18 +938,6 @@ const EMRSForm = () => {
 
    { name: "boysWardenContact", label: "Boys Warden Contact", type: "number" },
 
-{
-  name: "boysWaterStorage",
-  label: "Water Storage Capacity Available",
-  options: ["Yes", "No"]
-},
-
-{
-  name: "boysBackupPower",
-  label: "Backup Power Available",
-  options: ["Yes", "No"]
-}
-
 
   ];
 
@@ -620,17 +972,7 @@ const EMRSForm = () => {
 
    { name: "girlsWardenContact", label: "Girls Warden Contact", type: "number" },
 
-{
-  name: "girlsWaterStorage",
-  label: "Water Storage Capacity Available",
-  options: ["Yes", "No"]
-},
 
-{
-  name: "girlsBackupPower",
-  label: "Backup Power Available",
-  options: ["Yes", "No"]
-}
 
   ];
   // ================= ENROLLMENT SUMMARY =================
@@ -860,6 +1202,8 @@ const EMRSForm = () => {
         "Electricity",
         "Water",
         "Internet",
+        "Security Agency",
+        "Event Organized",
         "Maintenance",
         "Establishment",
         "Miscellaneous",
@@ -939,9 +1283,9 @@ const EMRSForm = () => {
       </Box>
     );
 
-    const emptyAcademic = { qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" };
-    const emptyProfessional = { qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
-    const emptyTET = { qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
+    const emptyAcademic = {  post:"", staffname:" ", qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" };
+    const emptyProfessional = {  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
+    const emptyTET = {  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
 
     return (
       <Box mt={2}>
@@ -954,7 +1298,7 @@ const EMRSForm = () => {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["S.No", "Qualification", "Course", "Registration No.", "Roll No.", "College", "Marks Obtained (%)", "University", "Passing Year", "Action"].map(h => (
+                {["S.No",  "Post", "Staff Name", "Qualification", "Course", "Registration No.", "Roll No.", "College", "Marks Obtained (%)", "University", "Passing Year", "Action"].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -962,11 +1306,33 @@ const EMRSForm = () => {
             <tbody>
               {row.academicQualifications.map((q, qIndex) => (
                 <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                
+                
+                
                   <td style={tdCenterStyle}>{qIndex + 1}</td>
+                  <td style={{ ...tdStyle, minWidth: 120 }}>
+                    <Typography sx={{
+    fontSize: 12, fontWeight: 700, color: "#fff",
+    background: "#1976d2", px: 1, py: 0.4,
+    borderRadius: 1, textAlign: "center", whiteSpace: "nowrap"
+  }}>
+    {row.post || "—"}
+  </Typography>
+</td>
+<td style={{ ...tdStyle, minWidth: 130 }}>
+  <Typography sx={{
+    fontSize: 12, fontWeight: 600, color: "#374151",px: 1, whiteSpace: "nowrap"
+  }}>
+    {row.name || "—"}
+  </Typography>
+</td>
                   <td style={tdStyle}>
                     <TextField select fullWidth size="small" value={q.qualification}
                       onChange={(e) => updateField("academicQualifications", qIndex, "qualification", e.target.value)}
-                      sx={{ minWidth: 110 }}>
+                
+    
+                  
+                  sx={{ minWidth: 110 }}>
                       {qualificationOptions.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                     </TextField>
                   </td>
@@ -1024,7 +1390,7 @@ const EMRSForm = () => {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["S.No", "Qualification", "Registration No.", "Roll No.", "Exam Conducted By", "Passing Year", "Marks Obtained (%)", "Affiliation Body", "Action"].map(h => (
+                {["S.No", "Post", "Staff Name", "Qualification", "Registration No.", "Roll No.", "Exam Conducted By", "Passing Year", "Marks Obtained (%)", "Affiliation Body", "Action"].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -1032,11 +1398,27 @@ const EMRSForm = () => {
             <tbody>
               {row.professionalQualifications.map((q, qIndex) => (
                 <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
-                  <td style={tdCenterStyle}>{qIndex + 1}</td>
+                 <td style={tdCenterStyle}>{qIndex + 1}</td>
+<td style={{ ...tdStyle, minWidth: 120 }}>
+  <Typography sx={{
+    fontSize: 12, fontWeight: 700, color: "#fff",
+    background: "#1976d2", px: 1, py: 0.4,
+    borderRadius: 1, textAlign: "center", whiteSpace: "nowrap"
+  }}>
+    {row.post || "—"}
+  </Typography>
+</td>
+<td style={{ ...tdStyle, minWidth: 130 }}>
+  <Typography sx={{
+    fontSize: 12, fontWeight: 600, color: "#374151",
+    px: 1, whiteSpace: "nowrap"
+  }}>
+    {row.name || "—"}
+  </Typography>
+</td>
                   <td style={tdStyle}>
                     <TextField select fullWidth size="small" value={q.qualification}
-                      onChange={(e) => updateField("professionalQualifications", qIndex, "qualification", e.target.value)}
-                      sx={{ minWidth: 110 }}>
+                      onChange={(e) => updateField("professionalQualifications", qIndex, "qualification", e.target.value)}                      sx={{ minWidth: 110 }}>
                       {professionalQualificationOptions.map(o => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                     </TextField>
                   </td>
@@ -1088,7 +1470,7 @@ const EMRSForm = () => {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["S.No", "Qualification", "Registration No.", "Roll No.", "Exam Conducted By", "Passing Year", "Marks Obtained (%)", "Affiliation Body", "Action"].map(h => (
+                {["S.No",  "Post", "Staff Name", "Qualification", "Registration No.", "Roll No.", "Exam Conducted By", "Passing Year", "Marks Obtained (%)", "Affiliation Body", "Action"].map(h => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -1096,7 +1478,24 @@ const EMRSForm = () => {
             <tbody>
               {row.tetQualifications.map((q, qIndex) => (
                 <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
-                  <td style={tdCenterStyle}>{qIndex + 1}</td>
+                <td style={tdCenterStyle}>{qIndex + 1}</td>
+<td style={{ ...tdStyle, minWidth: 120 }}>
+  <Typography sx={{
+    fontSize: 12, fontWeight: 700, color: "#fff",
+    background: "#1976d2", px: 1, py: 0.4,
+    borderRadius: 1, textAlign: "center", whiteSpace: "nowrap"
+  }}>
+    {row.post || "—"}
+  </Typography>
+</td>
+<td style={{ ...tdStyle, minWidth: 130 }}>
+  <Typography sx={{
+    fontSize: 12, fontWeight: 600, color: "#374151",
+    px: 1, whiteSpace: "nowrap"
+  }}>
+    {row.name || "—"}
+  </Typography>
+</td>
                   <td style={tdStyle}>
                     <TextField select fullWidth size="small" value={q.qualification}
                       onChange={(e) => updateField("tetQualifications", qIndex, "qualification", e.target.value)}
@@ -1226,33 +1625,44 @@ const EMRSForm = () => {
             </Grid>
             <Grid container spacing={2} mb={4}>
               {emrsBasicFields.map((fieldItem) => (
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small" sx={{ minWidth: 220 }}
-                        select={!!fieldItem.options}
-                        error={!!error}
-                        helperText={error ? error.message : ""}
-                      >
-                        {fieldItem.options &&
-                          fieldItem.options.map((option) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                      </TextField>
-                    )}
-                  />
-                </Grid>
-              ))}
+  <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+    <Controller
+      name={fieldItem.name}
+      control={control}
+      defaultValue=""
+      rules={{
+        required: `${fieldItem.label} is required`,
+        ...(fieldItem.name === "contactno" && {
+          validate: (v) => /^[0-9]{10}$/.test(v) || "Must be exactly 10 digits"
+        })
+      }}
+      render={({ field, fieldState: { error } }) => (
+        <TextField
+          {...field}
+          label={fieldItem.label}
+          fullWidth
+          size="small"
+          sx={{ minWidth: 220 }}
+          select={!!fieldItem.options}
+          error={!!error}
+          helperText={error ? error.message : ""}
+          {...(fieldItem.name === "contactno" && {
+            inputProps: { maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" },
+            onKeyDown: (e) => {
+              if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+                e.preventDefault();
+              }
+            }
+          })}
+        >
+          {fieldItem.options && fieldItem.options.map((option) => (
+            <MenuItem key={option} value={option}>{option}</MenuItem>
+          ))}
+        </TextField>
+      )}
+    />
+  </Grid>
+))}
             </Grid>
             {/* ================= EMRS LOCATION SECTION ================= */}
             <Grid container spacing={2}>
@@ -1336,184 +1746,266 @@ const EMRSForm = () => {
 
             </Grid>
 
-            {/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
+          {/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
+<Grid container spacing={2}>
+  <Grid item xs={12}>
+    <Typography variant="h6" sx={{
+      background: "linear-gradient(to right, #1976d2, #42a5f5)",
+      color: "#fff", padding: "8px 16px", borderRadius: 2, fontWeight: 600, mb: 2,
+    }}>
+      Infrastructure Details
+    </Typography>
+  </Grid>
+</Grid>
 
-            <Grid container spacing={3}>
+{/* ── LINE 1: Classrooms ── */}
+<Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 2, background: "#fff" }}>
+  <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>🏫 Classrooms</Typography>
+  <Grid container spacing={2}>
+    <Grid item xs={12} sm={4} md={4}>
+      <Controller name="totalClassrooms" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} label="Total Classrooms" type="number" fullWidth size="small" />
+        )} />
+    </Grid>
+    <Grid item xs={12} sm={4} md={4}>
+      <Controller name="classroomWithSmartClass" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} label="Classroom with Smart Class" type="number" fullWidth size="small" />
+        )} />
+    </Grid>
+    <Grid item xs={12} sm={4} md={4}>
+      <Controller name="classroomWithProjector" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} label="Classroom with Projector" type="number" fullWidth size="small" />
+        )} />
+    </Grid>
+  </Grid>
+</Box>
 
-              {/* Heading Row */}
+{/* ── LINE 2: Science Lab ── */}
+<Box sx={{ border: "1px solid #bbdefb", borderRadius: 2, p: 2, mb: 2, background: "#f0f7ff" }}>
+  <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>🔬 Science Lab</Typography>
+  <Grid container spacing={2}>
+    <Grid item xs={12} sm={3} md={3}>
+      <Controller name="scienceLab" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} select label="Science Lab Available" fullWidth size="small" sx={{ minWidth: 220 }}
+            onChange={(e) => { field.onChange(e); syncInfraToConstruction("scienceLab", e.target.value); }}>
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )} />
+    </Grid>
+    {watch("scienceLab") === "Yes" && (
+      <>
+        <Grid item xs={12} sm={3} md={3}>
+          <Controller name="biologyLab" control={control} defaultValue=""
+            render={({ field }) => (
+              <TextField {...field} select label="Biology Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </TextField>
+            )} />
+        </Grid>
+        <Grid item xs={12} sm={3} md={3}>
+          <Controller name="chemistryLab" control={control} defaultValue=""
+            render={({ field }) => (
+              <TextField {...field} select label="Chemistry Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </TextField>
+            )} />
+        </Grid>
+        <Grid item xs={12} sm={3} md={3}>
+          <Controller name="physicsLab" control={control} defaultValue=""
+            render={({ field }) => (
+              <TextField {...field} select label="Physics Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </TextField>
+            )} />
+        </Grid>
+      </>
+    )}
+  </Grid>
+</Box>
+
+{/* ── LINE 3: Computer Lab ── */}
+<Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 2, background: "#fff" }}>
+  <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>💻 Computer Lab</Typography>
+  <Grid container spacing={2}>
+    <Grid item xs={12} sm={4} md={3}>
+      <Controller name="computerLab" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} select label="Computer Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )} />
+    </Grid>
+  </Grid>
+</Box>
+
+{/* ── LINE 4: Library ── */}
+<Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 2, background: "#fff" }}>
+  <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>📚 Library</Typography>
+  <Grid container spacing={2}>
+    
+    <Grid item xs={12} sm={4} md={3}>
+      <Controller name="library" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} select label="Library Available" fullWidth size="small" sx={{ minWidth: 220 }}
+            onChange={(e) => { field.onChange(e); syncInfraToConstruction("library", e.target.value); }}>
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )} />
+    </Grid>
+
+    {watch("library") === "Yes" && (
+      <Grid item xs={12} sm={4} md={3}>
+        <Controller name="booksInLibrary" control={control} defaultValue=""
+          render={({ field }) => (
+            <TextField {...field} label="No. of Books in Library" type="number" fullWidth size="small" />
+          )} />
+      </Grid>
+    )}
+  </Grid>
+</Box>
+
+{/* ── LINE 5: Playground ── */}
+<Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 2, background: "#fff" }}>
+  <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>⚽ Playground</Typography>
+  <Grid container spacing={2}>
+    <Grid item xs={12} sm={4} md={3}>
+      <Controller name="playground" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} select label="Playground Available" fullWidth size="small" sx={{ minWidth: 220 }}>
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )} />
+    </Grid>
+    {watch("playground") === "Yes" && (
+      <Grid item xs={12} sm={4} md={3}>
+        <Controller name="playgroundArea" control={control} defaultValue=""
+          render={({ field }) => (
+            <TextField {...field} label="Playground Area (sq. ft)" type="number" fullWidth size="small" sx={{ minWidth: 220 }} />
+          )} />
+      </Grid>
+    )}
+  </Grid>
+</Box>
+
+{/* ── LINE 6: Auditorium & Medical Room ── */}
+<Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 4, background: "#fff" }}>
+  <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>🏛️ Other Facilities</Typography>
+  <Grid container spacing={2}>
+    <Grid item xs={12} sm={4} md={3}>
+      <Controller name="Auditorium" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} select label="Auditorium" fullWidth size="small" sx={{ minWidth: 220 }}
+            onChange={(e) => { field.onChange(e); syncInfraToConstruction("Auditorium", e.target.value); }}>
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )} />
+    </Grid>
+    <Grid item xs={12} sm={4} md={3}>
+      <Controller name="Medical Room" control={control} defaultValue=""
+        render={({ field }) => (
+          <TextField {...field} select label="Medical Room" fullWidth size="small" sx={{ minWidth: 220 }}
+            onChange={(e) => { field.onChange(e); syncInfraToConstruction("Medical Room", e.target.value); }}>
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )} />
+    </Grid>
+  </Grid>
+</Box>
+
+{/* ================= CONSTRUCTION & ASSET STATUS ================= */}            <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    background: "linear-gradient(to right, #1976d2, #42a5f5)",
-                    color: "#fff",
-                    padding: "8px 16px",
-                    borderRadius: 2,
-                    fontWeight: 600,
-                    mb: 2,
-                  }}
-                >
-                  Infrastructure Details
+                <Typography variant="h6" sx={{
+                  background: "linear-gradient(to right, #1976d2, #42a5f5)",
+                  color: "#fff", padding: "8px 16px", borderRadius: 2, fontWeight: 600, mb: 2,
+                }}>
+                  🏗️ Construction & Asset Status
                 </Typography>
               </Grid>
-
             </Grid>
 
-            {/* Fields Row (New Line) */}
-            <Grid container spacing={3} mb={4}>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="totalClassrooms"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Total Classrooms"
-                      type="number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
+            {/* Project Overview */}
+            <Box sx={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 2, p: 3, mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 2 }}>
+                Project Overview
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Controller name="projectStartDate" control={control} defaultValue=""
+                    render={({ field }) => (
+                      <TextField {...field} label="Project Start Date" type="date"
+                        InputLabelProps={{ shrink: true }} fullWidth size="small" />
+                    )} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Controller name="projectEndDate" control={control} defaultValue=""
+                    render={({ field }) => (
+                      <TextField {...field} label="Expected End Date" type="date"
+                        InputLabelProps={{ shrink: true }} fullWidth size="small" />
+                    )} />
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Controller name="totalProjectBudget" control={control} defaultValue=""
+                    render={({ field }) => (
+                      <TextField {...field} label="Total Project Budget (₹)" type="number" fullWidth size="small" />
+                    )} />
+                </Grid>
               </Grid>
+            </Box>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="classroomWithSmartClass"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Classroom with Smart Class"
-                      type="number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
+            {/* Live Summary Banner */}
+            {(() => {
+              const all = Object.values(constructionRows).flat();
+              const total = all.length;
+              const completed = all.filter(r => r.status === "Completed").length;
+              const inProgress = all.filter(r => r.status === "In Progress").length;
+              const pct = total > 0 ? Math.round(all.reduce((s, r) => s + r.progress, 0) / total) : 0;
+              return (
+                <Box sx={{ background: "linear-gradient(135deg, #1976d2, #42a5f5)", borderRadius: 2, p: 3, mb: 3, color: "#fff" }}>
+                  <Grid container alignItems="center" spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <Typography sx={{ fontSize: 13, opacity: 0.85 }}>Overall Construction Progress</Typography>
+                      <Typography sx={{ fontSize: 32, fontWeight: 800 }}>{pct}%</Typography>
+                      <Box sx={{ mt: 1, height: 8, background: "rgba(255,255,255,0.3)", borderRadius: 2 }}>
+                        <Box sx={{ height: "100%", width: `${pct}%`, background: "#fff", borderRadius: 2, transition: "width 0.5s" }} />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} md={8}>
+                      <Box display="flex" gap={2} flexWrap="wrap">
+                        {[
+                          { label: "Total",          val: total,                          bg: "rgba(255,255,255,0.15)" },
+                          { label: "✅ Completed",    val: completed,                      bg: "rgba(22,163,74,0.35)"   },
+                          { label: "🔄 In Progress",  val: inProgress,                     bg: "rgba(245,158,11,0.35)"  },
+                          { label: "⏳ Not Started",  val: total - completed - inProgress, bg: "rgba(255,255,255,0.1)"  },
+                        ].map(({ label, val, bg }) => (
+                          <Box key={label} sx={{ textAlign: "center", background: bg, borderRadius: 2, px: 2.5, py: 1.5 }}>
+                            <Typography sx={{ fontSize: 22, fontWeight: 800 }}>{val}</Typography>
+                            <Typography sx={{ fontSize: 11, opacity: 0.9 }}>{label}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+              );
+            })()}
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="classroomWithProjector"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Classroom with Projector"
-                      type="number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
+            {/* 4 Category Tables */}
+            {["school", "residence", "outdoor", "utilities"].map(catKey => renderConstructionTable(catKey))}
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="scienceLab"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField {...field} select label="Science Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="computerLab"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField {...field} select label="Computer Lab" fullWidth size="small" sx={{ minWidth: 220 }}>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="library"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField {...field} select label="Library" fullWidth size="small" sx={{ minWidth: 220 }}>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="booksInLibrary"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="No. of Books in Library"
-                      type="number"
-                      fullWidth
-                      size="small"
-                    />
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="playground"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField {...field} select label="Playground" fullWidth size="small" sx={{ minWidth: 220 }}>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="Auditorium"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField {...field} select label="Auditorium" fullWidth size="small" sx={{ minWidth: 220 }}>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Controller
-                  name="Medical Room"
-                  control={control}
-                  defaultValue=""
-                  render={({ field }) => (
-                    <TextField {...field} select label="Medical Room" fullWidth size="small" sx={{ minWidth: 220 }}>
-                      <MenuItem value="Yes">Yes</MenuItem>
-                      <MenuItem value="No">No</MenuItem>
-                    </TextField>
-                  )}
-                />
-              </Grid>
-
-            </Grid>
+            <Box mb={4} />
             {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -1539,49 +2031,128 @@ const EMRSForm = () => {
               Boys Hostel Details
             </Typography>
 
-            <Grid container spacing={2} mb={4}>
-              {boysHostelFields.map((fieldItem) => (
+             <Grid container spacing={2} mb={4}>
 
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+  {/* ── Line 1: Capacity, Beds, Occupancy ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysHostelCapacity" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Boys Hostel Capacity" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysBedsAvailable" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Beds Available" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysCurrentOccupancy" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Current Occupancy" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
 
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
+  {/* ── Force new row ── */}
+  <Grid item xs={12} sx={{ padding: "0 !important" }} />
 
-                    render={({ field }) => (
+  {/* ── Line 2: CCTV Installed, No of CCTV ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysCCTVInstalled" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="CCTV Installed" fullWidth size="small" sx={{ minWidth: 220 }}>
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysNoOfCCTV" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="No of CCTV Installed" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
 
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        sx={{ minWidth: 220 }}
-                        type={fieldItem.type || "text"}
-                        select={!!fieldItem.options}
-                      >
+  {/* ── Force new row ── */}
+  <Grid item xs={12} sx={{ padding: "0 !important" }} />
 
-                        {fieldItem.options &&
-                          fieldItem.options.map((option) => (
+  {/* ── Line 3: Security Agency Available + conditional Name & Contact ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysSecurityAgency" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Security Agency Available" fullWidth size="small" sx={{ minWidth: 220 }}>
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )} />
+  </Grid>
+  {watch("boysSecurityAgency") === "Yes" && (
+    <>
+      <Grid item xs={12} sm={4} md={4}>
+        <Controller name="boysSecurityAgencyName" control={control} defaultValue=""
+          render={({ field }) => (
+            <TextField {...field} label="Security Agency Name" fullWidth size="small" sx={{ minWidth: 220 }}/>
+          )} />
+      </Grid>
+      <Grid item xs={12} sm={4} md={4}>
+       <Controller name="boysSecurityAgencyContact" control={control} defaultValue=""
+  render={({ field }) => (
+    <TextField
+      {...field}
+      label="Security Agency Contact"
+      fullWidth
+      size="small"
+      inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+      onKeyDown={(e) => {
+        if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+          e.preventDefault();
+        }
+      }}
+      error={field.value && field.value.toString().length !== 10}
+      helperText={field.value && field.value.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
+    />
+  )} />
+      </Grid>
+    </>
+  )}
 
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
+  {/* ── Force new row ── */}
+  <Grid item xs={12} sx={{ padding: "0 !important" }} />
 
-                          ))}
+  {/* ── Line 4: Warden Name, Contact, Email ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysWardenName" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Boys Warden Name" fullWidth size="small" />
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysWardenContact" control={control} defaultValue=""
+  render={({ field }) => (
+    <TextField
+      {...field}
+      label="Boys Warden Contact"
+      fullWidth
+      size="small"
+      inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+      onKeyDown={(e) => {
+        if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+          e.preventDefault();
+        }
+      }}
+      error={field.value && field.value.toString().length !== 10}
+      helperText={field.value && field.value.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
+    />
+  )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="boysWardenEmail" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Boys Warden Email" fullWidth size="small" />
+      )} />
+  </Grid>
 
-                      </TextField>
-
-                    )}
-
-                  />
-
-                </Grid>
-
-              ))}
-
-            </Grid>
+</Grid>
             <Typography
               variant="subtitle1"
               sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
@@ -1589,50 +2160,128 @@ const EMRSForm = () => {
               Girls Hostel Details
             </Typography>
 
-            <Grid container spacing={2} mb={4}>
+           <Grid container spacing={2} mb={4}>
 
-              {girlsHostelFields.map((fieldItem) => (
+  {/* ── Line 1: Capacity, Beds, Occupancy ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsHostelCapacity" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Girls Hostel Capacity" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsBedsAvailable" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Beds Available" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsCurrentOccupancy" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Current Occupancy" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
 
-                <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+  {/* ── Force new row ── */}
+  <Grid item xs={12} sx={{ padding: "0 !important" }} />
 
-                  <Controller
-                    name={fieldItem.name}
-                    control={control}
-                    defaultValue=""
-                    rules={{ required: `${fieldItem.label} is required` }}
+  {/* ── Line 2: CCTV Installed, No of CCTV ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsCCTVInstalled" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="CCTV Installed" fullWidth size="small" sx={{ minWidth: 220 }}>
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsNoOfCCTV" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="No of CCTV Installed" type="number" fullWidth size="small" />
+      )} />
+  </Grid>
 
-                    render={({ field }) => (
+  {/* ── Force new row ── */}
+  <Grid item xs={12} sx={{ padding: "0 !important" }} />
 
-                      <TextField
-                        {...field}
-                        label={fieldItem.label}
-                        fullWidth
-                        size="small"
-                        sx={{ minWidth: 220 }}
-                        type={fieldItem.type || "text"}
-                        select={!!fieldItem.options}
-                      >
+  {/* ── Line 3: Security Agency Available + conditional Name & Contact ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsSecurityAgency" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} select label="Security Agency Available" fullWidth size="small" sx={{ minWidth: 220 }}>
+          <MenuItem value="Yes">Yes</MenuItem>
+          <MenuItem value="No">No</MenuItem>
+        </TextField>
+      )} />
+  </Grid>
+  {watch("girlsSecurityAgency") === "Yes" && (
+    <>
+      <Grid item xs={12} sm={4} md={4}>
+        <Controller name="girlsSecurityAgencyName" control={control} defaultValue=""
+          render={({ field }) => (
+            <TextField {...field} label="Security Agency Name" fullWidth size="small" sx={{ minWidth: 220 }}/>
+          )} />
+      </Grid>
+      <Grid item xs={12} sm={4} md={4}>
+       <Controller name="girlsSecurityAgencyContact" control={control} defaultValue=""
+  render={({ field }) => (
+    <TextField
+      {...field}
+      label="Security Agency Contact"
+      fullWidth
+      size="small"
+      inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+      onKeyDown={(e) => {
+        if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+          e.preventDefault();
+        }
+      }}
+      error={field.value && field.value.toString().length !== 10}
+      helperText={field.value && field.value.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
+    />
+  )} />
+      </Grid>
+    </>
+  )}
 
-                        {fieldItem.options &&
-                          fieldItem.options.map((option) => (
+  {/* ── Force new row ── */}
+  <Grid item xs={12} sx={{ padding: "0 !important" }} />
 
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
+  {/* ── Line 4: Warden Name, Contact, Email ── */}
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsWardenName" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Girls Warden Name" fullWidth size="small" />
+      )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsWardenContact" control={control} defaultValue=""
+  render={({ field }) => (
+    <TextField
+      {...field}
+      label="Girls Warden Contact"
+      fullWidth
+      size="small"
+      inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+      onKeyDown={(e) => {
+        if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+          e.preventDefault();
+        }
+      }}
+      error={field.value && field.value.toString().length !== 10}
+      helperText={field.value && field.value.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
+    />
+  )} />
+  </Grid>
+  <Grid item xs={12} sm={4} md={4}>
+    <Controller name="girlsWardenEmail" control={control} defaultValue=""
+      render={({ field }) => (
+        <TextField {...field} label="Girls Warden Email" fullWidth size="small" />
+      )} />
+  </Grid>
 
-                          ))}
-
-                      </TextField>
-
-                    )}
-
-                  />
-
-                </Grid>
-
-              ))}
-
-            </Grid>
+</Grid>
 
             {/* ================= UNIFIED STUDENT ENROLLMENT SECTION ================= */}
             <Grid container spacing={2}>
@@ -1738,9 +2387,122 @@ const EMRSForm = () => {
                         <TextField label="Pass %" fullWidth size="small" value={row.passPercent} InputProps={{ readOnly: true }} />
                       </Grid>
                       <Grid item xs={12} sm={6} md={4}>
-                        <TextField label="Above 75%" type="number" fullWidth size="small" value={row.above75}
-                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].above75 = e.target.value; setEnrollmentRows(u); }} />
-                      </Grid>
+  <TextField
+  label="No. of Students Scored Above 75%"
+  type="number"
+  fullWidth
+  size="small"
+  value={row.above75}
+  error={!!row.above75Error}          // ← turns border RED
+  helperText={row.above75Error || ""} // ← shows message below
+  FormHelperTextProps={{
+    style: { color: "#c62828", fontWeight: 600, fontSize: 12 }
+  }}
+    onChange={(e) => {
+  const val = Number(e.target.value);
+  const appeared = Number(enrollmentRows[rowIndex].appeared || 0);
+  const enrolled = Number(enrollmentRows[rowIndex].currentEnrollment || 0);
+
+  const u = [...enrollmentRows];
+  u[rowIndex].above75 = e.target.value;
+
+  // ── VALIDATION — appeared is strictest limit ──
+  if (appeared > 0 && val > appeared) {
+    u[rowIndex].above75Error =
+      `❌ Cannot be more than Students Appeared (${appeared})`;
+  } else if (enrolled > 0 && val > enrolled) {
+    u[rowIndex].above75Error =
+      `❌ Cannot be more than Current Enrollment (${enrolled})`;
+  } else {
+    u[rowIndex].above75Error = "";
+  }
+
+  setEnrollmentRows(u);
+}}
+  />
+
+  {/* ── DISPLAY CARD — shows only when above75 is filled ── */}
+  {row.above75 && Number(row.above75) > 0 && (
+    <Box sx={{
+      mt: 1,
+      p: 1.5,
+      borderRadius: 2,
+      background: "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
+      border: "1px solid #a5d6a7",
+      display: "flex",
+      flexDirection: "column",
+      gap: 0.5
+    }}>
+
+      {/* Line 1 — Count */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <span style={{ fontSize: 16 }}>🎯</span>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#2e7d32" }}>
+          {row.above75} students scored above 75%
+        </Typography>
+      </Box>
+
+      {/* Line 2 — Out of appeared */}
+      {row.appeared && Number(row.appeared) > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <span style={{ fontSize: 14 }}>📝</span>
+          <Typography sx={{ fontSize: 12, color: "#388e3c" }}>
+            Out of {row.appeared} appeared →{" "}
+            <strong>
+              {((Number(row.above75) / Number(row.appeared)) * 100).toFixed(1)}%
+            </strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Line 3 — Out of enrolled */}
+      {row.currentEnrollment && Number(row.currentEnrollment) > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <span style={{ fontSize: 14 }}>🏫</span>
+          <Typography sx={{ fontSize: 12, color: "#388e3c" }}>
+            Out of {row.currentEnrollment} enrolled →{" "}
+            <strong>
+              {((Number(row.above75) / Number(row.currentEnrollment)) * 100).toFixed(1)}%
+            </strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Line 4 — Performance label */}
+      <Box sx={{
+        mt: 0.5,
+        px: 1, py: 0.3,
+        borderRadius: 10,
+        display: "inline-fit-content",
+        background:
+          ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+            ? "#c8e6c9"
+            : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+            ? "#fff9c4"
+            : "#ffccbc",
+        width: "fit-content"
+      }}>
+        <Typography sx={{
+          fontSize: 11, fontWeight: 700,
+          color:
+            ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+              ? "#1b5e20"
+              : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+              ? "#f57f17"
+              : "#bf360c"
+        }}>
+          {((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+            ? "🟢 Excellent Performance"
+            : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+            ? "🟡 Average Performance"
+            : "🔴 Needs Improvement"}
+        </Typography>
+      </Box>
+
+    </Box>
+  )}
+</Grid>
+
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField label="Below 50%" type="number" fullWidth size="small" value={row.below50}
                           onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].below50 = e.target.value; setEnrollmentRows(u); }} />
@@ -1781,10 +2543,124 @@ const EMRSForm = () => {
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField label="Pass %" fullWidth size="small" value={row.passPercent} InputProps={{ readOnly: true }} />
                       </Grid>
-                      <Grid item xs={12} sm={6} md={4}>
-                        <TextField label="Above 75%" type="number" fullWidth size="small" value={row.above75}
-                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].above75 = e.target.value; setEnrollmentRows(u); }} />
-                      </Grid>
+                     <Grid item xs={12} sm={6} md={4}>
+  <TextField
+  label="No. of Students Scored Above 75%"
+  type="number"
+  fullWidth
+  size="small"
+  value={row.above75}
+  error={!!row.above75Error}          // ← turns border RED
+  helperText={row.above75Error || ""} // ← shows message below
+  FormHelperTextProps={{
+    style: { color: "#c62828", fontWeight: 600, fontSize: 12 }
+  }}
+    onChange={(e) => {
+  const val = Number(e.target.value);
+  const appeared = Number(enrollmentRows[rowIndex].appeared || 0);
+  const enrolled = Number(enrollmentRows[rowIndex].currentEnrollment || 0);
+
+  const u = [...enrollmentRows];
+  u[rowIndex].above75 = e.target.value;
+
+  // ── VALIDATION — appeared is strictest limit ──
+  if (appeared > 0 && val > appeared) {
+    u[rowIndex].above75Error =
+      `❌ Cannot be more than Students Appeared (${appeared})`;
+  } else if (enrolled > 0 && val > enrolled) {
+    u[rowIndex].above75Error =
+      `❌ Cannot be more than Current Enrollment (${enrolled})`;
+  } else {
+    u[rowIndex].above75Error = "";
+  }
+
+  setEnrollmentRows(u);
+
+    }}
+  />
+
+  {/* ── DISPLAY CARD — shows only when above75 is filled ── */}
+  {row.above75 && Number(row.above75) > 0 && (
+    <Box sx={{
+      mt: 1,
+      p: 1.5,
+      borderRadius: 2,
+      background: "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
+      border: "1px solid #a5d6a7",
+      display: "flex",
+      flexDirection: "column",
+      gap: 0.5
+    }}>
+
+      {/* Line 1 — Count */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <span style={{ fontSize: 16 }}>🎯</span>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#2e7d32" }}>
+          {row.above75} students scored above 75%
+        </Typography>
+      </Box>
+
+      {/* Line 2 — Out of appeared */}
+      {row.appeared && Number(row.appeared) > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <span style={{ fontSize: 14 }}>📝</span>
+          <Typography sx={{ fontSize: 12, color: "#388e3c" }}>
+            Out of {row.appeared} appeared →{" "}
+            <strong>
+              {((Number(row.above75) / Number(row.appeared)) * 100).toFixed(1)}%
+            </strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Line 3 — Out of enrolled */}
+      {row.currentEnrollment && Number(row.currentEnrollment) > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <span style={{ fontSize: 14 }}>🏫</span>
+          <Typography sx={{ fontSize: 12, color: "#388e3c" }}>
+            Out of {row.currentEnrollment} enrolled →{" "}
+            <strong>
+              {((Number(row.above75) / Number(row.currentEnrollment)) * 100).toFixed(1)}%
+            </strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Line 4 — Performance label */}
+      <Box sx={{
+        mt: 0.5,
+        px: 1, py: 0.3,
+        borderRadius: 10,
+        display: "inline-fit-content",
+        background:
+          ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+            ? "#c8e6c9"
+            : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+            ? "#fff9c4"
+            : "#ffccbc",
+        width: "fit-content"
+      }}>
+        <Typography sx={{
+          fontSize: 11, fontWeight: 700,
+          color:
+            ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+              ? "#1b5e20"
+              : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+              ? "#f57f17"
+              : "#bf360c"
+        }}>
+          {((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+            ? "🟢 Excellent Performance"
+            : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+            ? "🟡 Average Performance"
+            : "🔴 Needs Improvement"}
+        </Typography>
+      </Box>
+
+    </Box>
+  )}
+</Grid>
+
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField label="Below 50%" type="number" fullWidth size="small" value={row.below50}
                           onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].below50 = e.target.value; setEnrollmentRows(u); }} />
@@ -1852,9 +2728,122 @@ const EMRSForm = () => {
                         <TextField label="Pass %" fullWidth size="small" value={row.passPercent} InputProps={{ readOnly: true }} />
                       </Grid>
                       <Grid item xs={12} sm={6} md={4}>
-                        <TextField label="Above 75%" type="number" fullWidth size="small" value={row.above75}
-                          onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].above75 = e.target.value; setEnrollmentRows(u); }} />
-                      </Grid>
+  <TextField
+  label="No. of Students Scored Above 75%"
+  type="number"
+  fullWidth
+  size="small"
+  value={row.above75}
+  error={!!row.above75Error}          // ← turns border RED
+  helperText={row.above75Error || ""} // ← shows message below
+  FormHelperTextProps={{
+    style: { color: "#c62828", fontWeight: 600, fontSize: 12 }
+  }}
+  onChange={(e) => {
+  const val = Number(e.target.value);
+  const appeared = Number(enrollmentRows[rowIndex].appeared || 0);
+  const enrolled = Number(enrollmentRows[rowIndex].currentEnrollment || 0);
+
+  const u = [...enrollmentRows];
+  u[rowIndex].above75 = e.target.value;
+
+  // ── VALIDATION — appeared is strictest limit ──
+  if (appeared > 0 && val > appeared) {
+    u[rowIndex].above75Error =
+      `❌ Cannot be more than Students Appeared (${appeared})`;
+  } else if (enrolled > 0 && val > enrolled) {
+    u[rowIndex].above75Error =
+      `❌ Cannot be more than Current Enrollment (${enrolled})`;
+  } else {
+    u[rowIndex].above75Error = "";
+  }
+
+  setEnrollmentRows(u);
+}}
+  />
+
+  {/* ── DISPLAY CARD — shows only when above75 is filled ── */}
+  {row.above75 && Number(row.above75) > 0 && (
+    <Box sx={{
+      mt: 1,
+      p: 1.5,
+      borderRadius: 2,
+      background: "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
+      border: "1px solid #a5d6a7",
+      display: "flex",
+      flexDirection: "column",
+      gap: 0.5
+    }}>
+
+      {/* Line 1 — Count */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <span style={{ fontSize: 16 }}>🎯</span>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#2e7d32" }}>
+          {row.above75} students scored above 75%
+        </Typography>
+      </Box>
+
+      {/* Line 2 — Out of appeared */}
+      {row.appeared && Number(row.appeared) > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <span style={{ fontSize: 14 }}>📝</span>
+          <Typography sx={{ fontSize: 12, color: "#388e3c" }}>
+            Out of {row.appeared} appeared →{" "}
+            <strong>
+              {((Number(row.above75) / Number(row.appeared)) * 100).toFixed(1)}%
+            </strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Line 3 — Out of enrolled */}
+      {row.currentEnrollment && Number(row.currentEnrollment) > 0 && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <span style={{ fontSize: 14 }}>🏫</span>
+          <Typography sx={{ fontSize: 12, color: "#388e3c" }}>
+            Out of {row.currentEnrollment} enrolled →{" "}
+            <strong>
+              {((Number(row.above75) / Number(row.currentEnrollment)) * 100).toFixed(1)}%
+            </strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Line 4 — Performance label */}
+      <Box sx={{
+        mt: 0.5,
+        px: 1, py: 0.3,
+        borderRadius: 10,
+        display: "inline-fit-content",
+        background:
+          ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+            ? "#c8e6c9"
+            : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+            ? "#fff9c4"
+            : "#ffccbc",
+        width: "fit-content"
+      }}>
+        <Typography sx={{
+          fontSize: 11, fontWeight: 700,
+          color:
+            ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+              ? "#1b5e20"
+              : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+              ? "#f57f17"
+              : "#bf360c"
+        }}>
+          {((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 75
+            ? "🟢 Excellent Performance"
+            : ((Number(row.above75) / Number(row.appeared || row.currentEnrollment)) * 100) >= 50
+            ? "🟡 Average Performance"
+            : "🔴 Needs Improvement"}
+        </Typography>
+      </Box>
+
+    </Box>
+  )}
+</Grid>
+
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField label="Below 50%" type="number" fullWidth size="small" value={row.below50}
                           onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].below50 = e.target.value; setEnrollmentRows(u); }} />
@@ -1886,67 +2875,204 @@ const EMRSForm = () => {
                   Dropout Details
                 </Typography>
                 {row.dropouts.map((dropout, dIndex) => (
-                  <Grid container spacing={2} mb={2} key={dIndex}>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <TextField
-                        label="Roll No"
-                        fullWidth
-                        size="small"
-                        value={dropout.rollNo}
-                        onChange={(e) => {
-                          const u = [...enrollmentRows];
-                          u[rowIndex].dropouts[dIndex].rollNo = e.target.value;
-                          setEnrollmentRows(u);
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <TextField
-                        label="Student Name"
-                        fullWidth
-                        size="small"
-                        value={dropout.studentName}
-                        onChange={(e) => {
-                          const u = [...enrollmentRows];
-                          u[rowIndex].dropouts[dIndex].studentName = e.target.value;
-                          setEnrollmentRows(u);
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <TextField
-                        label="Reason of Dropout"
-                        fullWidth
-                        size="small"
-                        value={dropout.reason}
-                        onChange={(e) => {
-                          const u = [...enrollmentRows];
-                          u[rowIndex].dropouts[dIndex].reason = e.target.value;
-                          setEnrollmentRows(u);
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <TextField
-                        label="Guardian Contact No"
-                        fullWidth
-                        size="small"
-                        type="number"
-                        value={dropout.guardianContactNo}
-                        onChange={(e) => {
-                          const u = [...enrollmentRows];
-                          u[rowIndex].dropouts[dIndex].guardianContactNo = e.target.value;
-                          setEnrollmentRows(u);
-                        }}
-                      />
-                    </Grid>
-                  </Grid>
-                ))}
+  <Box key={dIndex} sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 2, background: "#f8fafc" }}>
+
+    {/* ── ROW 1: Student Info ── */}
+    <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 1, display: "block" }}>
+      Student Information
+    </Typography>
+    <Grid container spacing={2} mb={2}>
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          label="Student Name"
+          fullWidth
+          size="small"
+          value={dropout.studentName}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].studentName = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          label="Roll No"
+          fullWidth
+          size="small"
+          value={dropout.rollNo}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].rollNo = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+    <Grid item xs={12}>
+  <TextField
+    label="Reason for Dropout"
+    fullWidth
+    size="small"
+    multiline
+    rows={3}
+    placeholder="Enter remarks / reason for dropout..."
+    value={dropout.reason}
+    onChange={(e) => {
+      const u = [...enrollmentRows];
+      u[rowIndex].dropouts[dIndex].reason = e.target.value;
+      setEnrollmentRows(u);
+        }}
+        />
+      </Grid>
+    </Grid>
+
+    {/* ── ROW 2: Guardian Info ── */}
+    <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 1, display: "block" }}>
+      Guardian Information
+    </Typography>
+    <Grid container spacing={2} mb={2}>
+      <Grid item xs={12} sm={6} md={6}>
+        <TextField
+          label="Guardian Name"
+          fullWidth
+          size="small"
+          value={dropout.guardianName || ""}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].guardianName = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={6}>
+        <TextField
+          label="Guardian Contact No"
+          fullWidth
+          size="small"
+          value={dropout.guardianContactNo}
+          inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+          onKeyDown={(e) => {
+            if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+              e.preventDefault();
+            }
+          }}
+          error={dropout.guardianContactNo && dropout.guardianContactNo.toString().length !== 10}
+          helperText={dropout.guardianContactNo && dropout.guardianContactNo.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].guardianContactNo = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+    </Grid>
+
+    {/* ── ROW 3: Address Info ── */}
+    <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 1, display: "block" }}>
+      Address Details
+    </Typography>
+    <Grid container spacing={2}>
+      <Grid item xs={12} sm={6} md={2}>
+        <TextField
+          label="PIN Code"
+          fullWidth
+          size="small"
+          value={dropout.pinCode || ""}
+          inputProps={{ maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
+          onKeyDown={(e) => {
+            if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+              e.preventDefault();
+            }
+          }}
+          onChange={async (e) => {
+            const val = e.target.value;
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].pinCode = val;
+            setEnrollmentRows(u);
+
+            if (val.length === 6) {
+              try {
+                const res = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+                const data = await res.json();
+                if (data[0].Status === "Success") {
+                  const po = data[0].PostOffice[0];
+                  const u2 = [...enrollmentRows];
+                  u2[rowIndex].dropouts[dIndex].district = po.District;
+                  u2[rowIndex].dropouts[dIndex].postOffice = po.Name;
+                  u2[rowIndex].dropouts[dIndex].gramPanchayat = po.Block;
+                  u2[rowIndex].dropouts[dIndex].village = po.Village || "";
+                  setEnrollmentRows(u2);
+                }
+              } catch (err) {
+                console.error("Pincode fetch error:", err);
+              }
+            }
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={2}>
+        <TextField
+          label="District"
+          fullWidth
+          size="small"
+          value={dropout.district || ""}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].district = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3}>
+        <TextField
+          label="Post Office"
+          fullWidth
+          size="small"
+          value={dropout.postOffice || ""}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].postOffice = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3}>
+        <TextField
+          label="Gram Panchayat"
+          fullWidth
+          size="small"
+          value={dropout.gramPanchayat || ""}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].gramPanchayat = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={2}>
+        <TextField
+          label="Village"
+          fullWidth
+          size="small"
+          value={dropout.village || ""}
+          onChange={(e) => {
+            const u = [...enrollmentRows];
+            u[rowIndex].dropouts[dIndex].village = e.target.value;
+            setEnrollmentRows(u);
+          }}
+        />
+      </Grid>
+    </Grid>
+
+  </Box>
+))}
+  
+          
                 <Box mb={3}>
                   <Button variant="outlined" size="small"
                     onClick={() => {
                       const u = [...enrollmentRows];
-                      u[rowIndex].dropouts.push({ rollNo: "", studentName: "", reason: "", guardianContactNo: "" });
+                     u[rowIndex].dropouts.push({ studentName: "", rollNo: "", reason: "", guardianName: "", guardianContactNo: "", pinCode: "", district: "", postOffice: "", gramPanchayat: "", village: "" });
                       setEnrollmentRows(u);
                     }}>
                     + Add Dropout
@@ -2036,11 +3162,12 @@ const EMRSForm = () => {
                     academicYear: "", class: "", section: "", sanctionedCapacity: "",
                     currentEnrollment: "", category: "", boardClass: "", appeared: "",
                     passed: "", passPercent: "", above75: "", below50: "",
+                    above75Error: "",
                     stream: "",
                     distinctions: "",
                     topScorer: "",
                     topScore: "",
-                    dropouts: [{ rollNo: "", studentName: "", reason: "", guardianContactNo: "" }],
+                   dropouts: [{ studentName: "", rollNo: "", reason: "", guardianName: "", guardianContactNo: "", pinCode: "", district: "", postOffice: "", gramPanchayat: "", village: "" }],
                     migrations: [{ studentName: "", migratedFrom: "", transferredTo: "", reason: "" }],
                     achievements: [{ studentName: "", eventName: "", level: "", recognition: "" }]
                   }])
@@ -2277,58 +3404,103 @@ const EMRSForm = () => {
                   backgroundColor: "#fff"
                 }}
               >
+{/* ── HOSPITAL INFO ── */}
+<Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
+  Hospital & Empanelment Details
+</Typography>
+<Grid container spacing={2} mb={2}>
 
-                {/* ── HOSPITAL INFO ── */}
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
-                  Hospital & Empanelment Details
-                </Typography>
-                <Grid container spacing={2} mb={2}>
+  <Grid item xs={12} sm={6} md={4}>
+    <TextField
+      label="Hospital Empanelled With"
+      fullWidth
+      size="small"
+      value={row.hospitalEmpanelled}
+      onChange={(e) => {
+        const u = [...hospitalizationRows];
+        u[index].hospitalEmpanelled = e.target.value;
+        setHospitalizationRows(u);
+      }}
+    />
+  </Grid>
 
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Hospital Empanelled With"
-                      fullWidth
-                      size="small"
-                      value={row.hospitalEmpanelled}
-                      onChange={(e) => {
-                        const u = [...hospitalizationRows];
-                        u[index].hospitalEmpanelled = e.target.value;
-                        setHospitalizationRows(u);
-                      }}
-                    />
-                  </Grid>
+  <Grid item xs={12} sm={6} md={4}>
+    <TextField
+      label="Validity of Empanelment"
+      fullWidth
+      size="small"
+      type="date"
+      InputLabelProps={{ shrink: true }}
+      value={row.empanellementValidity}
+      onChange={(e) => {
+        const u = [...hospitalizationRows];
+        u[index].empanellementValidity = e.target.value;
+        setHospitalizationRows(u);
+      }}
+    />
+  </Grid>
 
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Validity of Empanelment"
-                      fullWidth
-                      size="small"
-                      type="date"
-                      InputLabelProps={{ shrink: true }}
-                      value={row.empanellementValidity}
-                      onChange={(e) => {
-                        const u = [...hospitalizationRows];
-                        u[index].empanellementValidity = e.target.value;
-                        setHospitalizationRows(u);
-                      }}
-                    />
-                  </Grid>
+  <Grid item xs={12} sm={6} md={4}>
+    <TextField
+      select
+      label="Department (Empanelment)"
+      fullWidth
+      size="small"
+       sx={{ minWidth: 220 }}
+      value={row.empanelmentDepartment || ""}
+      onChange={(e) => {
+        const u = [...hospitalizationRows];
+        u[index].empanelmentDepartment = e.target.value;
+        setHospitalizationRows(u);
+      }}
+    >
+      {[
+        "General Medicine",
+        "General Surgery",
+        "Ophthalmology (Eyes)",
+        "ENT (Ear, Nose & Throat)",
+        "Orthopaedics",
+        "Paediatrics",
+        "Dermatology (Skin)",
+        "Dental",
+        "Gynaecology",
+        "Cardiology",
+        "Neurology",
+        "Psychiatry / Mental Health",
+        "Pulmonology (Lungs)",
+        "Gastroenterology",
+        "Nephrology (Kidney)",
+        "Urology",
+        "Oncology (Cancer)",
+        "Endocrinology",
+        "Haematology (Blood)",
+        "Emergency / Trauma",
+        "Physiotherapy",
+        "Radiology / Imaging",
+        "Pathology / Lab",
+        "Other"
+      ].map(dept => (
+        <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+      ))}
+    </TextField>
+  </Grid>
 
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Doctor / Treating Physician"
-                      fullWidth
-                      size="small"
-                      value={row.doctorName}
-                      onChange={(e) => {
-                        const u = [...hospitalizationRows];
-                        u[index].doctorName = e.target.value;
-                        setHospitalizationRows(u);
-                      }}
-                    />
-                  </Grid>
+  <Grid item xs={12} sm={6} md={4}>
+    <TextField
+      label="Doctor / Treating Physician"
+      fullWidth
+      size="small"
+      value={row.doctorName}
+      onChange={(e) => {
+        const u = [...hospitalizationRows];
+        u[index].doctorName = e.target.value;
+        setHospitalizationRows(u);
+      }}
+    />
 
-                </Grid>
+  </Grid>
+
+</Grid>
 
                 {/* ── STUDENT INFO ── */}
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
@@ -2420,17 +3592,24 @@ const EMRSForm = () => {
 
                   <Grid item xs={12} sm={6} md={3}>
                     <TextField
-                      label="Guardian Contact"
-                      fullWidth
-                      size="small"
-                      type="number"
-                      value={row.guardianContact}
-                      onChange={(e) => {
-                        const u = [...hospitalizationRows];
-                        u[index].guardianContact = e.target.value;
-                        setHospitalizationRows(u);
-                      }}
-                    />
+  label="Guardian Contact"
+  fullWidth
+  size="small"
+  value={row.guardianContact}
+  inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
+  onKeyDown={(e) => {
+    if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }}
+  error={row.guardianContact && row.guardianContact.toString().length !== 10}
+  helperText={row.guardianContact && row.guardianContact.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
+  onChange={(e) => {
+    const u = [...hospitalizationRows];
+    u[index].guardianContact = e.target.value;
+    setHospitalizationRows(u);
+  }}
+/>
                   </Grid>
 
                 </Grid>
@@ -2472,33 +3651,22 @@ const EMRSForm = () => {
                     />
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Reason for Hospitalization"
-                      fullWidth
-                      size="small"
-                      value={row.reasonForHospitalization}
-                      onChange={(e) => {
-                        const u = [...hospitalizationRows];
-                        u[index].reasonForHospitalization = e.target.value;
-                        setHospitalizationRows(u);
-                      }}
-                    />
-                  </Grid>
+                  <Grid item xs={12}>
+  <TextField
+    label="Reason for Hospitalization"
+    fullWidth
+    size="small"
+    multiline
+    rows={3}
+    value={row.reasonForHospitalization}
+    onChange={(e) => {
+      const u = [...hospitalizationRows];
+      u[index].reasonForHospitalization = e.target.value;
+      setHospitalizationRows(u);
+    }}
+  />
+</Grid>
 
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Treatment Details"
-                      fullWidth
-                      size="small"
-                      value={row.treatmentDetails}
-                      onChange={(e) => {
-                        const u = [...hospitalizationRows];
-                        u[index].treatmentDetails = e.target.value;
-                        setHospitalizationRows(u);
-                      }}
-                    />
-                  </Grid>
 
                 </Grid>
 
@@ -2545,6 +3713,7 @@ const EMRSForm = () => {
                       label="Claim Status"
                       fullWidth
                       size="small"
+                       sx={{ minWidth: 220 }}
                       value={row.claimStatus}
                       onChange={(e) => {
                         const u = [...hospitalizationRows];
@@ -2580,7 +3749,7 @@ const EMRSForm = () => {
                       reasonForHospitalization: "",
                       hospitalEmpanelled: "",
                       empanellementValidity: "",
-                      treatmentDetails: "",
+                      empanelmentDepartment: "",
                       doctorName: "",
                       estimatedCost: "",
                       amountClaimed: "",
@@ -2633,12 +3802,25 @@ const EMRSForm = () => {
                         <Grid item xs={12} sm={6} md={4} key={field.name}>
                           {field.type === "select" ? (
                             <TextField
-                              select fullWidth size="small" sx={{ minWidth: 220 }} label={field.label}
-                              value={row[field.name]}
-                              onChange={(e) => {
-                                const updatedRows = [...teachingRows];
-                                updatedRows[index][field.name] = e.target.value;
-                                setteachingRows(updatedRows);
+  fullWidth size="small" sx={{ minWidth: 220 }}
+  type={field.name === "contact" ? "text" : field.type}
+  label={field.label}
+  value={row[field.name]}
+  InputProps={{ readOnly: field.readOnly }}
+  {...(field.name === "contact" && {
+    inputProps: { maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" },
+    onKeyDown: (e) => {
+      if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+        e.preventDefault();
+      }
+    },
+    error: row.contact && row.contact.toString().length !== 10,
+    helperText: row.contact && row.contact.toString().length !== 10 ? "Must be exactly 10 digits" : ""
+     })}
+  onChange={(e) => {
+    const updatedRows = [...teachingRows];
+    updatedRows[index][field.name] = e.target.value;
+    setteachingRows(updatedRows);
                               }}
                             >
                               <MenuItem value="">Select</MenuItem>
@@ -2713,9 +3895,9 @@ const EMRSForm = () => {
                         {
                           post: "", name: "", dob: "", doj: "", email: "", contact: "",
                           total: "", filled: "", vacant: "",
-                          academicQualifications: [{ qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
-                          professionalQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
-                          tetQualifications: [{ qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
+                          academicQualifications: [{  post:"", staffname:" ", qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
+                          professionalQualifications: [{  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+                          tetQualifications: [{  post:"", staffname:" ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }]
                         }])
                     }
                   >
@@ -2762,12 +3944,25 @@ const EMRSForm = () => {
                         <Grid item xs={12} sm={6} md={4} key={field.name}>
                           {field.type === "select" ? (
                             <TextField
-                              select fullWidth size="small" sx={{ minWidth: 220 }} label={field.label}
-                              value={row[field.name]}
-                              onChange={(e) => {
-                                const updatedRows = [...nonTeachingRows];
-                                updatedRows[index][field.name] = e.target.value;
-                                setnonTeachingRows(updatedRows);
+  fullWidth size="small" sx={{ minWidth: 220 }}
+  type={field.name === "contact" ? "text" : (field.type || "text")}
+  label={field.label}
+  value={row[field.name]}
+  InputProps={{ readOnly: field.readOnly }}
+  {...(field.name === "contact" && {
+    inputProps: { maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" },
+    onKeyDown: (e) => {
+      if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) {
+        e.preventDefault();
+      }
+    },
+    error: row.contact && row.contact.toString().length !== 10,
+    helperText: row.contact && row.contact.toString().length !== 10 ? "Must be exactly 10 digits" : ""
+  })}
+  onChange={(e) => {
+    const updatedRows = [...nonTeachingRows];
+    updatedRows[index][field.name] = e.target.value;
+    setnonTeachingRows(updatedRows);
                               }}
                             >
                               <MenuItem value="">Select</MenuItem>
