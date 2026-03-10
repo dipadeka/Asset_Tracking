@@ -26,7 +26,29 @@ import { GirlSharp } from "@mui/icons-material";
 const EMRSForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const [currentStep, setCurrentStep] = useState(0);
+
+const STEPS = [
+  { label: "School Details",     icon: "🏫" },
+  { label: "Infrastructure",     icon: "🔬" },
+  { label: "Construction",       icon: "🏗️" },
+  { label: "Hostel",             icon: "🏠" },
+  { label: "Enrollment",         icon: "🎓" },
+  { label: "Extra Curricular",   icon: "🎭" },
+  { label: "Hospitalization",    icon: "🏥" },
+  { label: "Staff Details",      icon: "👨‍🏫" },
+  { label: "Operational Cost",   icon: "💰" },
+];
+
+const handleNext = () => {
+  setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const handleBack = () => {
+  setCurrentStep(prev => Math.max(prev - 1, 0));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
   const [reservationRows, setReservationRows] = useState([
     {
       name: "",
@@ -1562,11 +1584,50 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         EMRS
       </Typography>
-
       <Typography variant="subtitle1" color="text.secondary" mb={3}>
         Create and manage EMRS details
       </Typography>
 
+      {/* ===== STEPPER ===== */}
+      <Box sx={{ overflowX: "auto", pb: 1, mb: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 700 }}>
+          {STEPS.map((step, i) => (
+            <React.Fragment key={i}>
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 72 }}>
+                <Box
+                  onClick={() => i < currentStep && setCurrentStep(i)}
+                  sx={{
+                    width: 40, height: 40, borderRadius: "50%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 18,
+                    background: i === currentStep ? "#1976d2" : i < currentStep ? "#4caf50" : "#e2e8f0",
+                    color: i <= currentStep ? "#fff" : "#94a3b8",
+                    cursor: i < currentStep ? "pointer" : "default",
+                    fontWeight: 700, transition: "all 0.3s",
+                    boxShadow: i === currentStep ? "0 0 0 4px #bbdefb" : "none"
+                  }}
+                >
+                  {i < currentStep ? "✓" : step.icon}
+                </Box>
+                <Typography sx={{
+                  fontSize: 10, mt: 0.5, fontWeight: i === currentStep ? 700 : 400,
+                  color: i === currentStep ? "#1976d2" : i < currentStep ? "#4caf50" : "#94a3b8",
+                  textAlign: "center", lineHeight: 1.2
+                }}>
+                  {step.label}
+                </Typography>
+              </Box>
+              {i < STEPS.length - 1 && (
+                <Box sx={{
+                  flex: 1, height: 3, mx: 0.5,
+                  background: i < currentStep ? "#4caf50" : "#e2e8f0",
+                  borderRadius: 2, transition: "background 0.3s", minWidth: 10
+                }} />
+              )}
+            </React.Fragment>
+          ))}
+        </Box>
+      </Box>
       <Card>
         <Box
           sx={{
@@ -1605,6 +1666,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
               opacity: loading ? 0.6 : 1,
             }}
           >
+            {currentStep === 0 && (<>
             {/* ================= BASIC SCHOOL DETAILS ROW ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -1640,6 +1702,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
         <TextField
           {...field}
           label={fieldItem.label}
+
           fullWidth
           size="small"
           sx={{ minWidth: 220 }}
@@ -1744,8 +1807,21 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                 />
               </Grid>
 
-            </Grid>
+              {/* Village */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Controller
+                  name="village"
+                  control={control}
+                  defaultValue=""
+                  render={({ field }) => (
+                    <TextField {...field} label="Village" fullWidth size="small" />
+                  )}
+                />
+              </Grid>
 
+            </Grid>
+                   </>)}
+                   {currentStep === 1 && (<>
           {/* ================= EMRS INFRASTRUCTURE DETAILS ================= */}
 <Grid container spacing={2}>
   <Grid item xs={12}>
@@ -1924,7 +2000,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
     </Grid>
   </Grid>
 </Box>
-
+</>)}
+{currentStep === 2 && (<>
 {/* ================= CONSTRUCTION & ASSET STATUS ================= */}            <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{
@@ -2006,6 +2083,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
             {["school", "residence", "outdoor", "utilities"].map(catKey => renderConstructionTable(catKey))}
 
             <Box mb={4} />
+            </>)}
+            {currentStep === 3 && (<>
             {/* ================= HOSTEL ADMINISTRATION SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -2282,6 +2361,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
   </Grid>
 
 </Grid>
+</>)}
+{currentStep === 4 && (<>
 
             {/* ================= UNIFIED STUDENT ENROLLMENT SECTION ================= */}
             <Grid container spacing={2}>
@@ -3175,7 +3256,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                 + Add Class / Section
               </Button>
             </Box>
-
+</>)}
+{currentStep === 5 && (<>
             {/* ================= EXTRA CURRICULAR ACTIVITIES SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -3373,7 +3455,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                 + Add Activity
               </Button>
             </Box>
-
+            </>)}
+            {currentStep === 6 && (<>
             {/* ================= HOSPITALIZATION SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -3763,6 +3846,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                 + Add Hospitalization Case
               </Button>
             </Box>
+            </>)}
+            {currentStep === 7 && (<>
 
             {/* ================= TEACHING STAFF DETAILS SECTION ================= */}
             <Grid container spacing={2}>
@@ -4048,6 +4133,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                 </Box>
               </Grid>
             </Grid>
+            </>)}
+            {currentStep === 8 && (<>
 
             {/* ================= OPERATIONAL COST DETAILS ================= */}
             <Grid container spacing={2}>
@@ -4150,6 +4237,59 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
               </Grid>
             )}
 
+           {/* ── PREVIEW ── */}
+            <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 3, mb: 3, background: "#f8fafc" }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: "#1976d2", mb: 2 }}>
+                📋 Preview & Confirm
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">School Name</Typography>
+                  <Typography fontWeight={600}>{watch("schoolname") || "—"}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">EMRS Code</Typography>
+                  <Typography fontWeight={600}>{watch("EMRScode") || "—"}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Principal Name</Typography>
+                  <Typography fontWeight={600}>{watch("NameofthePrincipal") || "—"}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">District</Typography>
+                  <Typography fontWeight={600}>{watch("district") || "—"}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Affiliation</Typography>
+                  <Typography fontWeight={600}>{watch("Affiliation") || "—"}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">School Type</Typography>
+                  <Typography fontWeight={600}>{watch("schooltype") || "—"}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Teaching Staff Records</Typography>
+                  <Typography fontWeight={600}>{teachingRows.length} record(s)</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Non-Teaching Staff Records</Typography>
+                  <Typography fontWeight={600}>{nonTeachingRows.length} record(s)</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Enrollment Records</Typography>
+                  <Typography fontWeight={600}>{enrollmentRows.length} class(es)</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Hospitalization Cases</Typography>
+                  <Typography fontWeight={600}>{hospitalizationRows.length} case(s)</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={4}>
+                  <Typography variant="subtitle2" color="text.secondary">Extra Curricular Activities</Typography>
+                  <Typography fontWeight={600}>{extraCurricularRows.length} activity(s)</Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
             {/* Submit */}
             <Grid item xs={12}>
               <Box display="flex" justifyContent="flex-end">
@@ -4157,18 +4297,46 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                   type="submit"
                   variant="contained"
                   disabled={loading}
-                  startIcon={
-                    loading ? (
-                      <CircularProgress size={20} sx={{ color: "white" }} />
-                    ) : null
-                  }
+                  sx={{ background: "linear-gradient(to right, #16a34a, #4ade80)", minWidth: 160 }}
+                  startIcon={loading ? <CircularProgress size={20} sx={{ color: "white" }} /> : null}
                 >
-                  {loading ? "Submitting..." : "Submit"}
+                  {loading ? "Submitting..." : "✅ Submit"}
                 </Button>
               </Box>
             </Grid>
 
+            </>)}
+{/* ================= NAVIGATION BUTTONS ================= */}
+            <Box
+              display="flex" justifyContent="space-between" alignItems="center"
+              mt={4} pt={3} sx={{ borderTop: "1px solid #e2e8f0" }}
+            >
+              <Button
+                variant="outlined"
+                onClick={handleBack}
+                disabled={currentStep === 0}
+                sx={{ minWidth: 120 }}
+              >
+                ← Back
+              </Button>
 
+              <Typography sx={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+                Step {currentStep + 1} of {STEPS.length}
+              </Typography>
+
+              {currentStep < STEPS.length - 1 && (
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  sx={{
+                    minWidth: 150,
+                    background: "linear-gradient(to right, #1976d2, #42a5f5)"
+                  }}
+                >
+                  Save & Next →
+                </Button>
+              )}
+            </Box>
           </form>
         </CardContent>
       </Card>

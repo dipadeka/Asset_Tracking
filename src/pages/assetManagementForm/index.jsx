@@ -27,6 +27,25 @@ const AssetForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [currentStep, setCurrentStep] = useState(0);
+
+const STEPS = [
+  { label: "Project Details",        icon: "📋" },
+  { label: "Address Details",        icon: "📍" },
+  { label: "Implementation Details", icon: "💰" },
+  { label: "Asset Image",            icon: "🖼️" },
+];
+
+const handleNext = () => {
+  setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const handleBack = () => {
+  setCurrentStep(prev => Math.max(prev - 1, 0));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
   const { control, handleSubmit, setValue, watch } = useForm({
     defaultValues: {
       status: "",
@@ -291,9 +310,51 @@ const AssetForm = () => {
         Asset Management
       </Typography>
 
+
       <Typography variant="subtitle1" color="text.secondary" mb={3}>
         Create and manage asset details
       </Typography>
+
+      {/* ===== STEPPER ===== */}
+<Box sx={{ overflowX: "auto", pb: 1, mb: 3 }}>
+  <Box sx={{ display: "flex", alignItems: "center", minWidth: 400 }}>
+    {STEPS.map((step, i) => (
+      <React.Fragment key={i}>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 80 }}>
+          <Box
+            onClick={() => i < currentStep && setCurrentStep(i)}
+            sx={{
+              width: 40, height: 40, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 18,
+              background: i === currentStep ? "#1976d2" : i < currentStep ? "#4caf50" : "#e2e8f0",
+              color: i <= currentStep ? "#fff" : "#94a3b8",
+              cursor: i < currentStep ? "pointer" : "default",
+              fontWeight: 700, transition: "all 0.3s",
+              boxShadow: i === currentStep ? "0 0 0 4px #bbdefb" : "none"
+            }}
+          >
+            {i < currentStep ? "✓" : step.icon}
+          </Box>
+          <Typography sx={{
+            fontSize: 10, mt: 0.5, fontWeight: i === currentStep ? 700 : 400,
+            color: i === currentStep ? "#1976d2" : i < currentStep ? "#4caf50" : "#94a3b8",
+            textAlign: "center", lineHeight: 1.2
+          }}>
+            {step.label}
+          </Typography>
+        </Box>
+        {i < STEPS.length - 1 && (
+          <Box sx={{
+            flex: 1, height: 3, mx: 0.5,
+            background: i < currentStep ? "#4caf50" : "#e2e8f0",
+            borderRadius: 2, transition: "background 0.3s", minWidth: 10
+          }} />
+        )}
+      </React.Fragment>
+    ))}
+  </Box>
+</Box>
 
       <Card>
         <Box
@@ -333,6 +394,7 @@ const AssetForm = () => {
               opacity: loading ? 0.6 : 1,
             }}
           >
+            {currentStep === 0 && (<>
             {/* ================= BASIC DETAILS ROW ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -373,7 +435,8 @@ const AssetForm = () => {
                 </Grid>
               ))}
             </Grid>
-
+            </>)}
+{currentStep === 1 && (<>
             {/* ================= ADDRESS DETAILS SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -464,7 +527,8 @@ const AssetForm = () => {
                 />
               </Grid>
             </Grid>
-
+</>)}
+{currentStep === 2 && (<>
             {/* ================= PROJECT / FINANCIAL SECTION ================= */}
 
             <Grid container spacing={2}>
@@ -711,7 +775,8 @@ const AssetForm = () => {
                 />
               </Grid>
             </Grid>
-
+            </>)}
+{currentStep === 3 && (<>
             {/* ================= IMAGE UPLOAD SECTION ================= */}
             <Grid container spacing={2}>
               <Grid item xs={12}>
@@ -777,6 +842,35 @@ const AssetForm = () => {
                 </Button>
               </Box>
             </Grid>
+            </>)}
+            {/* ================= NAVIGATION BUTTONS ================= */}
+<Box
+  display="flex" justifyContent="space-between" alignItems="center"
+  mt={4} pt={3} sx={{ borderTop: "1px solid #e2e8f0" }}
+>
+  <Button
+    variant="outlined"
+    onClick={handleBack}
+    disabled={currentStep === 0}
+    sx={{ minWidth: 120 }}
+  >
+    ← Back
+  </Button>
+
+  <Typography sx={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+    Step {currentStep + 1} of {STEPS.length}
+  </Typography>
+
+  {currentStep < STEPS.length - 1 && (
+    <Button
+      variant="contained"
+      onClick={handleNext}
+      sx={{ minWidth: 150, background: "linear-gradient(to right, #1976d2, #42a5f5)" }}
+    >
+      Save & Next →
+    </Button>
+  )}
+</Box>
           </form>
         </CardContent>
       </Card>
