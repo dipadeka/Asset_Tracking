@@ -23,10 +23,19 @@ import {
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { GirlSharp } from "@mui/icons-material";
-const EMRSForm = () => {
+const EMRSForm = ({ addSubmittedForm }) => {
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [openImageDialog, setOpenImageDialog] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+
+const handleImageUpload = (file) => {
+  if (!file) return;
+  setUploadedImage(file);
+  setValue("emrsImage", file);
+};
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [submittedForms, setSubmittedForms] = useState([]);
 
 const STEPS = [
   { label: "School Details",     icon: "🏫" },
@@ -67,7 +76,7 @@ const handleBack = () => {
       section: "",
       sanctionedCapacity: "",
       currentEnrollment: "",
-      category: "",
+      categoryBreakdown: { ST: "", PVTG: "", "DNT/NT/SNT": "", Orphan: "", LWE: "", "Divyang": "" },
       // Academic Performance
       boardClass: "",
       appeared: "",
@@ -266,6 +275,76 @@ const handleBack = () => {
 
       const sanctionedCapacity = Number(row.sanctionedCapacity || 0);
       const currentEnrollment = Number(row.currentEnrollment || 0);
+
+      // ── CSV EXPORT ──
+const exportCSV = (form) => {
+  const rows = [
+    ["Field", "Value"],
+    ["School Name", form.payload.schoolname],
+    ["EMRS Code", form.payload.EMRScode],
+    ["District", form.payload.district],
+    ["Principal", form.payload.principalName],
+    ["Affiliation", form.payload.affiliation],
+    ["School Type", form.payload.schooltype],
+    ["Contact", form.payload.contactno],
+    ["Email", form.payload.email],
+    ["Submitted At", form.submittedAt],
+  ];
+  const csvContent = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `EMRS_${form.EMRScode || "form"}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ── PDF EXPORT (uses browser print) ──
+const exportPDF = (form) => {
+  const p = form.payload;
+  const html = `
+    <html><head><title>EMRS Form</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 30px; }
+      h1 { color: #1976d2; } h2 { color: #374151; border-bottom: 1px solid #e2e8f0; pb: 4px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      th { background: #1976d2; color: #fff; padding: 8px; text-align: left; }
+      td { padding: 7px 8px; border: 1px solid #e2e8f0; }
+      tr:nth-child(even) { background: #f8fafc; }
+    </style></head>
+    <body>
+      <h1>EMRS Details Form</h1>
+      <p><strong>Submitted:</strong> ${form.submittedAt}</p>
+      <h2>Basic Details</h2>
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td>School Name</td><td>${p.schoolname || "—"}</td></tr>
+        <tr><td>EMRS Code</td><td>${p.EMRScode || "—"}</td></tr>
+        <tr><td>District</td><td>${p.district || "—"}</td></tr>
+        <tr><td>Principal</td><td>${p.principalName || "—"}</td></tr>
+        <tr><td>Affiliation</td><td>${p.affiliation || "—"}</td></tr>
+        <tr><td>School Type</td><td>${p.schooltype || "—"}</td></tr>
+        <tr><td>Contact</td><td>${p.contactno || "—"}</td></tr>
+        <tr><td>Email</td><td>${p.email || "—"}</td></tr>
+      </table>
+      <h2>Infrastructure</h2>
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td>Total Classrooms</td><td>${p.totalClassrooms || "—"}</td></tr>
+        <tr><td>Smart Class</td><td>${p.classroomWithSmartClass || "—"}</td></tr>
+        <tr><td>Science Lab</td><td>${p.scienceLab || "—"}</td></tr>
+        <tr><td>Computer Lab</td><td>${p.computerLab || "—"}</td></tr>
+        <tr><td>Library</td><td>${p.library || "—"}</td></tr>
+        <tr><td>Playground</td><td>${p.playground || "—"}</td></tr>
+      </table>
+    </body></html>
+  `;
+  const win = window.open("", "_blank");
+  win.document.write(html);
+  win.document.close();
+  win.print();
+};
 
       return {
         academicYear: row.academicYear,
@@ -502,7 +581,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
         section: row.section,
         sanctionedCapacity: Number(row.sanctionedCapacity || 0),
         currentEnrollment: Number(row.currentEnrollment || 0),
-        category: row.category,
+        categoryBreakdown: row.categoryBreakdown || {},
         academicPerformance: {
           appeared: Number(row.appeared || 0),
           passed: Number(row.passed || 0),
@@ -626,12 +705,21 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
     });
 
     const result = await response.json();
+    setSubmittedForms(prev => [...prev, {
+  id: result._id || Date.now(),
+  schoolname: payload.schoolname,
+  EMRScode: payload.EMRScode,
+  district: payload.district,
+  submittedAt: new Date().toLocaleString(),
+  payload // store full data for export
+}]);
+setSubmitSuccess(true);
 
     if (!response.ok) {
       throw new Error(result.message || "Something went wrong");
     }
 
-    alert("EMRS Data Submitted Successfully ✅");
+   setSubmitSuccess(true);
     console.log("EMRS RESPONSE:", result);
 
   } catch (error) {
@@ -845,7 +933,6 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
   // ================= EMRS BASIC DETAILS =================
   const emrsBasicFields = [
     { name: "EMRScode", label: "EMRS Code" },
-    { name: "EMRSid", label: "EMRS ID" },
     { name: "udaisecode", label: "UDISE Code" },
     { name: "schoolname", label: "School Name" },
     {
@@ -1045,7 +1132,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
         "DNT/NT/SNT",
         "Orphan",
         "LWE",
-        "Divyang Parent"
+        "Divyang"
       ]
     }
   ];
@@ -1988,8 +2075,19 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
           </TextField>
         )} />
     </Grid>
+
+    {/* ← ADD HERE */}
+    {watch("Auditorium") === "Yes" && (
+      <Grid item xs={12} sm={4} md={3}>
+        <Controller name="auditoriumCapacity" control={control} defaultValue=""
+          render={({ field }) => (
+            <TextField {...field} label="Auditorium Capacity" type="number" fullWidth size="small" sx={{ minWidth: 220 }} />
+          )} />
+      </Grid>
+    )}
+
     <Grid item xs={12} sm={4} md={3}>
-      <Controller name="Medical Room" control={control} defaultValue=""
+            <Controller name="Medical Room" control={control} defaultValue=""
         render={({ field }) => (
           <TextField {...field} select label="Medical Room" fullWidth size="small" sx={{ minWidth: 220 }}
             onChange={(e) => { field.onChange(e); syncInfraToConstruction("Medical Room", e.target.value); }}>
@@ -2422,12 +2520,94 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                     <TextField label="Current Enrollment" type="number" fullWidth size="small" value={row.currentEnrollment}
                       onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].currentEnrollment = e.target.value; setEnrollmentRows(u); }} />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField select label="Category" fullWidth size="small" sx={{ minWidth: 220 }} value={row.category}
-                      onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].category = e.target.value; setEnrollmentRows(u); }}>
-                      {["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang Parent"].map(cat => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
-                    </TextField>
-                  </Grid>
+                  {/* ── CATEGORY BREAKDOWN ── */}
+<Grid item xs={12}>
+  <Box sx={{ border: "1px solid #bbdefb", borderRadius: 2, p: 2, background: "#f0f7ff" }}>
+    <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 2, fontSize: 14 }}>
+      📊 Student Category Breakdown
+    </Typography>
+    <Grid container spacing={2}>
+      {["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang"].map(cat => (
+        <Grid item xs={6} sm={4} md={2} key={cat}>
+          <TextField
+            label={cat}
+            type="number"
+            fullWidth
+            size="small"
+            value={row.categoryBreakdown?.[cat] || ""}
+            onChange={(e) => {
+              const u = [...enrollmentRows];
+              if (!u[rowIndex].categoryBreakdown) u[rowIndex].categoryBreakdown = {};
+              u[rowIndex].categoryBreakdown[cat] = e.target.value;
+              setEnrollmentRows(u);
+            }}
+          />
+        </Grid>
+      ))}
+    </Grid>
+
+    {/* ── VISUAL BAR ── */}
+    {(() => {
+      const breakdown = row.categoryBreakdown || {};
+      const categories = ["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang"];
+      const colors = ["#1976d2", "#7b1fa2", "#2e7d32", "#e65100", "#c62828", "#00838f"];
+      const total = categories.reduce((sum, cat) => sum + Number(breakdown[cat] || 0), 0);
+      if (total === 0) return null;
+
+      return (
+        <Box mt={2}>
+          {/* Progress Bar */}
+          <Box sx={{ display: "flex", height: 28, borderRadius: 2, overflow: "hidden", mb: 1.5 }}>
+            {categories.map((cat, i) => {
+              const val = Number(breakdown[cat] || 0);
+              const pct = total > 0 ? (val / total) * 100 : 0;
+              if (pct === 0) return null;
+              return (
+                <Box key={cat} sx={{
+                  width: `${pct}%`, background: colors[i],
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "width 0.4s"
+                }}>
+                  {pct > 8 && (
+                    <Typography sx={{ fontSize: 10, color: "#fff", fontWeight: 700 }}>
+                      {Math.round(pct)}%
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* Legend */}
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+            {categories.map((cat, i) => {
+              const val = Number(breakdown[cat] || 0);
+              if (!val) return null;
+              return (
+                <Box key={cat} sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: colors[i], flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: 12, color: "#374151" }}>
+                    {cat}: <strong>{val}</strong>
+                  </Typography>
+                </Box>
+              );
+            })}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, ml: "auto" }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#1976d2" }}>
+                Total: {total}
+              </Typography>
+              {row.currentEnrollment && Number(row.currentEnrollment) > 0 && total > Number(row.currentEnrollment) && (
+                <Typography sx={{ fontSize: 11, color: "#c62828", fontWeight: 600 }}>
+                  ⚠️ Exceeds enrollment ({row.currentEnrollment})
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </Box>
+      );
+    })()}
+  </Box>
+</Grid>
                 </Grid>
 
                 {/* ── ACADEMIC PERFORMANCE ── */}
@@ -3248,6 +3428,8 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                     distinctions: "",
                     topScorer: "",
                     topScore: "",
+                    categoryBreakdown: { ST: "", PVTG: "", "DNT/NT/SNT": "", Orphan: "", LWE: "", "Divyang": "" },
+                    
                    dropouts: [{ studentName: "", rollNo: "", reason: "", guardianName: "", guardianContactNo: "", pinCode: "", district: "", postOffice: "", gramPanchayat: "", village: "" }],
                     migrations: [{ studentName: "", migratedFrom: "", transferredTo: "", reason: "" }],
                     achievements: [{ studentName: "", eventName: "", level: "", recognition: "" }]
@@ -3349,7 +3531,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                       fullWidth
                       size="small"
                       sx={{ minWidth: 220 }}
-                      SelectProps={{ multiple: true }}
+                  
                       value={row.areasOfDevelopment}
                       onChange={(e) => {
                         const u = [...extraCurricularRows];
@@ -3444,7 +3626,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                       academicYear: "",
                       initiativeName: "",
                       collaboratingPartner: "",
-                      areasOfDevelopment: [],
+                      areasOfDevelopment: "",
                       description: "",
                       targetStudents: "",
                       status: ""
@@ -3887,11 +4069,13 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                         <Grid item xs={12} sm={6} md={4} key={field.name}>
                           {field.type === "select" ? (
                             <TextField
+  select                                          
   fullWidth size="small" sx={{ minWidth: 220 }}
-  type={field.name === "contact" ? "text" : field.type}
+  type={field.name === "contact" ? "text" : "text"}  
   label={field.label}
   value={row[field.name]}
   InputProps={{ readOnly: field.readOnly }}
+  InputLabelProps={{ shrink: field.type === "date" || undefined }}
   {...(field.name === "contact" && {
     inputProps: { maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" },
     onKeyDown: (e) => {
@@ -3918,6 +4102,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                               fullWidth size="small" sx={{ minWidth: 220 }} type={field.type} label={field.label}
                               value={row[field.name]}
                               InputProps={{ readOnly: field.readOnly }}
+                              InputLabelProps={{ shrink: field.type === "date" || undefined }}
                               onChange={(e) => {
                                 const updatedRows = [...teachingRows];
                                 updatedRows[index][field.name] = e.target.value;
@@ -4028,12 +4213,14 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                       .map((field) => (
                         <Grid item xs={12} sm={6} md={4} key={field.name}>
                           {field.type === "select" ? (
-                            <TextField
+                           <TextField
+  select                                                   
   fullWidth size="small" sx={{ minWidth: 220 }}
-  type={field.name === "contact" ? "text" : (field.type || "text")}
+  type={field.name === "contact" ? "text" : "text"}       
   label={field.label}
   value={row[field.name]}
   InputProps={{ readOnly: field.readOnly }}
+  InputLabelProps={{ shrink: field.type === "date" || undefined }}
   {...(field.name === "contact" && {
     inputProps: { maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" },
     onKeyDown: (e) => {
@@ -4060,6 +4247,7 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
                               fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label}
                               value={row[field.name]}
                               InputProps={{ readOnly: field.readOnly }}
+                              InputLabelProps={{ shrink: field.type === "date" || undefined }}
                               onChange={(e) => {
                                 const updatedRows = [...nonTeachingRows];
                                 updatedRows[index][field.name] = e.target.value;
@@ -4222,18 +4410,22 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
 
 
             {/* Preview */}
-            {watch("emrsImage") && (
-              <Grid item xs={12} md={4}>
-                <img
-                  src={URL.createObjectURL(watch("emrsImage"))}
+           {uploadedImage && (
+  <Grid item xs={12} md={4}>
+    <img
+      src={URL.createObjectURL(uploadedImage)}
                   alt="preview"
                   style={{
                     width: "100%",
                     height: "150px",
                     objectFit: "cover",
-                    borderRadius: "10px"
+                    borderRadius: "10px",
+                    marginTop: "16px"
                   }}
                 />
+                <Typography variant="caption" sx={{ color: "#64748b", mt: 0.5, display: "block" }}>
+      📎 {uploadedImage.name}
+    </Typography>
               </Grid>
             )}
 
@@ -4340,6 +4532,39 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
           </form>
         </CardContent>
       </Card>
+      {submittedForms.length > 0 && (
+  <Card sx={{ mt: 4 }}>
+    <Box sx={{ background: "linear-gradient(to right, #16a34a, #4ade80)", p: 2, borderRadius: "16px 16px 0 0" }}>
+      <Typography variant="h6" sx={{ color: "#fff", fontWeight: 600 }}>
+        📋 Submitted EMRS Forms
+      </Typography>
+    </Box>
+    <CardContent>
+      {submittedForms.map((form, i) => (
+        <Box key={i} sx={{
+          border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 2,
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: "#f8fafc"
+        }}>
+          <Box>
+            <Typography fontWeight={700}>{form.schoolname || "—"}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              EMRS Code: {form.EMRScode} | District: {form.district} | Submitted: {form.submittedAt}
+            </Typography>
+          </Box>
+          <Box display="flex" gap={1}>
+            <Button variant="outlined" size="small" onClick={() => exportCSV(form)}>
+              ⬇ CSV
+            </Button>
+            <Button variant="outlined" size="small" color="error" onClick={() => exportPDF(form)}>
+              ⬇ PDF
+            </Button>
+          </Box>
+        </Box>
+      ))}
+    </CardContent>
+  </Card>
+)}
 
 
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
@@ -4377,7 +4602,17 @@ securityAgencyContact: data.boysSecurityAgencyContact || null,
             />
           </Button>
         </DialogContent>
-
+<Dialog open={submitSuccess} onClose={() => setSubmitSuccess(false)}>
+  <DialogTitle sx={{ color: "#16a34a", fontWeight: 700 }}>
+    ✅ Form Uploaded Successfully!
+  </DialogTitle>
+  <DialogContent>
+    <Typography>Your EMRS form has been submitted successfully. You can view it in the <strong>Submitted Forms</strong> section below.</Typography>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setSubmitSuccess(false)} variant="contained" color="success">OK</Button>
+  </DialogActions>
+</Dialog>
         <DialogActions>
           <Button onClick={() => setOpenImageDialog(false)}>Cancel</Button>
         </DialogActions>

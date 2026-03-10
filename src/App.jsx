@@ -11,26 +11,29 @@ import DashboardLayout from "./pages/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
 import EMRSForm from "./pages/EMRSForm";
+import AssetForm from "./pages/assetManagementForm/index";   // ← ADD THIS
+import HomePage from "./pages/home/homepage";                   // ← ADD THIS
 
 import ProtectedRoute from "./pages/routes/protected-routes";
+
 function App() {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      {/* <Login /> */}
 
-      {/* Routing syntax  */}
       <BrowserRouter>
         <Routes>
-          {/* AUTH PAGES */}
-          <Route path="/" element={<SignInPage />} />
-          <Route path="/signin" element={<SignInPage />} />
-          <Route path="/admin/signin" element={<AdminSignInPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-          {/*  DASHBOARD WITH SIDEBAR + TOPBAR */}
-          {/* PROTECTED DASHBOARD */}
+          {/* ── HOME PAGE ── */}
+          <Route path="/" element={<HomePage />} />            {/* ← CHANGED (was SignInPage) */}
+
+          {/* ── AUTH PAGES ── */}
+          <Route path="/signin"           element={<SignInPage />} />
+          <Route path="/admin/signin"     element={<AdminSignInPage />} />
+          <Route path="/signup"           element={<SignUpPage />} />
+          <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
+
+          {/* ── PROTECTED DASHBOARD ── */}
           <Route
             path="dashboard"
             element={
@@ -39,11 +42,12 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="new" element={<NewApplication />} />
+            <Route path="new"    element={<NewApplication />} />
             <Route path="applied" element={<AlreadyApplied />} />
-            <Route path="EMRS" element={<EMRSForm />} />
+            <Route path="EMRS"   element={<EMRSForm />} />
+            <Route path="assets" element={<AssetForm />} />   {/* ← ADD THIS */}
           </Route>
-          
+
         </Routes>
       </BrowserRouter>
     </>
