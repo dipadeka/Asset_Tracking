@@ -3176,7 +3176,7 @@ setSubmitSuccess(true);
     size="small"
     multiline
     rows={3}
-    placeholder="Enter remarks / reason for dropout..."
+    placeholder="Enter reason for dropout..."
     value={dropout.reason}
     onChange={(e) => {
       const u = [...enrollmentRows];
@@ -3359,7 +3359,8 @@ setSubmitSuccess(true);
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].migrations[mIndex].transferredTo = e.target.value; setEnrollmentRows(u); }} />
                     </Grid>
                     <Grid item xs={12} md={3}>
-                      <TextField label="Reason" fullWidth size="small" value={migration.reason}
+                      <TextField label="Reason" multiline
+  rows={4} fullWidth size="small" value={migration.reason}
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].migrations[mIndex].reason = e.target.value; setEnrollmentRows(u); }} />
                     </Grid>
                   </Grid>
