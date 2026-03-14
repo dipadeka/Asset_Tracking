@@ -90,10 +90,10 @@ const updateSubsection = (id, field, value) => {
     try {
       const payload = {
         assetId: data.assetId,
-        assetname: data.assetName, // mapped
+        assetname: data.assetName, 
         assetCode: Number(data.assetCode),
         projectName: data.projectName,
-        ImplementingAgency: data.implementingAgency, // mapped
+        ImplementingAgency: data.implementingAgency, 
         district: data.district,
         block: data.block,
         gramPanchayat: data.gramPanchayat,
@@ -105,7 +105,7 @@ const updateSubsection = (id, field, value) => {
         fundingSource: data.fundingSource,
         
         actualCost: Number(data.actualCost),
-        contractvalue: Number(data.contractValue), // mapped
+        contractvalue: Number(data.contractValue), 
         workorderNumber: data.workOrderNumber,
         workorderDate: data.workOrderDate,
         timeofcompletion: Number(data.timeOfCompletion),
@@ -605,7 +605,10 @@ const updateSubsection = (id, field, value) => {
           rules={{ required: "Project Cost is required" }}
           render={({ field, fieldState: { error } }) => (
             <TextField {...field} label="Project Cost (In Lakhs)" type="number"
-              fullWidth size="small" error={!!error} helperText={error?.message} />
+              fullWidth size="small" error={!!error} helperText={error?.message} 
+              inputProps={{ min: 0 }}
+  onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+  onChange={(e) => { if (Number(e.target.value) >= 0) field.onChange(e); }} />
           )}
         />
       </Grid>
@@ -614,7 +617,10 @@ const updateSubsection = (id, field, value) => {
           rules={{ required: "Actual Cost is required" }}
           render={({ field, fieldState: { error } }) => (
             <TextField {...field} label="Actual Cost (In Lakhs)" type="number"
-              fullWidth size="small" error={!!error} helperText={error?.message} />
+              fullWidth size="small" error={!!error} helperText={error?.message} 
+               inputProps={{ min: 0 }}
+  onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+  onChange={(e) => { if (Number(e.target.value) >= 0) field.onChange(e); }} />
           )}
         />
       </Grid>
@@ -623,7 +629,10 @@ const updateSubsection = (id, field, value) => {
           rules={{ required: "Contract Value is required" }}
           render={({ field, fieldState: { error } }) => (
             <TextField {...field} label="Contract Value (In Lakhs)" type="number"
-              fullWidth size="small" error={!!error} helperText={error?.message} />
+              fullWidth size="small" error={!!error} helperText={error?.message} 
+               inputProps={{ min: 0 }}
+  onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+  onChange={(e) => { if (Number(e.target.value) >= 0) field.onChange(e); }} />
           )}
         />
       </Grid>
@@ -648,9 +657,10 @@ const updateSubsection = (id, field, value) => {
                 onChange={(e) => updateSubsection(section.id, "category", e.target.value)}
                 fullWidth size="small" sx={{ mb: 1 }} />
               <TextField label="Amount (In Lakhs)" type="number" value={section.amount}
-                onChange={(e) => updateSubsection(section.id, "amount", e.target.value)}
-                fullWidth size="small" />
-              <Box display="flex" justifyContent="flex-end" mt={0.5}>
+  onChange={(e) => { if (Number(e.target.value) >= 0) updateSubsection(section.id, "amount", e.target.value); }}
+  fullWidth size="small"
+  inputProps={{ min: 0 }}
+  onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }} />              <Box display="flex" justifyContent="flex-end" mt={0.5}>
                 <Button size="small" color="error" onClick={() => removeSubsection(section.id)}
                   sx={{ fontSize: 11 }}>
                   ✕ Remove
@@ -773,8 +783,10 @@ const updateSubsection = (id, field, value) => {
         <Controller name="completionPercentage" control={control} defaultValue=""
           render={({ field }) => (
             <Box>
-              <TextField {...field} label="Completion %" fullWidth size="small"
-                InputProps={{ readOnly: true }}
+              <TextField {...field} label="Completion %" fullWidth size="small" 
+               
+               type="number"
+  inputProps={{ min: 0, max: 100 }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     background: Number(field.value) === 100 ? "#dcfce7" : Number(field.value) >= 50 ? "#fef3c7" : "#f8fafc",
