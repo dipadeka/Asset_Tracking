@@ -10,6 +10,7 @@ import AdminSignInPage from "./pages/auth/admin/login";
 import DashboardLayout from "./pages/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
+import AssetApplied from "./pages/AssetApplied";
 import EMRSForm from "./pages/EMRSForm";
 import AssetForm from "./pages/assetManagementForm/index";   
 import HomePage from "./pages/home/homepage";                   
@@ -35,19 +36,26 @@ function App() {
 
           {/* ── PROTECTED DASHBOARD ── */}
           <Route
-            path="dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="new"    element={<NewApplication />} />
-            <Route path="applied" element={<AlreadyApplied />} />
-            <Route path="EMRS"   element={<EMRSForm />} />
-            <Route path="assets" element={<AssetForm />} />   
-          </Route>
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <DashboardLayout />
+    </ProtectedRoute>
+  }
+>
 
+  <Route path="new" element={<NewApplication />} />
+
+  {/* Already applied pages */}
+  <Route path="applied" element={<AlreadyApplied />} />
+  <Route path="applied/emrs" element={<AlreadyApplied />} />
+  <Route path="applied/assets" element={<AssetApplied />} />
+
+  {/* Forms */}
+  <Route path="EMRS" element={<EMRSForm />} />
+  <Route path="assets" element={<AssetForm />} />
+
+</Route>
         </Routes>
       </BrowserRouter>
     </>
