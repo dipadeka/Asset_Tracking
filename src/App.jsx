@@ -11,7 +11,7 @@ import DashboardLayout from "./pages/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
 import AssetApplied from "./pages/AssetApplied";
-import EMRSForm from "./pages/EMRSForm";
+import EMRSForm from "./pages/EMRS/EMRSForm";
 import AssetForm from "./pages/assetManagementForm/index";   
 import HomePage from "./pages/home/homepage";                   
 
