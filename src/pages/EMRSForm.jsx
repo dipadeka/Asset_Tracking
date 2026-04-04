@@ -942,6 +942,7 @@ const prepareAcademicResults = (results) => {
 
   try {
     const payload = {
+      userId: "1", 
       EMRScode: Number(data.EMRScode),
       schoolname: data.schoolname?.trim(),
       schooltype: data.schooltype?.trim(),
