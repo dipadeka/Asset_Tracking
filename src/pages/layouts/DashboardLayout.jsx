@@ -1,8 +1,8 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
-import Sidebar from "../components/layouts/header/Sidebar";
-import Topbar from "../components/layouts/header/Topbar";
+import Sidebar from "../../components/layouts/header/Sidebar";
+import Topbar from "../../components/layouts/header/Topbar";
 
 
 const DashboardLayout = () => {
