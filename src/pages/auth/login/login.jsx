@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from 'react-router-dom';
-import axios from "axios";
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
+import { loginUser } from '../../../redux/slices/authSlice';
 
 import {
   Box,
@@ -31,6 +32,8 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 export default function SignInPage() {
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { isLoading } = useSelector((state) => state.auth);
   const [showPassword, setShowPassword] = React.useState(false);
 
   const {
@@ -40,22 +43,13 @@ export default function SignInPage() {
   } = useForm();
 
   const onSubmit = async (data) => {
-    try {
-      const payload = { ...data, role: 1 };
-      const response = await axios.post("http://localhost:5000/api/auth/login", payload);
-
-      if (response.data.success) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        toast.success(response.data.message);
-        setTimeout(() => navigate("/dashboard/new"), 900);
-      }
-    } catch (error) {
-      if (error.response) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Server error");
-      }
+    const payload = { ...data, role: 1 };
+    const resultAction = await dispatch(loginUser(payload));
+    if (loginUser.fulfilled.match(resultAction)) {
+      toast.success(resultAction.payload.message);
+      setTimeout(() => navigate("/dashboard/new"), 900);
+    } else if (loginUser.rejected.match(resultAction)) {
+      toast.error(resultAction.payload);
     }
   };
 
@@ -313,6 +307,7 @@ export default function SignInPage() {
               fullWidth
               type="submit"
               variant="contained"
+              disabled={isLoading}
               sx={{
                 py: 1.4,
                 fontWeight: 700,
@@ -331,7 +326,7 @@ export default function SignInPage() {
                 mb: 2.5,
               }}
             >
-              SIGN IN
+              {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
             </Button>
 
             <Divider sx={{

@@ -15,6 +15,7 @@ import AssetForm from "./pages/assetManagementForm/index";
 import HomePage from "./pages/home/homepage";                   
 
 import ProtectedRoute from "./pages/routes/protected-routes";
+import ReduxDevTools from "./components/ReduxDevTools";
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
 
         </Routes>
       </BrowserRouter>
+      <ReduxDevTools />
     </>
   );
 }

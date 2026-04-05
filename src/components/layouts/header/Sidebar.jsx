@@ -21,21 +21,18 @@ import {
 
 import { toast } from "react-toastify";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from 'react-redux';
+import { logout } from '../../../redux/slices/authSlice';
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const [openScheme, setOpenScheme] = useState(false);
 
   const logoutUser = () => {
-    // remove stored auth data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    // show message
+    dispatch(logout());
     toast.success("Logged out successfully");
-
-    // redirect to login page
     navigate("/signin", { replace: true });
   };
 
