@@ -7,10 +7,10 @@ import SignUpPage from "./pages/auth/signup";
 import ForgotPasswordPage from "./pages/auth/forgotPassword";
 
 import AdminSignInPage from "./pages/auth/admin/login";
-import DashboardLayout from "./pages/DashboardLayout";
+import DashboardLayout from "./pages/layouts/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
-import EMRSForm from "./pages/EMRSForm";
+import EMRSForm from "./pages/EMRS/EMRSForm";
 import AssetForm from "./pages/assetManagementForm/index";   
 import HomePage from "./pages/home/homepage";                   
 
