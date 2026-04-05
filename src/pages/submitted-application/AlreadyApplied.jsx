@@ -97,7 +97,7 @@ const buildSections = (form) => [
   },
 ];
 
-// CSV Export 
+// ── CSV Export ────────────────────────────────────────────
 const exportCSV = (form) => {
   const sections = buildSections(form);
   let csv = `EMRS Form Export - ${form.schoolname || "School"}\n\n`;
@@ -159,7 +159,7 @@ const exportCSV = (form) => {
   URL.revokeObjectURL(url);
 };
 
-//  PDF Export 
+// ── PDF Export ────────────────────────────────────────────
 const exportPDF = (form) => {
   const sections = buildSections(form);
   let html = `
@@ -250,7 +250,7 @@ const exportPDF = (form) => {
   win.print(); // opens print/save as PDF dialog
 };
 
-//  Section Table Component 
+// ── Section Table Component ───────────────────────────────
 const SectionTable = ({ title, rows }) => (
   <Box mb={2}>
     <Typography sx={{
@@ -280,7 +280,7 @@ const SectionTable = ({ title, rows }) => (
   </Box>
 );
 
-// Main Component 
+// ── Main Component ────────────────────────────────────────
 const AlreadyApplied = () => {
   const [submittedForms, setSubmittedForms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -362,6 +362,7 @@ const AlreadyApplied = () => {
         </Box>
       ) : (
         submittedForms.map((form, index) => (
+          
           <Accordion key={form._id || index} sx={{ mb: 2, borderRadius: "12px !important", boxShadow: 2 }}>
 
             {/* ── Accordion Header ── */}

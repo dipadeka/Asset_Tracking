@@ -10,9 +10,10 @@ import AdminSignInPage from "./pages/auth/admin/login";
 import DashboardLayout from "./pages/layouts/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
 import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
+import AssetApplied from "./pages/AssetApplied";
 import EMRSForm from "./pages/EMRS/EMRSForm";
-import AssetForm from "./pages/assetManagementForm/index";   
-import HomePage from "./pages/home/homepage";                   
+import AssetForm from "./pages/assetManagementForm/index";
+import HomePage from "./pages/home/homepage";
 
 import ProtectedRoute from "./pages/routes/protected-routes";
 import ReduxDevTools from "./components/ReduxDevTools";
@@ -24,31 +25,35 @@ function App() {
 
       <BrowserRouter>
         <Routes>
-
           {/* ── HOME PAGE ── */}
-          <Route path="/" element={<HomePage />} />            
+          <Route path="/" element={<HomePage />} />
 
           {/* ── AUTH PAGES ── */}
-          <Route path="/signin"           element={<SignInPage />} />
-          <Route path="/admin/signin"     element={<AdminSignInPage />} />
-          <Route path="/signup"           element={<SignUpPage />} />
-          <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/admin/signin" element={<AdminSignInPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* ── PROTECTED DASHBOARD ── */}
           <Route
-            path="dashboard"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <DashboardLayout />
               </ProtectedRoute>
             }
           >
-            <Route path="new"    element={<NewApplication />} />
-            <Route path="applied" element={<AlreadyApplied />} />
-            <Route path="EMRS"   element={<EMRSForm />} />
-            <Route path="assets" element={<AssetForm />} />   
-          </Route>
+            <Route path="new" element={<NewApplication />} />
 
+            {/* Already applied pages */}
+            <Route path="applied" element={<AlreadyApplied />} />
+            <Route path="applied/emrs" element={<AlreadyApplied />} />
+            <Route path="applied/assets" element={<AssetApplied />} />
+
+            {/* Forms */}
+            <Route path="EMRS" element={<EMRSForm />} />
+            <Route path="assets" element={<AssetForm />} />
+          </Route>
         </Routes>
       </BrowserRouter>
       <ReduxDevTools />

@@ -1,6 +1,12 @@
-import toast, { Toaster } from "react-hot-toast";
 import React, { useState, useEffect } from "react";
 import { CircularProgress } from "@mui/material";
+import * as exifr from "exifr";
+import { useNavigate } from "react-router-dom";
+import { DesktopDatePicker } from "@mui/x-date-pickers/DesktopDatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
+import toast, { Toaster } from "react-hot-toast";
 import {
   Box,
   Grid,
@@ -9,6 +15,7 @@ import {
   Typography,
   MenuItem,
   Card,
+  Chip,
   CardContent,
   CardHeader,
   Divider,
@@ -20,9 +27,26 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableContainer,
+  Paper,
 } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useForm, Controller } from "react-hook-form";
-
+import { GirlSharp } from "@mui/icons-material";
+const thStyle = {
+  border: "1px solid #e0e0e0",
+  padding: "8px",
+  textAlign: "left",
+  fontWeight: 600,
+};
+const tdStyle = { border: "1px solid #e0e0e0", padding: "8px" };
 const EMRSForm = ({ addSubmittedForm }) => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [openImageDialog, setOpenImageDialog] = useState(false);
@@ -33,9 +57,48 @@ const EMRSForm = ({ addSubmittedForm }) => {
     setUploadedImage(file);
     setValue("emrsImage", file);
   };
-
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [submittedForms, setSubmittedForms] = useState([]);
+  const [safetyCompliance, setSafetyCompliance] = useState({
+    totalFireExtinguishers: "",
+    functionalFireExtinguishers: "",
+    electricalSafetyInspection: "No", // (Yes/No)
+    fireSafetyDrillConducted: "No", // (Yes/No)
+  });
+  const handleFundsChange = (field, value) => {
+    setFinancialData((prev) => {
+      const updated = { ...prev, [field]: value };
+
+      const allocated = parseFloat(
+        field === "totalFundsAllocated" ? value : prev.totalFundsAllocated,
+      );
+      const utilized = parseFloat(
+        field === "totalFundsUtilized" ? value : prev.totalFundsUtilized,
+      );
+
+      if (
+        !isNaN(allocated) &&
+        allocated > 0 &&
+        !isNaN(utilized) &&
+        utilized >= 0
+      ) {
+        const pct = (utilized / allocated) * 100;
+        updated.utilizationPercentage = parseFloat(pct.toFixed(2));
+
+        if (pct >= 95) updated.fundUtilMarksObtained = 5;
+        else if (pct >= 70) updated.fundUtilMarksObtained = 3;
+        else if (pct >= 50) updated.fundUtilMarksObtained = 1;
+        else updated.fundUtilMarksObtained = 0;
+      } else {
+        updated.utilizationPercentage = "";
+        updated.fundUtilMarksObtained = 0;
+      }
+
+      return updated;
+    });
+  };
 
   const STEPS = [
     { label: "School Details", icon: "🏫" },
@@ -46,7 +109,10 @@ const EMRSForm = ({ addSubmittedForm }) => {
     { label: "Extra Curricular", icon: "🎭" },
     { label: "Hospitalization", icon: "🏥" },
     { label: "Staff Details", icon: "👨‍🏫" },
+    { label: "Attendence", icon: "📅" },
     { label: "Operational Cost", icon: "💰" },
+    { label: "Financial & Procurement Compliance", icon: "📊" },
+    { label: "EMRS Image Upload", icon: "📸" },
   ];
 
   const handleNext = () => {
@@ -59,9 +125,57 @@ const EMRSForm = ({ addSubmittedForm }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [monthlyAttendance, setMonthlyAttendance] = useState([
+    { month: "", workingDays: "", totalStudents: "", present: "" },
+  ]);
+  const [attendance, setAttendance] = useState({
+    workingDays: "",
+    casual: "",
+    earned: "",
+    medical: "",
+    maternity: "",
+    paternity: "",
+    holidays: "",
+    present: 0,
+    absent: 0,
+  });
+  const [reservationRows, setReservationRows] = useState([
+    {
+      name: "",
+      class: "",
+      section: "",
+      category: "",
+    },
+  ]);
   const { control, handleSubmit, setValue, watch, register } = useForm({});
+  const labValues = watch([
+    "physicsLabFunctional",
+    "chemistryLabFunctional",
+    "biologyLabFunctional",
+    "computerLabFunctional",
+    "mathLabFunctional",
+    "skillLabFunctional",
+  ]);
+  useEffect(() => {
+    const yesCount = labValues.filter((val) => val === "Yes").length;
 
+    let marks = 0;
+
+    if (yesCount === 6) {
+      marks = 5;
+    } else if (yesCount >= 3) {
+      marks = 3;
+    } else if (yesCount >= 1) {
+      marks = 1;
+    } else {
+      marks = 0;
+    }
+
+    setValue("marksLabFunctional", marks);
+  }, [labValues, setValue]);
   // ================= DROPOUT / MIGRATION / ACHIEVEMENT STATES =================
   const [enrollmentRows, setEnrollmentRows] = useState([
     {
@@ -75,7 +189,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
         PVTG: "",
         "DNT/NT/SNT": "",
         Orphan: "",
-        LWE: "",
         Divyang: "",
       },
       // Academic Performance
@@ -83,9 +196,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
       appeared: "",
       passed: "",
       passPercent: "",
-      above75: "",
-      above75Error: "",
-      below50: "",
+      marks: "",
       stream: "",
       distinctions: "",
       topScorer: "",
@@ -128,29 +239,172 @@ const EMRSForm = ({ addSubmittedForm }) => {
       status: "",
     },
   ]);
+  // Common function to calculate marks based on two Yes/No conditions
+  const calculateCommonMarks = (condition1, condition2) => {
+    if (condition1 === "Yes" && condition2 === "Yes") {
+      return 5; // Both YES
+    } else if (condition1 === "Yes" || condition2 === "Yes") {
+      return 3; // One YES
+    } else if (condition1 === "No" && condition2 === "No") {
+      return 0; // Both NO
+    }
+    return 0; // Default or if conditions are not yet selected
+  };
+
+  const blankEyeEntry = () => ({
+    eyeSpecialistName: "",
+    eyeCheckupDate: "",
+    eyeClass: "",
+    eyeSection: "",
+    eyeStudentsScreened: "",
+    eyeStudentsWithProblem: "",
+    eyeNeedsSpectacle: "",
+    eyeNeedsHigherInvestigation: "",
+  });
+
+  const blankEarEntry = () => ({
+    earSpecialistName: "",
+    earCheckupDate: "",
+    earClass: "",
+    earSection: "",
+    earStudentsScreened: "",
+    earStudentsWithProblem: "",
+    earNeedsEquipment: "",
+  });
+  const blankNurseEntry = () => ({
+    nurseName: "",
+    nurseQualification: "",
+    nurseRegNo: "",
+    nurseContact: "",
+    nurseShift: "",
+    nurseJoiningDate: "",
+  });
+
+  const blankVisitLog = () => ({
+    visitDate: "",
+    actualVisitTime: "",
+    visitStatus: "",
+    remarks: "",
+  });
+  const addEyeRow = (index) => {
+    const u = [...hospitalizationRows];
+    u[index].eyeEntries = [...(u[index].eyeEntries || []), blankEyeEntry()];
+    setHospitalizationRows(u);
+  };
+
+  const addEarRow = (index) => {
+    const u = [...hospitalizationRows];
+    u[index].earEntries = [...(u[index].earEntries || []), blankEarEntry()];
+    setHospitalizationRows(u);
+  };
+  const [eyeDateErrors, setEyeDateErrors] = useState({}); // key: `${rowIndex}-${entryIndex}`
+  const [earDateErrors, setEarDateErrors] = useState({}); // key: `${rowIndex}-${entryIndex}`
+  const emptyHospitalizationRow = () => ({
+    // Hospital
+    hospitalEmpanelled: "",
+    privateHospital: "",
+    empanellementValidity: "",
+    empanelmentDepartment: "",
+    doctorName: "",
+    treatmentDetails: "",
+    // Student
+    studentName: "",
+    rollNo: "",
+    class: "",
+    section: "",
+    guardianName: "",
+    guardianContact: "",
+    // Admission
+    admissionDate: "",
+    dischargeDate: "",
+    reasonForHospitalization: "",
+    // Claim
+    estimatedCost: "",
+    amountClaimed: "",
+    claimStatus: "",
+    // Health monitoring
+    "Annual Health Check Conducted": "",
+    "Part-Time Doctor Engaged": "",
+    "Medical Register Maintained": "",
+    "Sickle Cell Screening Conducted": "",
+    "ABHA ID Created": "",
+    "Eye Checkup Conducted": "",
+    "Ear Checkup Conducted": "",
+    marksHealth: undefined,
+
+    eyeCheckupConducted: "",
+    eyeEntries: [blankEyeEntry()],
+
+    earCheckupConducted: "",
+    earEntries: [blankEarEntry()],
+
+    nurseEntries: [blankNurseEntry()],
+
+    visitingDoctorName: "",
+    visitingDoctorSpecialization: "",
+    visitingDoctorRegNo: "",
+    visitingDoctorContact: "",
+    scheduledVisitTime: "",
+    doctorVisitLogs: [blankVisitLog()],
+    // ── NEW: Psychological Counsellor
+    counsellorName: "",
+    counsellorQualification: "",
+    counsellorRegNo: "",
+    counsellorContact: "",
+    counsellorAvailableDays: [],
+    counsellorSessionType: "",
+    counsellorSessionsConducted: "",
+    counsellorStudentsCounselled: "",
+  });
+
+  const hospitalizationRowExample = {
+    "Annual Health Check Conducted": "Yes",
+    "Part-Time Doctor Engaged": "No",
+    "Medical Register Maintained": "Yes",
+    "Sickle Cell Screening Conducted": "No",
+    "ABHA ID Created": "Yes",
+    "Eye Checkup Conducted": "Yes",
+    "Ear Checkup Conducted": "Yes",
+    marksHealth: 0,
+  };
+  const calculateHealthMarks = (rowData) => {
+    const conditions = [
+      "Annual Health Check Conducted",
+      "Part-Time Doctor Engaged",
+      "Medical Register Maintained",
+      "Sickle Cell Screening Conducted",
+      "ABHA ID Created",
+      "Eye Checkup Conducted",
+      "Ear Checkup Conducted",
+    ];
+    const yesCount = conditions.filter((c) => rowData[c] === "Yes").length;
+    if (yesCount === 7) return 9;
+    if (yesCount >= 5) return 7;
+    if (yesCount >= 3) return 5;
+    if (yesCount >= 1) return 3;
+    return 0;
+  };
+  const validateBiAnnualDate = (newDate, entries, currentIndex, dateField) => {
+    if (!newDate || !dayjs(newDate).isValid()) return null;
+
+    const newDayjs = dayjs(newDate);
+
+    for (let i = 0; i < entries.length; i++) {
+      if (i === currentIndex) continue;
+      const otherDate = entries[i][dateField];
+      if (!otherDate) continue;
+      const otherDayjs = dayjs(otherDate);
+      const diffMonths = Math.abs(newDayjs.diff(otherDayjs, "month", true));
+      if (diffMonths < 6 || diffMonths > 6) {
+        return `Date must be exactly 6 months apart from entry #${i + 1} (${otherDayjs.format("DD MMM YYYY")}). Current gap: ${diffMonths.toFixed(1)} months.`;
+      }
+    }
+    return null; // valid
+  };
 
   const [hospitalizationRows, setHospitalizationRows] = useState([
-    {
-      studentName: "",
-      rollNo: "",
-      class: "",
-      section: "",
-      admissionDate: "",
-      dischargeDate: "",
-      reasonForHospitalization: "",
-      hospitalEmpanelled: "",
-      empanellementValidity: "",
-      treatmentDetails: "",
-      empanelmentDepartment: "",
-      doctorName: "",
-      estimatedCost: "",
-      amountClaimed: "",
-      claimStatus: "",
-      guardianName: "",
-      guardianContact: "",
-    },
+    emptyHospitalizationRow,
   ]);
-
   const [teachingRows, setteachingRows] = useState([
     {
       post: "",
@@ -205,6 +459,67 @@ const EMRSForm = ({ addSubmittedForm }) => {
       monthlyAttendance: [],
     },
   ]);
+  const [recurringBreakup, setRecurringBreakup] = useState([
+    {
+      sno: "1",
+      component: "Staff Salary (53.85%)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+    {
+      sno: "2",
+      component: "Direct Expenditure on Students (23.78%)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+    {
+      sno: "3a",
+      component: "Operational Expenditure & Co-Curricular (13.62%)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+    {
+      sno: "3b",
+      component: "Maintenance & Repair of Buildings (4.75%)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+    {
+      sno: "4",
+      component: "Administrative Expense of State Society (1.91%)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+    {
+      sno: "5",
+      component: "Capital Expenditure (2.09%)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+  ]);
+  const handleBreakupChange = (index, field, value) => {
+    const updated = [...recurringBreakup];
+    updated[index] = { ...updated[index], [field]: value };
+    setRecurringBreakup(updated);
+  };
   const [nonTeachingRows, setnonTeachingRows] = useState([
     {
       post: "",
@@ -259,19 +574,77 @@ const EMRSForm = ({ addSubmittedForm }) => {
       monthlyAttendance: [],
     },
   ]);
-
   const [operationalCostRows, setOperationalCostRows] = useState([
     { year: "", month: "", costType: "", amount: "" },
   ]);
-
   const [messData, setMessData] = useState({
+    year: "2026",
+    month: "March",
+    purchaseDate: "",
+    purchasedFrom: "",
+    items: [
+      {
+        category: "",
+        name: "",
+        quantity: "",
+        unit: "",
+        price: "",
+        total: 0,
+      },
+    ],
     weeklyMenuDisplayed: "",
     messInspectionRegister: "",
     foodStockRegister: "",
     foodComplaintRegister: "",
     messCleanlinessDaily: "",
   });
+  const [financialData, setFinancialData] = useState({
+    academicYear: "",
+    totalFundsAllocated: "",
+    totalFundsUtilized: "",
+    utilizationPercentage: 0,
+    fundUtilMarksObtained: 0,
+    auditConducted: "",
+    totalProcurements: 0,
+    procurementsGeM: 0,
+    gemProcurementPercentage: 0,
+    gemMarksObtained: 0,
+  });
+  const [procurements, setProcurements] = useState([]);
+  const [procurementDialogOpen, setProcurementDialogOpen] = useState(false);
+  const [currentProcurement, setCurrentProcurement] = useState({
+    type: "",
+    description: "",
+    totalNumber: "",
+    orderDate: "",
+    value: "",
+    vendor: "",
+    throughGem: "",
+  });
 
+  // Auto-calculated values
+  const totalProcurements = procurements.reduce(
+    (sum, p) => sum + Number(p.totalNumber || 0),
+    0,
+  );
+  const totalThroughGem = procurements.reduce(
+    (sum, p) => sum + Number(p.throughGem || 0),
+    0,
+  );
+  const gemPercentage =
+    totalProcurements > 0
+      ? ((totalThroughGem / totalProcurements) * 100).toFixed(2)
+      : "0.00";
+
+  const getGemMarks = (pct) => {
+    const p = Number(pct);
+    if (p >= 100) return 5;
+    if (p >= 75) return 4;
+    if (p >= 50) return 3;
+    if (p >= 25) return 1;
+    return 0;
+  };
+  const gemMarks = getGemMarks(gemPercentage);
   // ================= CONSTRUCTION STATUS STATE =================
   const [constructionRows, setConstructionRows] = useState({
     school: [
@@ -613,13 +986,429 @@ const EMRSForm = ({ addSubmittedForm }) => {
       },
     ],
   });
+  const [workingDays, setWorkingDays] = useState(26);
+  const [showHolidays, setShowHolidays] = useState(false);
+  const [monthYear, setMonthYear] = useState(() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+  const [teachRows, setTeachRows] = useState([
+    { id: 1, post: "", name: "", cl: "", el: "", ml: "", mat: "" },
+  ]);
+  const [ntRows, setNtRows] = useState([
+    { id: 1, post: "", name: "", cl: "", el: "", ml: "", mat: "" },
+  ]);
+  const handleItemChange = (index, field, value) => {
+    const updatedItems = [...messData.items];
+
+    if (["quantity", "price"].includes(field)) {
+      value = Math.max(0, value);
+    }
+
+    updatedItems[index][field] = value;
+
+    const qty = parseFloat(updatedItems[index].quantity) || 0;
+    const price = parseFloat(updatedItems[index].price) || 0;
+
+    updatedItems[index].total = qty * price;
+
+    setMessData({ ...messData, items: updatedItems });
+  };
+
+  const addItem = () => {
+    setMessData({
+      ...messData,
+      items: [
+        ...messData.items,
+        { category: "", name: "", quantity: "", price: "", total: 0 },
+      ],
+    });
+  };
+
+  const removeItem = (index) => {
+    const updated = messData.items.filter((_, i) => i !== index);
+    setMessData({ ...messData, items: updated });
+  };
+
+  const calculateGrandTotal = () => {
+    return messData.items.reduce((sum, item) => sum + (item.total || 0), 0);
+  };
+  const handleAddNonTeachingSummary = () => {
+    setNonTeachingSummaryRows([
+      ...nonTeachingSummaryRows,
+      { post: "", total: "", filled: "", vacant: "" },
+    ]);
+  };
+  const handleGemPercentageChange = (e) => {
+    const newPercentage = e.target.value;
+    const marks = calculateGemMarks(newPercentage);
+
+    setFinancialData((prev) => ({
+      ...prev,
+      gemProcurementPercentage: newPercentage,
+      gemMarksObtained: marks,
+    }));
+  };
+
+  const prepareBasicDetails = (data) => ({
+    EMRScode: Number(data.EMRScode),
+    EMRSid: data.EMRSid?.trim(),
+    udaisecode: Number(data.udaisecode),
+    schoolname: data.schoolname?.trim(),
+    schooltype: data.schooltype?.trim(),
+    affiliation: data.affiliation?.trim(),
+    principalName: data.principalName?.trim(),
+    contactno: data.contactno?.trim(),
+    email: data.email?.trim(),
+  });
+
+  const prepareLocationDetails = (data) => ({
+    state: data.state,
+    district: data.district,
+    block: data.block,
+    grampanchayat: data.grampanchayat,
+    village: data.village,
+  });
+  const prepareInfrastructureDetails = (data) => ({
+    totalClassrooms: Number(data.totalClassrooms || 0),
+
+    classroomWithSmartClass: Number(data.classroomWithSmartClass || 0),
+    classroomWithProjector: Number(data.classroomWithProjector || 0),
+
+    scienceLab: data.scienceLab || "",
+    computerLab: data.computerLab || "",
+
+    library: data.library || "",
+    booksInLibrary: Number(data.booksInLibrary || 0),
+
+    playground: data.playground || "",
+    auditorium: data.auditorium || "",
+    medicalroom: data.medicalroom || "",
+  });
+  const prepareHostelAdministration = (data) => ({
+    boysHostel: {
+      capacity: Number(data.boysHostelCapacity || 0),
+      bedsAvailable: Number(data.boysBedsAvailable || 0),
+      currentOccupancy: Number(data.boysCurrentOccupancy || 0),
+      cctvInstalled: data.boysCCTVInstalled,
+      noOfCCTV: Number(data.boysNoOfCCTV || 0),
+      securityAgency: data.boysSecurityAgency,
+      warden: {
+        name: data.boysWardenName,
+        email: data.boysWardenEmail,
+        contact: data.boysWardenContact,
+      },
+    },
+    girlsHostel: {
+      capacity: Number(data.girlsHostelCapacity || 0),
+      bedsAvailable: Number(data.girlsBedsAvailable || 0),
+      currentOccupancy: Number(data.girlsCurrentOccupancy || 0),
+      cctvInstalled: data.girlsCCTVInstalled,
+      noOfCCTV: Number(data.girlsNoOfCCTV || 0),
+      securityAgency: data.girlsSecurityAgency,
+      warden: {
+        name: data.girlsWardenName,
+        email: data.girlsWardenEmail,
+        contact: data.girlsWardenContact,
+      },
+    },
+  });
+  const prepareClassStrength = (rows) => {
+    return rows.map((row) => {
+      const sanctionedCapacity = Number(row.sanctionedCapacity || 0);
+      const currentEnrollment = Number(row.currentEnrollment || 0);
+    });
+  };
+
+  const getMarksFromPercentage = (percent) => {
+    if (percent === 100) return 10;
+    if (percent >= 90) return 9;
+    if (percent >= 80) return 8;
+    if (percent >= 70) return 7;
+    if (percent >= 60) return 6;
+    if (percent >= 50) return 5;
+    if (percent >= 40) return 4;
+    if (percent >= 33) return 3;
+    return 0;
+  };
+
+  const getAttendanceMarks = (percent) => {
+    if (percent === 100) return 8;
+    if (percent >= 95) return 6;
+    if (percent >= 90) return 4;
+    if (percent >= 80) return 2;
+    return 0;
+  };
+  // Function to calculate Marks Obtained based on Utilization Percentage
+  const calculateFundUtilMarks = (percentage) => {
+    const numericPercentage = parseFloat(percentage); // Convert input to a number
+
+    if (isNaN(numericPercentage)) {
+      return 0;
+    }
+
+    if (numericPercentage >= 95 && numericPercentage <= 100) {
+      return 5;
+    } else if (numericPercentage >= 70 && numericPercentage <= 94) {
+      return 3;
+    } else if (numericPercentage >= 50 && numericPercentage <= 69) {
+      return 1;
+    } else if (numericPercentage < 50) {
+      return 0;
+    }
+    return 0;
+  };
+  // Function to calculate Marks Obtained for GeM Procurement
+  const calculateGemMarks = (percentage) => {
+    const numericPercentage = parseFloat(percentage);
+
+    if (isNaN(numericPercentage)) {
+      return 0;
+    }
+
+    if (numericPercentage === 100) {
+      // Explicitly for 100%
+      return 5;
+    } else if (numericPercentage >= 75 && numericPercentage <= 99) {
+      return 4;
+    } else if (numericPercentage >= 50 && numericPercentage <= 74) {
+      return 3;
+    } else if (numericPercentage >= 25 && numericPercentage <= 49) {
+      return 1;
+    } else if (numericPercentage < 25) {
+      return 0;
+    }
+    return 0;
+  };
+  const prepareAcademicResults = (results) => {
+    return results.map((item) => {
+      const appeared = Number(item.appeared || 0);
+      const passed = Number(item.passed || 0);
+
+      const percent = appeared > 0 ? (passed / appeared) * 100 : 0;
+
+      return {
+        year: item.year,
+        boardClass: item.boardClass,
+        appeared,
+        passed,
+        passPercent: percent.toFixed(2),
+        marks: getMarksFromPercentage(percent),
+        above75: Number(item.above75 || 0),
+        below50: Number(item.below50 || 0),
+      };
+    });
+  };
+  const prepareDropouts = (dropouts) => {
+    return dropouts.map((item) => ({
+      year: item.year,
+      class: item.class,
+      studentName: item.studentName?.trim(),
+      reason: item.reason,
+    }));
+  };
+  const prepareMigrations = (migrations) => {
+    return migrations.map((item) => ({
+      year: item.year,
+      studentName: item.studentName?.trim(),
+      class: item.class?.trim(),
+      migratedfrom: item.migratedfrom,
+      transferredTo: item.transferredTo,
+      reason: item.reason,
+    }));
+  };
+
+  const prepareAchievements = (achievements) => {
+    return achievements.map((item) => ({
+      studentName: item.studentName?.trim(),
+      class: item.class,
+      eventName: item.eventName,
+      level: item.level,
+      recognition: item.recognition,
+    }));
+  };
+  const prepareExtraCurricular = (rows) => {
+    return rows.map((item) => ({
+      academicYear: item.academicYear,
+      initiativeName: item.initiativeName?.trim(),
+      collaboratingPartner: item.collaboratingPartner?.trim(),
+      areasOfDevelopment: item.areasOfDevelopment,
+      description: item.description?.trim(),
+      targetStudents: item.targetStudents?.trim(),
+      status: item.status,
+    }));
+  };
+  const prepareHospitalization = (rows) => {
+    return rows.map((item) => ({
+      studentName: item.studentName?.trim(),
+      rollNo: item.rollNo,
+      class: item.class,
+      section: item.section,
+      admissionDate: item.admissionDate,
+      dischargeDate: item.dischargeDate,
+      reasonForHospitalization: item.reasonForHospitalization?.trim(),
+      hospitalEmpanelled: item.hospitalEmpanelled?.trim(),
+      empanellementValidity: item.empanellementValidity,
+      treatmentDetails: item.treatmentDetails?.trim(),
+      doctorName: item.doctorName?.trim(),
+      estimatedCost: Number(item.estimatedCost || 0),
+      amountClaimed: Number(item.amountClaimed || 0),
+      claimStatus: item.claimStatus,
+      guardianName: item.guardianName?.trim(),
+      guardianContact: item.guardianContact,
+      healthMonitoring: {
+        "Annual Health Check Conducted": item["Annual Health Check Conducted"],
+        "Part-Time Doctor Engaged": item["Part-Time Doctor Engaged"],
+        "Medical Register Maintained": item["Medical Register Maintained"],
+        "Sickle Cell Screening Conducted":
+          item["Sickle Cell Screening Conducted"],
+        "ABHA ID Created": item["ABHA ID Created"],
+        "Eye Checkup Conducted": item["Eye Checkup Conducted"],
+        "Ear Checkup Conducted": item["Ear Checkup Conducted"],
+        marksHealth: item.marksHealth,
+      },
+      // eye entries
+      eyeEntries: (item.eyeEntries || []).map((e) => ({
+        eyeSpecialistName: e.eyeSpecialistName?.trim(),
+        eyeCheckupDate: e.eyeCheckupDate,
+        eyeClass: e.eyeClass,
+        eyeSection: e.eyeSection,
+        eyeStudentsScreened: Number(e.eyeStudentsScreened || 0),
+        eyeStudentsWithProblem: Number(e.eyeStudentsWithProblem || 0),
+        eyeNeedsSpectacle: Number(e.eyeNeedsSpectacle || 0),
+        eyeNeedsHigherInvestigation: Number(e.eyeNeedsHigherInvestigation || 0),
+      })),
+      // ear entries
+      earEntries: (item.earEntries || []).map((e) => ({
+        earSpecialistName: e.earSpecialistName?.trim(),
+        earCheckupDate: e.earCheckupDate,
+        earClass: e.earClass,
+        earSection: e.earSection,
+        earStudentsScreened: Number(e.earStudentsScreened || 0),
+        earStudentsWithProblem: Number(e.earStudentsWithProblem || 0),
+        earNeedsEquipment: Number(e.earNeedsEquipment || 0),
+      })),
+      // ── NEW: Staff Nurse
+      nurseEntries: (item.nurseEntries || []).map((n) => ({
+        nurseName: n.nurseName?.trim(),
+        nurseQualification: n.nurseQualification,
+        nurseRegNo: n.nurseRegNo?.trim(),
+        nurseContact: n.nurseContact,
+        nurseShift: n.nurseShift,
+        nurseJoiningDate: n.nurseJoiningDate,
+      })),
+      // ── NEW: Daily Visiting Doctor
+      visitingDoctorName: item.visitingDoctorName?.trim(),
+      visitingDoctorSpecialization: item.visitingDoctorSpecialization,
+      visitingDoctorRegNo: item.visitingDoctorRegNo?.trim(),
+      visitingDoctorContact: item.visitingDoctorContact,
+      scheduledVisitTime: item.scheduledVisitTime,
+      doctorVisitLogs: (item.doctorVisitLogs || []).map((log) => ({
+        visitDate: log.visitDate,
+        actualVisitTime: log.actualVisitTime,
+        visitStatus: log.visitStatus,
+        remarks: log.remarks?.trim(),
+      })),
+      // ── NEW: Psychological Counsellor
+      counsellorName: item.counsellorName?.trim(),
+      counsellorQualification: item.counsellorQualification,
+      counsellorRegNo: item.counsellorRegNo?.trim(),
+      counsellorContact: item.counsellorContact,
+      counsellorAvailableDays: item.counsellorAvailableDays || [],
+      counsellorSessionType: item.counsellorSessionType,
+      counsellorSessionsConducted: Number(
+        item.counsellorSessionsConducted || 0,
+      ),
+      counsellorStudentsCounselled: Number(
+        item.counsellorStudentsCounselled || 0,
+      ),
+    }));
+  };
+
+  const prepareTeachingStaffSummary = (summary) => {
+    return summary.map((item) => {
+      const total = Number(item.total || 0);
+      const filled = Number(item.filled || 0);
+
+      return {
+        post: item.post,
+        total,
+        filled,
+        vacant: total - filled,
+      };
+    });
+  };
+  const prepareTeachingStaffDetails = (staffList) => {
+    return staffList.map((staff) => ({
+      post: staff.post,
+      name: staff.name?.trim(),
+      dob: staff.dob,
+      doj: staff.doj,
+      email: staff.email?.trim(),
+      contact: staff.contact,
+    }));
+  };
+
+  const prepareNonTeachingSummary = (summary) => {
+    return summary.map((item) => {
+      const total = Number(item.total || 0);
+      const filled = Number(item.filled || 0);
+
+      return {
+        post: item.post,
+        total,
+        filled,
+        vacant: total - filled,
+      };
+    });
+  };
+
+  const prepareNonTeachingDetails = (staffList) => {
+    return staffList.map((staff) => ({
+      post: staff.post,
+      name: staff.name?.trim(),
+      dob: staff.dob,
+      doj: staff.doj,
+      email: staff.email?.trim(),
+      contact: staff.contact,
+    }));
+  };
+
+  const prepareOperationalCost = (cost) => {
+    const electricity = Number(cost.electricity || 0);
+    const water = Number(cost.water || 0);
+    const internet = Number(cost.internet || 0);
+    const maintenance = Number(cost.maintenance || 0);
+    const mess = Number(cost.mess || 0);
+    const amount = Number(cost.amount || 0);
+
+    return {
+      electricity,
+      water,
+      internet,
+      maintenance,
+      mess,
+      totalMonthlyCost,
+    };
+  };
 
   const onSubmit = async (data) => {
     console.log("onSubmit CALLED", data);
+    const hasEyeErrors = Object.keys(eyeDateErrors).length > 0;
+    const hasEarErrors = Object.keys(earDateErrors).length > 0;
+
+    if (hasEyeErrors || hasEarErrors) {
+      alert(
+        "⚠️ Please fix the Eye/Ear checkup date errors before submitting.\nCheckup dates must be at least 6 months apart.",
+      );
+      return; // stops everything — no loading, no fetch, no toast
+    }
     setLoading(true);
 
     try {
       const payload = {
+        userId: "1",
         EMRScode: Number(data.EMRScode),
         schoolname: data.schoolname?.trim(),
         schooltype: data.schooltype?.trim(),
@@ -795,7 +1584,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
       const loadingToast = toast.loading("Submitting EMRS data...");
 
-      const response = await fetch("/api/emrs/create", {
+      const response = await fetch("http://localhost:5000/api/emrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -840,7 +1629,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
       setLoading(false);
     }
   };
-
   // ================= PINCODE AUTO FILL =================
   const onPincodeChange = async (e) => {
     const pincode = e.target.value;
@@ -1647,6 +2435,11 @@ const EMRSForm = ({ addSubmittedForm }) => {
       type: "select",
       options: ["SEBA", "CBSE", "ICSC"],
     },
+    {
+      name: "principalAvailable",
+      label: "Principal Available",
+      options: ["Yes", "No"],
+    },
     { name: "NameofthePrincipal", label: "Principal Name" },
     { name: "contactno", label: "Contact Number", type: "number" },
     { name: "emailid", label: "Email-id" },
@@ -1719,11 +2512,15 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
     {
       name: "boysCCTVInstalled",
-      label: "CCTV Installed",
+      label: "CCTV Camera Installed",
       options: ["Yes", "No"],
     },
 
-    { name: "boysNoOfCCTV", label: "No of CCTV Installed", type: "number" },
+    {
+      name: "boysNoOfCCTV",
+      label: "No of CCTV Camera Installed",
+      type: "number",
+    },
 
     {
       name: "boysSecurityAgency",
@@ -1757,11 +2554,15 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
     {
       name: "girlsCCTVInstalled",
-      label: "CCTV Installed",
+      label: "CCTV Camera Installed",
       options: ["Yes", "No"],
     },
 
-    { name: "girlsNoOfCCTV", label: "No of CCTV Installed", type: "number" },
+    {
+      name: "girlsNoOfCCTV",
+      label: "No of CCTV Camera Installed",
+      type: "number",
+    },
 
     {
       name: "girlsSecurityAgency",
@@ -1820,7 +2621,15 @@ const EMRSForm = ({ addSubmittedForm }) => {
     {
       name: "category",
       label: "Category",
-      options: ["ST", "PVTG", "DNT/NT/SNT", "Orphan", "LWE", "Divyang"],
+      options: [
+        "ST", // Cat I  — 80%
+        "PVTG", // Cat II — 5%
+        "DNT/NT/SNT", // Cat III — 5%
+        "LWE/Covid/Insurgency", // Cat IV a) — 7% shared
+        "Children of Widows", // Cat IV b) — 7% shared
+        "Divyang/Orphan", // Cat IV c) — 7% shared
+        "Land Donor", // Cat V  — 3%
+      ],
     },
   ];
 
@@ -1878,6 +2687,22 @@ const EMRSForm = ({ addSubmittedForm }) => {
   // ================= TEACHING STAFF =================
   const teachingStaffSummaryFields = [
     {
+      name: "total",
+      label: "Total Teaching Staff",
+      type: "number",
+    },
+    {
+      name: "filled",
+      label: "Filled",
+      type: "number",
+    },
+    {
+      name: "vacant",
+      label: "Vacant",
+      type: "number",
+      readOnly: true,
+    },
+    {
       name: "post",
       label: "Post",
       type: "select",
@@ -1897,23 +2722,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
     { name: "doj", label: "Date of Joining", type: "date" },
     { name: "email", label: "Email" },
     { name: "contact", label: "Contact Number" },
-
-    {
-      name: "total",
-      label: "Total Teaching Staff",
-      type: "number",
-    },
-    {
-      name: "filled",
-      label: "Filled",
-      type: "number",
-    },
-    {
-      name: "vacant",
-      label: "Vacant",
-      type: "number",
-      readOnly: true,
-    },
   ];
   // ================= NON TEACHING STAFF DETAILS =================
   const nonTeachingStaffDetailFields = [
@@ -2987,72 +3795,79 @@ const EMRSForm = ({ addSubmittedForm }) => {
                   </Grid>
                 </Grid>
                 <Grid container spacing={2} mb={4}>
-                  {emrsBasicFields.map((fieldItem) => (
-                    <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
-                      <Controller
-                        name={fieldItem.name}
-                        control={control}
-                        defaultValue=""
-                        rules={{
-                          ...(fieldItem.name === "contactno" && {
-                            validate: (v) =>
-                              !v ||
-                              /^[0-9]{10}$/.test(String(v)) ||
-                              "Must be exactly 10 digits",
-                          }),
-                        }}
-                        render={({ field, fieldState: { error } }) => (
-                          <TextField
-                            {...field}
-                            label={fieldItem.label}
-                            fullWidth
-                            size="small"
-                            sx={{ minWidth: 220 }}
-                            select={!!fieldItem.options}
-                            error={!!error}
-                            helperText={error ? error.message : ""}
-                            {...(fieldItem.name === "contactno" && {
-                              inputProps: {
-                                maxLength: 10,
-                                inputMode: "numeric",
-                                pattern: "[0-9]*",
-                              },
-                              onKeyDown: (e) => {
-                                if (
-                                  !/[0-9]/.test(e.key) &&
-                                  ![
-                                    "Backspace",
-                                    "Delete",
-                                    "ArrowLeft",
-                                    "ArrowRight",
-                                    "Tab",
-                                  ].includes(e.key)
-                                ) {
-                                  e.preventDefault();
-                                }
-                              },
-                            })}
-                            {...([
-                              "schoolname",
-                              "NameofthePrincipal",
-                              "emailid",
-                            ].includes(fieldItem.name) && {
-                              onKeyDown: (e) => {
-                                if (/^[0-9]$/.test(e.key)) e.preventDefault();
-                              },
-                            })}
-                          >
-                            {fieldItem.options &&
-                              fieldItem.options.map((option) => (
-                                <MenuItem key={option} value={option}>
-                                  {option}
-                                </MenuItem>
-                              ))}
-                          </TextField>
-                        )}
-                      />
-                    </Grid>
-                  ))}
+                  {emrsBasicFields.map((fieldItem) => {
+                    if (
+                      fieldItem.name === "NameofthePrincipal" &&
+                      watch("principalAvailable") !== "Yes"
+                    )
+                      return null;
+
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
+                        <Controller
+                          name={fieldItem.name}
+                          control={control}
+                          defaultValue=""
+                          rules={{
+                            ...(fieldItem.name === "contactno" && {
+                              validate: (v) =>
+                                !v ||
+                                /^[0-9]{10}$/.test(String(v)) ||
+                                "Must be exactly 10 digits",
+                            }),
+                          }}
+                          render={({ field, fieldState: { error } }) => (
+                            <TextField
+                              {...field}
+                              label={fieldItem.label}
+                              fullWidth
+                              size="small"
+                              sx={{ minWidth: 220 }}
+                              select={!!fieldItem.options}
+                              error={!!error}
+                              helperText={error ? error.message : ""}
+                              {...(fieldItem.name === "contactno" && {
+                                inputProps: {
+                                  maxLength: 10,
+                                  inputMode: "numeric",
+                                  pattern: "[0-9]*",
+                                },
+                                onKeyDown: (e) => {
+                                  if (
+                                    !/[0-9]/.test(e.key) &&
+                                    ![
+                                      "Backspace",
+                                      "Delete",
+                                      "ArrowLeft",
+                                      "ArrowRight",
+                                      "Tab",
+                                    ].includes(e.key)
+                                  )
+                                    e.preventDefault();
+                                },
+                              })}
+                              {...([
+                                "schoolname",
+                                "NameofthePrincipal",
+                                "emailid",
+                              ].includes(fieldItem.name) && {
+                                onKeyDown: (e) => {
+                                  if (/^[0-9]$/.test(e.key)) e.preventDefault();
+                                },
+                              })}
+                            >
+                              {fieldItem.options &&
+                                fieldItem.options.map((option) => (
+                                  <MenuItem key={option} value={option}>
+                                    {option}
+                                  </MenuItem>
+                                ))}
+                            </TextField>
+                          )}
+                        />
+                      </Grid>
+                    );
+                  })}
                 </Grid>
                 {/* ================= EMRS LOCATION SECTION ================= */}
                 <Grid container spacing={2}>
@@ -3410,6 +4225,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     💻 Computer Lab
                   </Typography>
                   <Grid container spacing={2}>
+                    {/* Computer Lab Yes/No */}
                     <Grid item xs={12} sm={4} md={3}>
                       <Controller
                         name="computerLab"
@@ -3430,6 +4246,30 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         )}
                       />
                     </Grid>
+
+                    {/* Conditional Internet in Computer Lab */}
+                    {watch("computerLab") === "Yes" && (
+                      <Grid item xs={12} sm={4} md={3}>
+                        <Controller
+                          name="internetComputerLab"
+                          control={control}
+                          defaultValue=""
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              select
+                              label="Internet in Computer Lab"
+                              fullWidth
+                              size="small"
+                              sx={{ minWidth: 220 }}
+                            >
+                              <MenuItem value="Yes">Yes</MenuItem>
+                              <MenuItem value="No">No</MenuItem>
+                            </TextField>
+                          )}
+                        />
+                      </Grid>
+                    )}
                   </Grid>
                 </Box>
 
@@ -3664,11 +4504,331 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     </Grid>
                   </Grid>
                 </Box>
+                {/* ── LINE 7: Fire & Electrical Safety Compliance ── */}
+                <Box
+                  sx={{
+                    border: "1px solid #ffccbc",
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 4,
+                    background: "#fff8f6",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      color: "#d84315",
+                      mb: 1.5,
+                      fontSize: 14,
+                    }}
+                  >
+                    🔥 Fire & Electrical Safety Compliance
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    {/* Total Fire Extinguishers Installed */}
+                    <Grid item xs={12} sm={4} md={3}>
+                      <Controller
+                        name="totalFireExtinguishers"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Total Fire Extinguishers Installed"
+                            type="number"
+                            fullWidth
+                            size="small"
+                            inputProps={{ min: 0 }}
+                            onKeyDown={(e) => {
+                              if (e.key === "-" || e.key === "e")
+                                e.preventDefault();
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Functional Fire Extinguishers */}
+                    <Grid item xs={12} sm={4} md={3}>
+                      <Controller
+                        name="functionalFireExtinguishers"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Functional Fire Extinguishers"
+                            type="number"
+                            fullWidth
+                            size="small"
+                            inputProps={{ min: 0 }}
+                            onKeyDown={(e) => {
+                              if (e.key === "-" || e.key === "e")
+                                e.preventDefault();
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Electrical Safety Inspection */}
+                    <Grid item xs={12} sm={4} md={3}>
+                      <Controller
+                        name="electricalSafetyInspection"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Electrical Safety Inspection Conducted"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Fire Safety Drill */}
+                    <Grid item xs={12} sm={4} md={3}>
+                      <Controller
+                        name="fireSafetyDrill"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Fire Safety Drill Conducted"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+                {/* ── Laboratory Functionality ── */}
+                <Box
+                  sx={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 2,
+                    p: 3,
+                    mb: 4,
+                    background: "#fff",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      color: "#1976d2",
+                      mb: 1.5,
+                      fontSize: 14,
+                    }}
+                  >
+                    🧪 Laboratory Functionality
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    {/* Physics Lab */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="physicsLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Physics Lab Functional"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Chemistry Lab */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="chemistryLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Chemistry Lab Functional"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Biology Lab */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="biologyLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Biology Lab Functional"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Computer Lab */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="computerLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Computer Lab Functional"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Mathematics Lab */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="mathLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Mathematics Lab Functional"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Skill Lab */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="skillLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            select
+                            label="Skill Lab Functional"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                          >
+                            <MenuItem value="Yes">Yes</MenuItem>
+                            <MenuItem value="No">No</MenuItem>
+                          </TextField>
+                        )}
+                      />
+                    </Grid>
+
+                    {/* Marks Obtained */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Controller
+                        name="marksLabFunctional"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            label="Marks Obtained (out of 5)"
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                            InputProps={{ readOnly: true }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  {/* Marking Criteria Table */}
+                  <Box
+                    sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}
+                  >
+                    <TableContainer component={Paper} sx={{ maxWidth: 500 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>
+                              <strong>Condition</strong>
+                            </TableCell>
+                            <TableCell>
+                              <strong>Marks</strong>
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {[
+                            { condition: "All 6 Labs functional", marks: 5 },
+                            { condition: "3–5 Labs functional", marks: 3 },
+                            { condition: "1–2 Labs functional", marks: 1 },
+                            { condition: "None functional", marks: 0 },
+                          ].map((row) => (
+                            <TableRow key={row.condition}>
+                              <TableCell>{row.condition}</TableCell>
+                              <TableCell>{row.marks}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                </Box>
               </>
             )}
             {currentStep === 2 && (
               <>
-                {/* ================= CONSTRUCTION & ASSET STATUS ================= */}{" "}
+                {/* ================= CONSTRUCTION & ASSET STATUS ================= */}
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
                     <Typography
@@ -3687,6 +4847,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     </Typography>
                   </Grid>
                 </Grid>
+
                 {/* Project Overview */}
                 <Box
                   sx={{
@@ -3756,6 +4917,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     </Grid>
                   </Grid>
                 </Box>
+
                 {/* Live Summary Banner */}
                 {(() => {
                   const all = Object.values(constructionRows).flat();
@@ -3859,10 +5021,12 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     </Box>
                   );
                 })()}
+
                 {/* 4 Category Tables */}
                 {["school", "residence", "outdoor", "utilities"].map((catKey) =>
                   renderConstructionTable(catKey),
                 )}
+
                 <Box mb={4} />
               </>
             )}
@@ -4011,7 +5175,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         <TextField
                           {...field}
                           select
-                          label="CCTV Installed"
+                          label="CCTV  Camera Installed"
                           fullWidth
                           size="small"
                           sx={{ minWidth: 220 }}
@@ -4347,7 +5511,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         <TextField
                           {...field}
                           select
-                          label="CCTV Installed"
+                          label="CCTV Camera Installed"
                           fullWidth
                           size="small"
                           sx={{ minWidth: 220 }}
@@ -4557,12 +5721,13 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     />
                   </Grid>
                 </Grid>
-                {/* ================= MESS & NUTRITION COMPLIANCE ================= */}
+                {/* ================= MESS DETAILS ================= */}
+                {/* ================= MAIN SECTION ================= */}
                 <Typography
                   variant="subtitle1"
-                  sx={{ fontWeight: 600, color: "#1976d2", mb: 1, mt: 3 }}
+                  sx={{ fontWeight: 700, color: "#1976d2", mb: 2, mt: 3 }}
                 >
-                  🍽️ Mess & Nutrition Compliance
+                  🧾 Mess Management and Compliance
                 </Typography>
 
                 <Box
@@ -4571,128 +5736,345 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     borderRadius: 2,
                     p: 3,
                     background: "#fff",
-                    mb: 4,
                   }}
                 >
-                  <Typography variant="body2" sx={{ color: "#64748b", mb: 2 }}>
-                    Mess & Nutrition Compliance
+                  {/* ================= SUBSECTION 1 ================= */}
+                  <Typography sx={{ fontWeight: 600, color: "#16a34a", mb: 2 }}>
+                    🧾 Mess Expenditure Details
                   </Typography>
 
                   <Grid container spacing={2}>
-                    {[
-                      {
-                        name: "weeklyMenuDisplayed",
-                        label: "Approved Weekly Menu Displayed & Followed",
-                      },
-                      {
-                        name: "messInspectionRegister",
-                        label: "Mess Inspection Register Maintained",
-                      },
-                      {
-                        name: "foodStockRegister",
-                        label: "Food Stock & Consumption Register Maintained",
-                      },
-                      {
-                        name: "foodComplaintRegister",
-                        label: "Food-Related Complaint Register Maintained",
-                      },
-                      {
-                        name: "messCleanlinessDaily",
-                        label: "Mess Cleanliness Maintained Daily",
-                      },
-                    ].map(({ name, label }) => (
-                      <Grid item xs={12} sm={6} md={4} key={name}>
-                        <TextField
-                          select
-                          fullWidth
-                          size="small"
-                          label={label}
-                          value={messData[name]}
-                          onChange={(e) =>
-                            setMessData((prev) => ({
-                              ...prev,
-                              [name]: e.target.value,
-                            }))
-                          }
-                          sx={{ minWidth: 220 }}
-                        >
-                          <MenuItem value="Yes">✅ Yes</MenuItem>
-                          <MenuItem value="No">❌ No</MenuItem>
-                        </TextField>
-                      </Grid>
-                    ))}
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="Mess Year"
+                        value={messData.year}
+                        onChange={(e) =>
+                          setMessData({ ...messData, year: e.target.value })
+                        }
+                      >
+                        {["2024", "2025", "2026"].map((y) => (
+                          <MenuItem key={y} value={y}>
+                            {y}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        label="Mess Month"
+                        value={messData.month}
+                        onChange={(e) =>
+                          setMessData({ ...messData, month: e.target.value })
+                        }
+                      >
+                        {[
+                          "January",
+                          "February",
+                          "March",
+                          "April",
+                          "May",
+                          "June",
+                          "July",
+                          "August",
+                          "September",
+                          "October",
+                          "November",
+                          "December",
+                        ].map((m) => (
+                          <MenuItem key={m} value={m}>
+                            {m}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        type="date"
+                        fullWidth
+                        size="small"
+                        label="Purchase Date"
+                        InputLabelProps={{ shrink: true }}
+                        value={messData.purchaseDate}
+                        onChange={(e) =>
+                          setMessData({
+                            ...messData,
+                            purchaseDate: e.target.value,
+                          })
+                        }
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Invoice/Bill No."
+                        value={messData.billNo}
+                        onChange={(e) =>
+                          setMessData({ ...messData, billNo: e.target.value })
+                        }
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        label="Payment Method"
+                        value={messData.paymentMethod}
+                        onChange={(e) =>
+                          setMessData({
+                            ...messData,
+                            paymentMethod: e.target.value,
+                          })
+                        }
+                      >
+                        <MenuItem value="Cash">Cash</MenuItem>
+                        <MenuItem value="Card">Card</MenuItem>
+                        <MenuItem value="Online">Online</MenuItem>
+                      </TextField>
+                    </Grid>
                   </Grid>
 
-                  {/* ── Live KPI Score Preview ── */}
-                  {Object.values(messData).some((v) => v !== "") &&
-                    (() => {
-                      const yesCount = Object.values(messData).filter(
-                        (v) => v === "Yes",
-                      ).length;
-                      const score =
-                        yesCount === 5
-                          ? 5
-                          : yesCount === 4
-                            ? 3
-                            : yesCount === 3
-                              ? 1
-                              : 0;
-                      const color =
-                        score >= 4
-                          ? "#16a34a"
-                          : score >= 2
-                            ? "#d97706"
-                            : "#dc2626";
-                      const bg =
-                        score >= 4
-                          ? "#dcfce7"
-                          : score >= 2
-                            ? "#fef3c7"
-                            : "#fee2e2";
-                      const label =
-                        score >= 4
-                          ? "🟢 Good"
-                          : score >= 2
-                            ? "🟡 Partial"
-                            : "🔴 Needs Improvement";
+                  {/* TABLE */}
+                  <TableContainer component={Paper} sx={{ mt: 3 }}>
+                    <Table size="small">
+                      <TableHead sx={{ background: "#f1f5f9" }}>
+                        <TableRow>
+                          <TableCell>
+                            <b>Category</b>
+                          </TableCell>
+                          <TableCell>
+                            <b>Item</b>
+                          </TableCell>
+                          <TableCell>
+                            <b>Qty</b>
+                          </TableCell>
+                          <TableCell>
+                            <b>Price (₹)</b>
+                          </TableCell>
+                          <TableCell>
+                            <b>Total (₹)</b>
+                          </TableCell>
+                          <TableCell>
+                            <b>Action</b>
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
 
-                      return (
-                        <Box
-                          sx={{
-                            mt: 3,
-                            p: 2,
-                            borderRadius: 2,
-                            background: bg,
-                            border: `1px solid ${color}40`,
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                            gap: 1,
-                          }}
-                        >
-                          <Box>
-                            <Typography
-                              sx={{ fontWeight: 700, color, fontSize: 14 }}
-                            >
-                              {label} — {yesCount} of 5 conditions fulfilled
+                      <TableBody>
+                        {messData.items.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <TextField
+                                select
+                                size="small"
+                                value={item.category}
+                                onChange={(e) =>
+                                  handleItemChange(
+                                    index,
+                                    "category",
+                                    e.target.value,
+                                  )
+                                }
+                              >
+                                <MenuItem value="Recurring">Recurring</MenuItem>
+                                <MenuItem value="Non-recurring">
+                                  Non-recurring
+                                </MenuItem>
+                              </TextField>
+                            </TableCell>
+
+                            <TableCell>
+                              <TextField
+                                size="small"
+                                value={item.name}
+                                onChange={(e) =>
+                                  handleItemChange(
+                                    index,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </TableCell>
+
+                            <TableCell>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  handleItemChange(
+                                    index,
+                                    "quantity",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </TableCell>
+
+                            <TableCell>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={item.price}
+                                onChange={(e) =>
+                                  handleItemChange(
+                                    index,
+                                    "price",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </TableCell>
+
+                            <TableCell>
+                              ₹ {Number(item.total || 0).toFixed(2)}
+                            </TableCell>
+
+                            <TableCell>
+                              <Button
+                                color="error"
+                                onClick={() => removeItem(index)}
+                              >
+                                X
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* ADD + TOTAL */}
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Button variant="outlined" onClick={addItem}>
+                      + Add
+                    </Button>
+                    <Typography sx={{ fontWeight: 700 }}>
+                      Grand Total: ₹ {calculateGrandTotal().toFixed(2)}
+                    </Typography>
+                  </Box>
+
+                  {/* ================= SUBSECTION 2 ================= */}
+                  <Typography
+                    sx={{ fontWeight: 600, color: "#2563eb", mt: 4, mb: 2 }}
+                  >
+                    📋 Mess Compliance & Monitoring
+                  </Typography>
+
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead sx={{ background: "#f1f5f9" }}>
+                        <TableRow>
+                          <TableCell>Weekly Menu Register</TableCell>
+                          <TableCell>Inspection Register</TableCell>
+                          <TableCell>Stock Register</TableCell>
+                          <TableCell>Complaint Register</TableCell>
+                          <TableCell>Cleanliness Register</TableCell>
+                          <TableCell>Marks</TableCell>
+                        </TableRow>
+                      </TableHead>
+
+                      <TableBody>
+                        <TableRow>
+                          {[
+                            "weeklyMenuDisplayed",
+                            "messInspectionRegister",
+                            "foodStockRegister",
+                            "foodComplaintRegister",
+                            "messCleanlinessDaily",
+                          ].map((field) => (
+                            <TableCell key={field}>
+                              <TextField
+                                select
+                                size="small"
+                                value={messData[field] || ""}
+                                onChange={(e) =>
+                                  setMessData((prev) => ({
+                                    ...prev,
+                                    [field]: e.target.value,
+                                  }))
+                                }
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            </TableCell>
+                          ))}
+
+                          <TableCell>
+                            <Typography sx={{ fontWeight: 700 }}>
+                              {(() => {
+                                const yes = [
+                                  messData.weeklyMenuDisplayed,
+                                  messData.messInspectionRegister,
+                                  messData.foodStockRegister,
+                                  messData.foodComplaintRegister,
+                                  messData.messCleanlinessDaily,
+                                ].filter((v) => v === "Yes").length;
+
+                                return yes === 5
+                                  ? 5
+                                  : yes === 4
+                                    ? 3
+                                    : yes === 3
+                                      ? 1
+                                      : 0;
+                              })()}
                             </Typography>
-                            <Typography
-                              sx={{ fontSize: 12, color: "#64748b", mt: 0.3 }}
-                            >
-                              All 5 = 5 pts &nbsp;|&nbsp; Any 4 = 3 pts
-                              &nbsp;|&nbsp; Any 3 = 1 pt &nbsp;|&nbsp; Below 3 =
-                              0 pts
-                            </Typography>
-                          </Box>
-                          <Typography
-                            sx={{ fontWeight: 800, color, fontSize: 20 }}
-                          >
-                            {score} / 5
-                          </Typography>
-                        </Box>
-                      );
-                    })()}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* MARKING CRITERIA */}
+                  <Box sx={{ mt: 3 }}>
+                    <Typography sx={{ fontWeight: 600, mb: 1 }}>
+                      *Marking Criteria (Out of 5)
+                    </Typography>
+
+                    <TableContainer component={Paper}>
+                      <Table size="small">
+                        <TableBody>
+                          <TableRow>
+                            <TableCell>All 5 fulfilled</TableCell>
+                            <TableCell>5</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Any 4 fulfilled</TableCell>
+                            <TableCell>3</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Any 3 fulfilled</TableCell>
+                            <TableCell>1</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Less than 3 fulfilled</TableCell>
+                            <TableCell>0</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
                 </Box>
               </>
             )}
@@ -4900,6 +6282,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           <TextField
                             label="Sanctioned Capacity"
                             type="number"
+                            inputProps={{ min: 0 }}
                             fullWidth
                             size="small"
                             value={row.sanctionedCapacity}
@@ -4914,6 +6297,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           <TextField
                             label="Current Enrollment"
                             type="number"
+                            inputProps={{ min: 0 }}
                             fullWidth
                             size="small"
                             value={row.currentEnrollment}
@@ -4944,186 +6328,547 @@ const EMRSForm = ({ addSubmittedForm }) => {
                             >
                               📊 Student Category Breakdown
                             </Typography>
-                            <Grid container spacing={2}>
-                              {[
-                                "ST",
-                                "PVTG",
-                                "DNT/NT/SNT",
-                                "Orphan",
-                                "LWE",
-                                "Divyang",
-                              ].map((cat) => (
-                                <Grid item xs={6} sm={4} md={2} key={cat}>
-                                  <TextField
-                                    label={cat}
-                                    type="number"
-                                    fullWidth
-                                    size="small"
-                                    value={row.categoryBreakdown?.[cat] || ""}
-                                    onChange={(e) => {
-                                      const u = [...enrollmentRows];
-                                      if (!u[rowIndex].categoryBreakdown)
-                                        u[rowIndex].categoryBreakdown = {};
-                                      u[rowIndex].categoryBreakdown[cat] =
-                                        e.target.value;
-                                      setEnrollmentRows(u);
-                                    }}
-                                  />
-                                </Grid>
-                              ))}
-                            </Grid>
 
-                            {/* ── VISUAL BAR ── */}
                             {(() => {
-                              const breakdown = row.categoryBreakdown || {};
-                              const categories = [
+                              const categoryConfig = [
+                                {
+                                  key: "ST",
+                                  label: "ST",
+                                  group: "I",
+                                  pct: "80%",
+                                  color: "#1976d2",
+                                  hasState: true,
+                                  notApplicable: false,
+                                  expected: {
+                                    Block: 24,
+                                    District: 15,
+                                    State: 9,
+                                  },
+                                },
+                                {
+                                  key: "PVTG",
+                                  label: "PVTG",
+                                  group: "II",
+                                  pct: "5%",
+                                  color: "#7b1fa2",
+                                  hasState: false,
+                                  notApplicable: true,
+                                  expected: { Block: 0, District: 0, State: 0 },
+                                },
+                                {
+                                  key: "DNT_NT_SNT",
+                                  label: "DNT/NT/SNT",
+                                  group: "III",
+                                  pct: "5%",
+                                  color: "#2e7d32",
+                                  hasState: false,
+                                  notApplicable: true,
+                                  expected: { Block: 0, District: 0, State: 0 },
+                                },
+                                {
+                                  key: "LandDonor",
+                                  label: "Land Donor",
+                                  group: "IV",
+                                  pct: "3%",
+                                  color: "#00838f",
+                                  hasState: false,
+                                  notApplicable: false,
+                                  expected: { Block: 1, District: 1, State: 0 },
+                                },
+                              ];
+                              const cat4Config = [
+                                {
+                                  key: "LWE_Covid",
+                                  label: "LWE/Covid/Insurgency",
+                                  subLabel: "V a)",
+                                },
+                                {
+                                  key: "Widow",
+                                  label: "Children of Widows",
+                                  subLabel: "V b)",
+                                },
+                                {
+                                  key: "Divyang",
+                                  label: "Divyang/Orphan",
+                                  subLabel: "V c)",
+                                },
+                              ];
+                              const levels = ["Block", "District", "State"];
+
+                              const handleChange = (catKey, level, value) => {
+                                const u = [...enrollmentRows];
+                                if (!u[rowIndex].categoryBreakdown)
+                                  u[rowIndex].categoryBreakdown = {};
+                                if (!u[rowIndex].categoryBreakdown[catKey])
+                                  u[rowIndex].categoryBreakdown[catKey] = {};
+                                u[rowIndex].categoryBreakdown[catKey][level] =
+                                  value;
+                                setEnrollmentRows(u);
+                              };
+
+                              const categoryKeys = [
+                                "ST",
+                                "PVTG",
+                                "DNT_NT_SNT",
+                                "LWE_Covid",
+                                "Widow",
+                                "Divyang",
+                                "LandDonor",
+                              ];
+                              const categoryLabels = [
                                 "ST",
                                 "PVTG",
                                 "DNT/NT/SNT",
-                                "Orphan",
-                                "LWE",
-                                "Divyang",
+                                "LWE/Covid",
+                                "Widow",
+                                "Divyang/Orphan",
+                                "Land Donor",
                               ];
                               const colors = [
                                 "#1976d2",
                                 "#7b1fa2",
                                 "#2e7d32",
                                 "#e65100",
+                                "#f57c00",
                                 "#c62828",
                                 "#00838f",
                               ];
-                              const total = categories.reduce(
-                                (sum, cat) => sum + Number(breakdown[cat] || 0),
+                              const breakdown = row.categoryBreakdown || {};
+
+                              const getCatTotal = (key) => {
+                                const bd = breakdown[key] || {};
+                                return levels.reduce(
+                                  (s, l) => s + Number(bd[l] || 0),
+                                  0,
+                                );
+                              };
+                              const total = categoryKeys.reduce(
+                                (sum, key) => sum + getCatTotal(key),
                                 0,
                               );
-                              if (total === 0) return null;
 
                               return (
-                                <Box mt={2}>
-                                  {/* Progress Bar */}
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      height: 28,
-                                      borderRadius: 2,
-                                      overflow: "hidden",
-                                      mb: 1.5,
-                                    }}
-                                  >
-                                    {categories.map((cat, i) => {
-                                      const val = Number(breakdown[cat] || 0);
-                                      const pct =
-                                        total > 0 ? (val / total) * 100 : 0;
-                                      if (pct === 0) return null;
-                                      return (
-                                        <Box
-                                          key={cat}
-                                          sx={{
-                                            width: `${pct}%`,
-                                            background: colors[i],
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            transition: "width 0.4s",
-                                          }}
-                                        >
-                                          {pct > 8 && (
-                                            <Typography
-                                              sx={{
-                                                fontSize: 10,
-                                                color: "#fff",
-                                                fontWeight: 700,
-                                              }}
-                                            >
-                                              {Math.round(pct)}%
-                                            </Typography>
-                                          )}
-                                        </Box>
-                                      );
-                                    })}
-                                  </Box>
+                                <>
+                                  <Grid container spacing={2}>
+                                    {/* ── Cat I, II, III, V ── */}
+                                    {categoryConfig.map((cat) => {
+                                      const bd = breakdown[cat.key] || {};
+                                      const block = Number(bd.Block || 0);
+                                      const district = Number(bd.District || 0);
+                                      const state = Number(bd.State || 0);
+                                      const rowTotal = block + district + state;
+                                      const seatsOk =
+                                        rowTotal === 0 ||
+                                        (block === cat.expected.Block &&
+                                          district === cat.expected.District &&
+                                          state === cat.expected.State);
 
-                                  {/* Legend */}
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      flexWrap: "wrap",
-                                      gap: 1.5,
-                                    }}
-                                  >
-                                    {categories.map((cat, i) => {
-                                      const val = Number(breakdown[cat] || 0);
-                                      if (!val) return null;
                                       return (
-                                        <Box
-                                          key={cat}
-                                          sx={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 0.8,
-                                          }}
-                                        >
+                                        <Grid item xs={12} md={6} key={cat.key}>
                                           <Box
                                             sx={{
-                                              width: 10,
-                                              height: 10,
-                                              borderRadius: "50%",
-                                              background: colors[i],
-                                              flexShrink: 0,
+                                              border: `1px solid ${cat.notApplicable ? "#e0e0e0" : cat.color + "44"}`,
+                                              borderRadius: 2,
+                                              p: 1.5,
+                                              background: cat.notApplicable
+                                                ? "#f5f5f5"
+                                                : "#fff",
                                             }}
-                                          />
+                                          >
+                                            {/* Header */}
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 1,
+                                                mb: 1.5,
+                                              }}
+                                            >
+                                              <Box
+                                                sx={{
+                                                  width: 10,
+                                                  height: 10,
+                                                  borderRadius: "50%",
+                                                  background: cat.notApplicable
+                                                    ? "#bdbdbd"
+                                                    : cat.color,
+                                                }}
+                                              />
+                                              <Typography
+                                                sx={{
+                                                  fontSize: 13,
+                                                  fontWeight: 700,
+                                                  color: cat.notApplicable
+                                                    ? "#9e9e9e"
+                                                    : cat.color,
+                                                }}
+                                              >
+                                                {cat.label}
+                                              </Typography>
+                                              <Typography
+                                                sx={{
+                                                  fontSize: 11,
+                                                  color: "#888",
+                                                }}
+                                              >
+                                                (Cat {cat.group} · {cat.pct})
+                                              </Typography>
+                                              {/* ← N/A badge */}
+                                              {cat.notApplicable && (
+                                                <Box
+                                                  sx={{
+                                                    ml: "auto",
+                                                    px: 1,
+                                                    py: 0.2,
+                                                    background: "#eeeeee",
+                                                    borderRadius: 1,
+                                                    border: "1px solid #bdbdbd",
+                                                  }}
+                                                >
+                                                  <Typography
+                                                    sx={{
+                                                      fontSize: 10,
+                                                      fontWeight: 700,
+                                                      color: "#757575",
+                                                    }}
+                                                  >
+                                                    N/A — Not applicable in
+                                                    Assam
+                                                  </Typography>
+                                                </Box>
+                                              )}
+                                            </Box>
+
+                                            {/* Block / District / State — all disabled if N/A */}
+                                            <Grid container spacing={1}>
+                                              {levels.map((level) => (
+                                                <Grid item xs={4} key={level}>
+                                                  <TextField
+                                                    label={level}
+                                                    type="number"
+                                                    fullWidth
+                                                    size="small"
+                                                    disabled={
+                                                      cat.notApplicable ||
+                                                      (level === "State" &&
+                                                        !cat.hasState)
+                                                    }
+                                                    value={
+                                                      cat.notApplicable
+                                                        ? "0"
+                                                        : bd[level] || ""
+                                                    }
+                                                    helperText={
+                                                      cat.notApplicable
+                                                        ? "Not applicable"
+                                                        : level === "State" &&
+                                                            !cat.hasState
+                                                          ? "0 (N/A)"
+                                                          : `Expected: ${cat.expected[level]}`
+                                                    }
+                                                    onChange={(e) => {
+                                                      if (cat.notApplicable)
+                                                        return; // guard
+                                                      handleChange(
+                                                        cat.key,
+                                                        level,
+                                                        e.target.value,
+                                                      );
+                                                    }}
+                                                  />
+                                                </Grid>
+                                              ))}
+                                            </Grid>
+
+                                            {/* Validation — skip for N/A */}
+                                            {!cat.notApplicable &&
+                                              rowTotal > 0 && (
+                                                <Typography
+                                                  sx={{
+                                                    fontSize: 11,
+                                                    mt: 1,
+                                                    fontWeight: 600,
+                                                    color: seatsOk
+                                                      ? "#2e7d32"
+                                                      : "#e65100",
+                                                  }}
+                                                >
+                                                  {seatsOk
+                                                    ? `✅ Matches guideline · Total: ${rowTotal}`
+                                                    : `⚠️ Expected B:${cat.expected.Block} D:${cat.expected.District} S:${cat.expected.State} · Got B:${block} D:${district} S:${state}`}
+                                                </Typography>
+                                              )}
+                                          </Box>
+                                        </Grid>
+                                      );
+                                    })}
+
+                                    {/* ── Cat IV grouped ── */}
+                                    <Grid item xs={12}>
+                                      <Box
+                                        sx={{
+                                          border: "1px dashed #e65100",
+                                          borderRadius: 2,
+                                          p: 1.5,
+                                          background: "#fff3e0",
+                                        }}
+                                      >
+                                        <Typography
+                                          sx={{
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            color: "#e65100",
+                                            mb: 1.5,
+                                          }}
+                                        >
+                                          Category IV — Shared Pool · 7%
+                                          &nbsp;|&nbsp; Expected: Block=2,
+                                          District=2, State=0
+                                        </Typography>
+
+                                        <Grid container spacing={2}>
+                                          {cat4Config.map((cat) => {
+                                            const bd = breakdown[cat.key] || {};
+                                            return (
+                                              <Grid
+                                                item
+                                                xs={12}
+                                                md={4}
+                                                key={cat.key}
+                                              >
+                                                <Box
+                                                  sx={{
+                                                    background: "#fff",
+                                                    borderRadius: 1.5,
+                                                    p: 1.5,
+                                                    border: "1px solid #ffe0b2",
+                                                  }}
+                                                >
+                                                  <Typography
+                                                    sx={{
+                                                      fontSize: 12,
+                                                      fontWeight: 600,
+                                                      color: "#e65100",
+                                                      mb: 1,
+                                                    }}
+                                                  >
+                                                    {cat.subLabel} {cat.label}
+                                                  </Typography>
+                                                  <Grid container spacing={1}>
+                                                    {levels.map((level) => (
+                                                      <Grid
+                                                        item
+                                                        xs={4}
+                                                        key={level}
+                                                      >
+                                                        <TextField
+                                                          label={level}
+                                                          type="number"
+                                                          fullWidth
+                                                          size="small"
+                                                          disabled={
+                                                            level === "State"
+                                                          }
+                                                          value={
+                                                            bd[level] || ""
+                                                          }
+                                                          helperText={
+                                                            level === "State"
+                                                              ? "0 (N/A)"
+                                                              : ""
+                                                          }
+                                                          onChange={(e) =>
+                                                            handleChange(
+                                                              cat.key,
+                                                              level,
+                                                              e.target.value,
+                                                            )
+                                                          }
+                                                        />
+                                                      </Grid>
+                                                    ))}
+                                                  </Grid>
+                                                </Box>
+                                              </Grid>
+                                            );
+                                          })}
+                                        </Grid>
+
+                                        {/* Cat IV pool check */}
+                                        {(() => {
+                                          const cat4Total = [
+                                            "LWE_Covid",
+                                            "Widow",
+                                            "Divyang",
+                                          ].reduce(
+                                            (sum, k) =>
+                                              sum +
+                                              levels.reduce(
+                                                (s, l) =>
+                                                  s +
+                                                  Number(
+                                                    breakdown[k]?.[l] || 0,
+                                                  ),
+                                                0,
+                                              ),
+                                            0,
+                                          );
+                                          const cat4Max = Math.round(
+                                            (row.sanctionedCapacity || 60) *
+                                              0.07,
+                                          );
+                                          if (cat4Total === 0) return null;
+                                          return (
+                                            <Typography
+                                              sx={{
+                                                fontSize: 11,
+                                                fontWeight: 600,
+                                                mt: 1.5,
+                                                color:
+                                                  cat4Total > cat4Max
+                                                    ? "#c62828"
+                                                    : "#2e7d32",
+                                              }}
+                                            >
+                                              {cat4Total > cat4Max
+                                                ? `⚠️ Cat V total ${cat4Total} exceeds pool of ${cat4Max} seats`
+                                                : `✅ Cat V pool: ${cat4Total} / ${cat4Max} seats used`}
+                                            </Typography>
+                                          );
+                                        })()}
+                                      </Box>
+                                    </Grid>
+                                  </Grid>
+
+                                  {/* ── VISUAL BAR ── */}
+                                  {total > 0 && (
+                                    <Box mt={2}>
+                                      {/* Progress Bar */}
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          height: 28,
+                                          borderRadius: 2,
+                                          overflow: "hidden",
+                                          mb: 1.5,
+                                        }}
+                                      >
+                                        {categoryKeys.map((key, i) => {
+                                          const val = getCatTotal(key);
+                                          const pct =
+                                            total > 0 ? (val / total) * 100 : 0;
+                                          if (pct === 0) return null;
+                                          return (
+                                            <Box
+                                              key={key}
+                                              sx={{
+                                                width: `${pct}%`,
+                                                background: colors[i],
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                transition: "width 0.4s",
+                                              }}
+                                            >
+                                              {pct > 8 && (
+                                                <Typography
+                                                  sx={{
+                                                    fontSize: 10,
+                                                    color: "#fff",
+                                                    fontWeight: 700,
+                                                  }}
+                                                >
+                                                  {Math.round(pct)}%
+                                                </Typography>
+                                              )}
+                                            </Box>
+                                          );
+                                        })}
+                                      </Box>
+
+                                      {/* Legend */}
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          flexWrap: "wrap",
+                                          gap: 1.5,
+                                        }}
+                                      >
+                                        {categoryKeys.map((key, i) => {
+                                          const val = getCatTotal(key);
+                                          if (!val) return null;
+                                          return (
+                                            <Box
+                                              key={key}
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 0.8,
+                                              }}
+                                            >
+                                              <Box
+                                                sx={{
+                                                  width: 10,
+                                                  height: 10,
+                                                  borderRadius: "50%",
+                                                  background: colors[i],
+                                                  flexShrink: 0,
+                                                }}
+                                              />
+                                              <Typography
+                                                sx={{
+                                                  fontSize: 12,
+                                                  color: "#374151",
+                                                }}
+                                              >
+                                                {categoryLabels[i]}:{" "}
+                                                <strong>{val}</strong>
+                                              </Typography>
+                                            </Box>
+                                          );
+                                        })}
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 1,
+                                            ml: "auto",
+                                          }}
+                                        >
                                           <Typography
                                             sx={{
                                               fontSize: 12,
-                                              color: "#374151",
+                                              fontWeight: 700,
+                                              color: "#1976d2",
                                             }}
                                           >
-                                            {cat}: <strong>{val}</strong>
+                                            Total: {total}
                                           </Typography>
+                                          {row.currentEnrollment &&
+                                            Number(row.currentEnrollment) > 0 &&
+                                            total >
+                                              Number(row.currentEnrollment) && (
+                                              <Typography
+                                                sx={{
+                                                  fontSize: 11,
+                                                  color: "#c62828",
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                ⚠️ Exceeds enrollment (
+                                                {row.currentEnrollment})
+                                              </Typography>
+                                            )}
                                         </Box>
-                                      );
-                                    })}
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 0.8,
-                                        ml: "auto",
-                                      }}
-                                    >
-                                      <Typography
-                                        sx={{
-                                          fontSize: 12,
-                                          fontWeight: 700,
-                                          color: "#1976d2",
-                                        }}
-                                      >
-                                        Total: {total}
-                                      </Typography>
-                                      {row.currentEnrollment &&
-                                        Number(row.currentEnrollment) > 0 &&
-                                        total >
-                                          Number(row.currentEnrollment) && (
-                                          <Typography
-                                            sx={{
-                                              fontSize: 11,
-                                              color: "#c62828",
-                                              fontWeight: 600,
-                                            }}
-                                          >
-                                            ⚠️ Exceeds enrollment (
-                                            {row.currentEnrollment})
-                                          </Typography>
-                                        )}
+                                      </Box>
                                     </Box>
-                                  </Box>
-                                </Box>
+                                  )}
+                                </>
                               );
                             })()}
                           </Box>
                         </Grid>
                       </Grid>
-
                       {/* ── ACADEMIC PERFORMANCE ── */}
                       <Typography
                         variant="subtitle1"
@@ -5160,14 +6905,21 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                 onChange={(e) => {
                                   const u = [...enrollmentRows];
                                   u[rowIndex].appeared = e.target.value;
+
                                   const appeared = Number(e.target.value || 0);
                                   const passed = Number(
                                     u[rowIndex].passed || 0,
                                   );
-                                  u[rowIndex].passPercent =
+
+                                  const percent =
                                     appeared > 0
-                                      ? ((passed / appeared) * 100).toFixed(2)
-                                      : "";
+                                      ? (passed / appeared) * 100
+                                      : 0;
+
+                                  u[rowIndex].passPercent = percent.toFixed(2);
+                                  u[rowIndex].marks =
+                                    getMarksFromPercentage(percent);
+
                                   setEnrollmentRows(u);
                                 }}
                               />
@@ -5182,250 +6934,34 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                 onChange={(e) => {
                                   const u = [...enrollmentRows];
                                   u[rowIndex].passed = e.target.value;
+
                                   const passed = Number(e.target.value || 0);
                                   const appeared = Number(
                                     u[rowIndex].appeared || 0,
                                   );
-                                  u[rowIndex].passPercent =
+
+                                  const percent =
                                     appeared > 0
-                                      ? ((passed / appeared) * 100).toFixed(2)
-                                      : "";
+                                      ? (passed / appeared) * 100
+                                      : 0;
+
+                                  u[rowIndex].passPercent = percent.toFixed(2);
+                                  u[rowIndex].marks =
+                                    getMarksFromPercentage(percent);
+
                                   setEnrollmentRows(u);
                                 }}
                               />
                             </Grid>
+
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
                                 label="Pass %"
+                                type="number"
                                 fullWidth
                                 size="small"
-                                value={row.passPercent}
+                                value={row.passPercent || ""}
                                 InputProps={{ readOnly: true }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <TextField
-                                label="No. of Students Scored Above 75%"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                value={row.above75}
-                                error={!!row.above75Error} // ←  RED
-                                helperText={row.above75Error || ""}
-                                FormHelperTextProps={{
-                                  style: {
-                                    color: "#c62828",
-                                    fontWeight: 600,
-                                    fontSize: 12,
-                                  },
-                                }}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  const appeared = Number(
-                                    enrollmentRows[rowIndex].appeared || 0,
-                                  );
-                                  const enrolled = Number(
-                                    enrollmentRows[rowIndex]
-                                      .currentEnrollment || 0,
-                                  );
-
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].above75 = e.target.value;
-
-                                  // ── VALIDATION — appeared is strictest limit ──
-                                  if (appeared > 0 && val > appeared) {
-                                    u[rowIndex].above75Error =
-                                      `❌ Cannot be more than Students Appeared (${appeared})`;
-                                  } else if (enrolled > 0 && val > enrolled) {
-                                    u[rowIndex].above75Error =
-                                      `❌ Cannot be more than Current Enrollment (${enrolled})`;
-                                  } else {
-                                    u[rowIndex].above75Error = "";
-                                  }
-
-                                  setEnrollmentRows(u);
-                                }}
-                              />
-
-                              {/* ── DISPLAY CARD — shows only when above75 is filled ── */}
-                              {row.above75 && Number(row.above75) > 0 && (
-                                <Box
-                                  sx={{
-                                    mt: 1,
-                                    p: 1.5,
-                                    borderRadius: 2,
-                                    background:
-                                      "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
-                                    border: "1px solid #a5d6a7",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  {/* Line 1 — Count */}
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                    }}
-                                  >
-                                    <span style={{ fontSize: 16 }}>🎯</span>
-                                    <Typography
-                                      sx={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: "#2e7d32",
-                                      }}
-                                    >
-                                      {row.above75} students scored above 75%
-                                    </Typography>
-                                  </Box>
-
-                                  {/* Line 2 — Out of appeared */}
-                                  {row.appeared && Number(row.appeared) > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                      }}
-                                    >
-                                      <span style={{ fontSize: 14 }}>📝</span>
-                                      <Typography
-                                        sx={{ fontSize: 12, color: "#388e3c" }}
-                                      >
-                                        Out of {row.appeared} appeared →{" "}
-                                        <strong>
-                                          {(
-                                            (Number(row.above75) /
-                                              Number(row.appeared)) *
-                                            100
-                                          ).toFixed(1)}
-                                          %
-                                        </strong>
-                                      </Typography>
-                                    </Box>
-                                  )}
-
-                                  {/* Line 3 — Out of enrolled */}
-                                  {row.currentEnrollment &&
-                                    Number(row.currentEnrollment) > 0 && (
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 1,
-                                        }}
-                                      >
-                                        <span style={{ fontSize: 14 }}>🏫</span>
-                                        <Typography
-                                          sx={{
-                                            fontSize: 12,
-                                            color: "#388e3c",
-                                          }}
-                                        >
-                                          Out of {row.currentEnrollment}{" "}
-                                          enrolled →{" "}
-                                          <strong>
-                                            {(
-                                              (Number(row.above75) /
-                                                Number(row.currentEnrollment)) *
-                                              100
-                                            ).toFixed(1)}
-                                            %
-                                          </strong>
-                                        </Typography>
-                                      </Box>
-                                    )}
-
-                                  {/* Line 4 — Performance label */}
-                                  <Box
-                                    sx={{
-                                      mt: 0.5,
-                                      px: 1,
-                                      py: 0.3,
-                                      borderRadius: 10,
-                                      display: "inline-fit-content",
-                                      background:
-                                        (Number(row.above75) /
-                                          Number(
-                                            row.appeared ||
-                                              row.currentEnrollment,
-                                          )) *
-                                          100 >=
-                                        75
-                                          ? "#c8e6c9"
-                                          : (Number(row.above75) /
-                                                Number(
-                                                  row.appeared ||
-                                                    row.currentEnrollment,
-                                                )) *
-                                                100 >=
-                                              50
-                                            ? "#fff9c4"
-                                            : "#ffccbc",
-                                      width: "fit-content",
-                                    }}
-                                  >
-                                    <Typography
-                                      sx={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        color:
-                                          (Number(row.above75) /
-                                            Number(
-                                              row.appeared ||
-                                                row.currentEnrollment,
-                                            )) *
-                                            100 >=
-                                          75
-                                            ? "#1b5e20"
-                                            : (Number(row.above75) /
-                                                  Number(
-                                                    row.appeared ||
-                                                      row.currentEnrollment,
-                                                  )) *
-                                                  100 >=
-                                                50
-                                              ? "#f57f17"
-                                              : "#bf360c",
-                                      }}
-                                    >
-                                      {(Number(row.above75) /
-                                        Number(
-                                          row.appeared || row.currentEnrollment,
-                                        )) *
-                                        100 >=
-                                      75
-                                        ? "🟢 Excellent Performance"
-                                        : (Number(row.above75) /
-                                              Number(
-                                                row.appeared ||
-                                                  row.currentEnrollment,
-                                              )) *
-                                              100 >=
-                                            50
-                                          ? "🟡 Average Performance"
-                                          : "🔴 Needs Improvement"}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              )}
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                              <TextField
-                                label="Below 50%"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                value={row.below50}
-                                onChange={(e) => {
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].below50 = e.target.value;
-                                  setEnrollmentRows(u);
-                                }}
                               />
                             </Grid>
                           </Grid>
@@ -5460,14 +6996,21 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                 onChange={(e) => {
                                   const u = [...enrollmentRows];
                                   u[rowIndex].appeared = e.target.value;
+
                                   const appeared = Number(e.target.value || 0);
                                   const passed = Number(
                                     u[rowIndex].passed || 0,
                                   );
-                                  u[rowIndex].passPercent =
+
+                                  const percent =
                                     appeared > 0
-                                      ? ((passed / appeared) * 100).toFixed(2)
-                                      : "";
+                                      ? (passed / appeared) * 100
+                                      : 0;
+
+                                  u[rowIndex].passPercent = percent.toFixed(2);
+                                  u[rowIndex].marks =
+                                    getMarksFromPercentage(percent);
+
                                   setEnrollmentRows(u);
                                 }}
                               />
@@ -5482,14 +7025,21 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                 onChange={(e) => {
                                   const u = [...enrollmentRows];
                                   u[rowIndex].passed = e.target.value;
+
                                   const passed = Number(e.target.value || 0);
                                   const appeared = Number(
                                     u[rowIndex].appeared || 0,
                                   );
-                                  u[rowIndex].passPercent =
+
+                                  const percent =
                                     appeared > 0
-                                      ? ((passed / appeared) * 100).toFixed(2)
-                                      : "";
+                                      ? (passed / appeared) * 100
+                                      : 0;
+
+                                  u[rowIndex].passPercent = percent.toFixed(2);
+                                  u[rowIndex].marks =
+                                    getMarksFromPercentage(percent);
+
                                   setEnrollmentRows(u);
                                 }}
                               />
@@ -5497,249 +7047,20 @@ const EMRSForm = ({ addSubmittedForm }) => {
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
                                 label="Pass %"
+                                type="number"
                                 fullWidth
                                 size="small"
-                                value={row.passPercent}
+                                value={row.passPercent || ""}
                                 InputProps={{ readOnly: true }}
                               />
                             </Grid>
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
-                                label="No. of Students Scored Above 75%"
-                                type="number"
+                                label="Marks Obtained (out of 10)"
                                 fullWidth
                                 size="small"
-                                value={row.above75}
-                                error={!!row.above75Error} //  border RED
-                                helperText={row.above75Error || ""} // shows message below
-                                FormHelperTextProps={{
-                                  style: {
-                                    color: "#c62828",
-                                    fontWeight: 600,
-                                    fontSize: 12,
-                                  },
-                                }}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  const appeared = Number(
-                                    enrollmentRows[rowIndex].appeared || 0,
-                                  );
-                                  const enrolled = Number(
-                                    enrollmentRows[rowIndex]
-                                      .currentEnrollment || 0,
-                                  );
-
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].above75 = e.target.value;
-
-                                  // ── VALIDATION — appeared is strictest limit ──
-                                  if (appeared > 0 && val > appeared) {
-                                    u[rowIndex].above75Error =
-                                      `❌ Cannot be more than Students Appeared (${appeared})`;
-                                  } else if (enrolled > 0 && val > enrolled) {
-                                    u[rowIndex].above75Error =
-                                      `❌ Cannot be more than Current Enrollment (${enrolled})`;
-                                  } else {
-                                    u[rowIndex].above75Error = "";
-                                  }
-
-                                  setEnrollmentRows(u);
-                                }}
-                              />
-
-                              {/* ── DISPLAY CARD — shows only when above75 is filled ── */}
-                              {row.above75 && Number(row.above75) > 0 && (
-                                <Box
-                                  sx={{
-                                    mt: 1,
-                                    p: 1.5,
-                                    borderRadius: 2,
-                                    background:
-                                      "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
-                                    border: "1px solid #a5d6a7",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  {/* Line 1 — Count */}
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                    }}
-                                  >
-                                    <span style={{ fontSize: 16 }}>🎯</span>
-                                    <Typography
-                                      sx={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: "#2e7d32",
-                                      }}
-                                    >
-                                      {row.above75} students scored above 75%
-                                    </Typography>
-                                  </Box>
-
-                                  {/* Line 2 — Out of appeared */}
-                                  {row.appeared && Number(row.appeared) > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                      }}
-                                    >
-                                      <span style={{ fontSize: 14 }}>📝</span>
-                                      <Typography
-                                        sx={{ fontSize: 12, color: "#388e3c" }}
-                                      >
-                                        Out of {row.appeared} appeared →{" "}
-                                        <strong>
-                                          {(
-                                            (Number(row.above75) /
-                                              Number(row.appeared)) *
-                                            100
-                                          ).toFixed(1)}
-                                          %
-                                        </strong>
-                                      </Typography>
-                                    </Box>
-                                  )}
-
-                                  {/* Line 3 — Out of enrolled */}
-                                  {row.currentEnrollment &&
-                                    Number(row.currentEnrollment) > 0 && (
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 1,
-                                        }}
-                                      >
-                                        <span style={{ fontSize: 14 }}>🏫</span>
-                                        <Typography
-                                          sx={{
-                                            fontSize: 12,
-                                            color: "#388e3c",
-                                          }}
-                                        >
-                                          Out of {row.currentEnrollment}{" "}
-                                          enrolled →{" "}
-                                          <strong>
-                                            {(
-                                              (Number(row.above75) /
-                                                Number(row.currentEnrollment)) *
-                                              100
-                                            ).toFixed(1)}
-                                            %
-                                          </strong>
-                                        </Typography>
-                                      </Box>
-                                    )}
-
-                                  {/* Line 4 — Performance label */}
-                                  <Box
-                                    sx={{
-                                      mt: 0.5,
-                                      px: 1,
-                                      py: 0.3,
-                                      borderRadius: 10,
-                                      display: "inline-fit-content",
-                                      background:
-                                        (Number(row.above75) /
-                                          Number(
-                                            row.appeared ||
-                                              row.currentEnrollment,
-                                          )) *
-                                          100 >=
-                                        75
-                                          ? "#c8e6c9"
-                                          : (Number(row.above75) /
-                                                Number(
-                                                  row.appeared ||
-                                                    row.currentEnrollment,
-                                                )) *
-                                                100 >=
-                                              50
-                                            ? "#fff9c4"
-                                            : "#ffccbc",
-                                      width: "fit-content",
-                                    }}
-                                  >
-                                    <Typography
-                                      sx={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        color:
-                                          (Number(row.above75) /
-                                            Number(
-                                              row.appeared ||
-                                                row.currentEnrollment,
-                                            )) *
-                                            100 >=
-                                          75
-                                            ? "#1b5e20"
-                                            : (Number(row.above75) /
-                                                  Number(
-                                                    row.appeared ||
-                                                      row.currentEnrollment,
-                                                  )) *
-                                                  100 >=
-                                                50
-                                              ? "#f57f17"
-                                              : "#bf360c",
-                                      }}
-                                    >
-                                      {(Number(row.above75) /
-                                        Number(
-                                          row.appeared || row.currentEnrollment,
-                                        )) *
-                                        100 >=
-                                      75
-                                        ? "🟢 Excellent Performance"
-                                        : (Number(row.above75) /
-                                              Number(
-                                                row.appeared ||
-                                                  row.currentEnrollment,
-                                              )) *
-                                              100 >=
-                                            50
-                                          ? "🟡 Average Performance"
-                                          : "🔴 Needs Improvement"}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              )}
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                              <TextField
-                                label="Below 50%"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                value={row.below50}
-                                onChange={(e) => {
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].below50 = e.target.value;
-                                  setEnrollmentRows(u);
-                                }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <TextField
-                                label="Distinctions (≥ 75%)"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                value={row.distinctions || ""}
-                                onChange={(e) => {
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].distinctions = e.target.value;
-                                  setEnrollmentRows(u);
-                                }}
+                                value={row.marks || ""}
+                                InputProps={{ readOnly: true }}
                               />
                             </Grid>
                             <Grid item xs={12} sm={6} md={4}>
@@ -5770,9 +7091,43 @@ const EMRSForm = ({ addSubmittedForm }) => {
                               />
                             </Grid>
                           </Grid>
+
+                          <Box sx={{ mt: 2 }}>
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ fontWeight: 600, color: "#374151", mb: 1 }}
+                            >
+                              Marking Criteria (Out of 10)
+                            </Typography>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Pass %</TableCell>
+                                  <TableCell>Marks</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {[
+                                  { range: "100%", marks: 10 },
+                                  { range: "90–99%", marks: 9 },
+                                  { range: "80–89%", marks: 8 },
+                                  { range: "70–79%", marks: 7 },
+                                  { range: "60–69%", marks: 6 },
+                                  { range: "50–59%", marks: 5 },
+                                  { range: "40–49%", marks: 4 },
+                                  { range: "33–39%", marks: 3 },
+                                  { range: "Below 33%", marks: 0 },
+                                ].map((row) => (
+                                  <TableRow key={row.range}>
+                                    <TableCell>{row.range}</TableCell>
+                                    <TableCell>{row.marks}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </Box>
                         </Box>
                       )}
-
                       {/* ── CLASS 11 & 12 — Board Exam by Stream ── */}
                       {["11", "12"].includes(row.class) && (
                         <Box
@@ -5816,7 +7171,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                               </TextField>
                             </Grid>
                           </Grid>
-
                           <Grid container spacing={2}>
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
@@ -5832,14 +7186,19 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                   const passed = Number(
                                     u[rowIndex].passed || 0,
                                   );
-                                  u[rowIndex].passPercent =
+                                  const passPercent =
                                     appeared > 0
                                       ? ((passed / appeared) * 100).toFixed(2)
                                       : "";
+                                  u[rowIndex].passPercent = passPercent;
+                                  u[rowIndex].marks = getMarksFromPercentage(
+                                    Number(passPercent),
+                                  ); // ✅ fixed
                                   setEnrollmentRows(u);
                                 }}
                               />
                             </Grid>
+
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
                                 label="Students Passed"
@@ -5854,10 +7213,14 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                   const appeared = Number(
                                     u[rowIndex].appeared || 0,
                                   );
-                                  u[rowIndex].passPercent =
+                                  const passPercent =
                                     appeared > 0
                                       ? ((passed / appeared) * 100).toFixed(2)
                                       : "";
+                                  u[rowIndex].passPercent = passPercent;
+                                  u[rowIndex].marks = getMarksFromPercentage(
+                                    Number(passPercent),
+                                  ); // ✅ fixed
                                   setEnrollmentRows(u);
                                 }}
                               />
@@ -5865,249 +7228,20 @@ const EMRSForm = ({ addSubmittedForm }) => {
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
                                 label="Pass %"
+                                type="number"
                                 fullWidth
                                 size="small"
-                                value={row.passPercent}
+                                value={row.passPercent || ""}
                                 InputProps={{ readOnly: true }}
                               />
                             </Grid>
                             <Grid item xs={12} sm={6} md={4}>
                               <TextField
-                                label="No. of Students Scored Above 75%"
-                                type="number"
+                                label="Marks Obtained (out of 10)"
                                 fullWidth
                                 size="small"
-                                value={row.above75}
-                                error={!!row.above75Error} // turns border RED
-                                helperText={row.above75Error || ""} // shows message below
-                                FormHelperTextProps={{
-                                  style: {
-                                    color: "#c62828",
-                                    fontWeight: 600,
-                                    fontSize: 12,
-                                  },
-                                }}
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  const appeared = Number(
-                                    enrollmentRows[rowIndex].appeared || 0,
-                                  );
-                                  const enrolled = Number(
-                                    enrollmentRows[rowIndex]
-                                      .currentEnrollment || 0,
-                                  );
-
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].above75 = e.target.value;
-
-                                  // ── VALIDATION — appeared is strictest limit ──
-                                  if (appeared > 0 && val > appeared) {
-                                    u[rowIndex].above75Error =
-                                      `❌ Cannot be more than Students Appeared (${appeared})`;
-                                  } else if (enrolled > 0 && val > enrolled) {
-                                    u[rowIndex].above75Error =
-                                      `❌ Cannot be more than Current Enrollment (${enrolled})`;
-                                  } else {
-                                    u[rowIndex].above75Error = "";
-                                  }
-
-                                  setEnrollmentRows(u);
-                                }}
-                              />
-
-                              {/* ── DISPLAY CARD — shows only when above75 is filled ── */}
-                              {row.above75 && Number(row.above75) > 0 && (
-                                <Box
-                                  sx={{
-                                    mt: 1,
-                                    p: 1.5,
-                                    borderRadius: 2,
-                                    background:
-                                      "linear-gradient(135deg, #e8f5e9, #f1f8e9)",
-                                    border: "1px solid #a5d6a7",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  {/* Line 1 — Count */}
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                    }}
-                                  >
-                                    <span style={{ fontSize: 16 }}>🎯</span>
-                                    <Typography
-                                      sx={{
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                        color: "#2e7d32",
-                                      }}
-                                    >
-                                      {row.above75} students scored above 75%
-                                    </Typography>
-                                  </Box>
-
-                                  {/* Line 2 — Out of appeared */}
-                                  {row.appeared && Number(row.appeared) > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                      }}
-                                    >
-                                      <span style={{ fontSize: 14 }}>📝</span>
-                                      <Typography
-                                        sx={{ fontSize: 12, color: "#388e3c" }}
-                                      >
-                                        Out of {row.appeared} appeared →{" "}
-                                        <strong>
-                                          {(
-                                            (Number(row.above75) /
-                                              Number(row.appeared)) *
-                                            100
-                                          ).toFixed(1)}
-                                          %
-                                        </strong>
-                                      </Typography>
-                                    </Box>
-                                  )}
-
-                                  {/* Line 3 — Out of enrolled */}
-                                  {row.currentEnrollment &&
-                                    Number(row.currentEnrollment) > 0 && (
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 1,
-                                        }}
-                                      >
-                                        <span style={{ fontSize: 14 }}>🏫</span>
-                                        <Typography
-                                          sx={{
-                                            fontSize: 12,
-                                            color: "#388e3c",
-                                          }}
-                                        >
-                                          Out of {row.currentEnrollment}{" "}
-                                          enrolled →{" "}
-                                          <strong>
-                                            {(
-                                              (Number(row.above75) /
-                                                Number(row.currentEnrollment)) *
-                                              100
-                                            ).toFixed(1)}
-                                            %
-                                          </strong>
-                                        </Typography>
-                                      </Box>
-                                    )}
-
-                                  {/* Line 4 — Performance label */}
-                                  <Box
-                                    sx={{
-                                      mt: 0.5,
-                                      px: 1,
-                                      py: 0.3,
-                                      borderRadius: 10,
-                                      display: "inline-fit-content",
-                                      background:
-                                        (Number(row.above75) /
-                                          Number(
-                                            row.appeared ||
-                                              row.currentEnrollment,
-                                          )) *
-                                          100 >=
-                                        75
-                                          ? "#c8e6c9"
-                                          : (Number(row.above75) /
-                                                Number(
-                                                  row.appeared ||
-                                                    row.currentEnrollment,
-                                                )) *
-                                                100 >=
-                                              50
-                                            ? "#fff9c4"
-                                            : "#ffccbc",
-                                      width: "fit-content",
-                                    }}
-                                  >
-                                    <Typography
-                                      sx={{
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        color:
-                                          (Number(row.above75) /
-                                            Number(
-                                              row.appeared ||
-                                                row.currentEnrollment,
-                                            )) *
-                                            100 >=
-                                          75
-                                            ? "#1b5e20"
-                                            : (Number(row.above75) /
-                                                  Number(
-                                                    row.appeared ||
-                                                      row.currentEnrollment,
-                                                  )) *
-                                                  100 >=
-                                                50
-                                              ? "#f57f17"
-                                              : "#bf360c",
-                                      }}
-                                    >
-                                      {(Number(row.above75) /
-                                        Number(
-                                          row.appeared || row.currentEnrollment,
-                                        )) *
-                                        100 >=
-                                      75
-                                        ? "🟢 Excellent Performance"
-                                        : (Number(row.above75) /
-                                              Number(
-                                                row.appeared ||
-                                                  row.currentEnrollment,
-                                              )) *
-                                              100 >=
-                                            50
-                                          ? "🟡 Average Performance"
-                                          : "🔴 Needs Improvement"}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              )}
-                            </Grid>
-
-                            <Grid item xs={12} sm={6} md={4}>
-                              <TextField
-                                label="Below 50%"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                value={row.below50}
-                                onChange={(e) => {
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].below50 = e.target.value;
-                                  setEnrollmentRows(u);
-                                }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={4}>
-                              <TextField
-                                label="Distinctions (≥ 75%)"
-                                type="number"
-                                fullWidth
-                                size="small"
-                                value={row.distinctions || ""}
-                                onChange={(e) => {
-                                  const u = [...enrollmentRows];
-                                  u[rowIndex].distinctions = e.target.value;
-                                  setEnrollmentRows(u);
-                                }}
+                                value={row.marks || ""}
+                                InputProps={{ readOnly: true }}
                               />
                             </Grid>
                             <Grid item xs={12} sm={6} md={4}>
@@ -6138,9 +7272,43 @@ const EMRSForm = ({ addSubmittedForm }) => {
                               />
                             </Grid>
                           </Grid>
+
+                          <Box sx={{ mt: 2 }}>
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ fontWeight: 600, color: "#374151", mb: 1 }}
+                            >
+                              Marking Criteria (Out of 10)
+                            </Typography>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell>Pass %</TableCell>
+                                  <TableCell>Marks</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {[
+                                  { range: "100%", marks: 10 },
+                                  { range: "90–99%", marks: 9 },
+                                  { range: "80–89%", marks: 8 },
+                                  { range: "70–79%", marks: 7 },
+                                  { range: "60–69%", marks: 6 },
+                                  { range: "50–59%", marks: 5 },
+                                  { range: "40–49%", marks: 4 },
+                                  { range: "33–39%", marks: 3 },
+                                  { range: "Below 33%", marks: 0 },
+                                ].map((row) => (
+                                  <TableRow key={row.range}>
+                                    <TableCell>{row.range}</TableCell>
+                                    <TableCell>{row.marks}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </Box>
                         </Box>
                       )}
-
                       {/* Fallback if no class selected yet */}
                       {!row.class && (
                         <Typography
@@ -6151,521 +7319,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           Performance.
                         </Typography>
                       )}
-
-                      {/* ── MONTHLY ATTENDANCE ── */}
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
-                      >
-                        Monthly Attendance
-                      </Typography>
-                      <Box
-                        sx={{
-                          border: "1px solid #bbdefb",
-                          borderRadius: 2,
-                          p: 2,
-                          mb: 3,
-                          background: "#f0f7ff",
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontWeight: 600,
-                            color: "#1976d2",
-                            mb: 2,
-                            fontSize: 14,
-                          }}
-                        >
-                          📅 Monthly Attendance — Class {row.class || "—"}{" "}
-                          {row.section ? `(Section ${row.section})` : ""}{" "}
-                          {row.academicYear ? `| ${row.academicYear}` : ""}
-                        </Typography>
-
-                        {!row.class || !row.section || !row.academicYear ? (
-                          <Typography
-                            sx={{
-                              color: "#94a3b8",
-                              fontStyle: "italic",
-                              fontSize: 13,
-                            }}
-                          >
-                            Please select Academic Year, Class and Section above
-                            to record attendance.
-                          </Typography>
-                        ) : (
-                          <>
-                            {(row.monthlyAttendance || []).map((att, aIdx) => {
-                              const workingDays = Number(att.workingDays || 0);
-                              const present = Number(att.present || 0);
-                              const absent =
-                                workingDays > 0 && att.present !== ""
-                                  ? workingDays - present
-                                  : null;
-                              const pct =
-                                workingDays > 0 && att.present !== ""
-                                  ? ((present / workingDays) * 100).toFixed(1)
-                                  : null;
-
-                              return (
-                                <Box
-                                  key={aIdx}
-                                  sx={{
-                                    border: "1px solid #e2e8f0",
-                                    borderRadius: 2,
-                                    p: 2,
-                                    mb: 2,
-                                    background: "#fff",
-                                    position: "relative",
-                                  }}
-                                >
-                                  {/* Delete button */}
-                                  <Box
-                                    sx={{
-                                      position: "absolute",
-                                      top: 8,
-                                      right: 8,
-                                    }}
-                                  >
-                                    <Button
-                                      size="small"
-                                      color="error"
-                                      variant="outlined"
-                                      sx={{
-                                        minWidth: 0,
-                                        px: 1,
-                                        py: 0.2,
-                                        fontSize: 12,
-                                      }}
-                                      onClick={() => {
-                                        const u = [...enrollmentRows];
-                                        u[rowIndex].monthlyAttendance.splice(
-                                          aIdx,
-                                          1,
-                                        );
-                                        setEnrollmentRows(u);
-                                      }}
-                                    >
-                                      ✕
-                                    </Button>
-                                  </Box>
-
-                                  <Grid
-                                    container
-                                    spacing={2}
-                                    alignItems="center"
-                                  >
-                                    {/* Month */}
-                                    <Grid item xs={12} sm={6} md={3}>
-                                      <TextField
-                                        select
-                                        label="Month"
-                                        fullWidth
-                                        size="small"
-                                        sx={{ minWidth: 160 }}
-                                        value={att.month}
-                                        onChange={(e) => {
-                                          const u = [...enrollmentRows];
-                                          u[rowIndex].monthlyAttendance[
-                                            aIdx
-                                          ].month = e.target.value;
-                                          setEnrollmentRows(u);
-                                        }}
-                                      >
-                                        {[
-                                          "April",
-                                          "May",
-                                          "June",
-                                          "July",
-                                          "August",
-                                          "September",
-                                          "October",
-                                          "November",
-                                          "December",
-                                          "January",
-                                          "February",
-                                          "March",
-                                        ].map((m) => (
-                                          <MenuItem key={m} value={m}>
-                                            {m}
-                                          </MenuItem>
-                                        ))}
-                                      </TextField>
-                                    </Grid>
-
-                                    {/* Working Days */}
-                                    <Grid item xs={12} sm={6} md={2}>
-                                      <TextField
-                                        label="Working Days"
-                                        type="number"
-                                        fullWidth
-                                        size="small"
-                                        sx={{ minWidth: 220 }}
-                                        value={att.workingDays}
-                                        inputProps={{ min: 0, max: 31 }}
-                                        onChange={(e) => {
-                                          const u = [...enrollmentRows];
-                                          u[rowIndex].monthlyAttendance[
-                                            aIdx
-                                          ].workingDays = e.target.value;
-                                          setEnrollmentRows(u);
-                                        }}
-                                      />
-                                    </Grid>
-
-                                    {/* Present */}
-                                    <Grid item xs={12} sm={6} md={2}>
-                                      <TextField
-                                        label="Days Present"
-                                        type="number"
-                                        fullWidth
-                                        size="small"
-                                        sx={{ minWidth: 220 }}
-                                        value={att.present}
-                                        inputProps={{
-                                          min: 0,
-                                          max: Number(att.workingDays) || 31,
-                                        }}
-                                        error={
-                                          att.present !== "" &&
-                                          present > workingDays &&
-                                          workingDays > 0
-                                        }
-                                        helperText={
-                                          att.present !== "" &&
-                                          present > workingDays &&
-                                          workingDays > 0
-                                            ? `❌ Cannot exceed working days (${workingDays})`
-                                            : ""
-                                        }
-                                        onChange={(e) => {
-                                          const u = [...enrollmentRows];
-                                          u[rowIndex].monthlyAttendance[
-                                            aIdx
-                                          ].present = e.target.value;
-                                          setEnrollmentRows(u);
-                                        }}
-                                      />
-                                    </Grid>
-
-                                    {/* Absent - auto calculated */}
-                                    <Grid item xs={12} sm={6} md={2}>
-                                      <TextField
-                                        label="Days Absent"
-                                        fullWidth
-                                        size="small"
-                                        value={absent !== null ? absent : ""}
-                                        InputProps={{ readOnly: true }}
-                                        sx={{
-                                          "& .MuiOutlinedInput-root": {
-                                            background:
-                                              absent > 0
-                                                ? "#fff5f5"
-                                                : absent === 0
-                                                  ? "#f0fff4"
-                                                  : "#f8fafc",
-                                          },
-                                          "& input": {
-                                            color:
-                                              absent > 0
-                                                ? "#c62828"
-                                                : "#16a34a",
-                                            fontWeight: 700,
-                                          },
-                                        }}
-                                      />
-                                    </Grid>
-
-                                    {/* Attendance % - auto calculated */}
-                                    <Grid item xs={12} sm={6} md={3}>
-                                      {pct !== null ? (
-                                        <Box sx={{ px: 1 }}>
-                                          <Box
-                                            sx={{
-                                              display: "flex",
-                                              justifyContent: "space-between",
-                                              mb: 0.5,
-                                            }}
-                                          >
-                                            <Typography
-                                              sx={{
-                                                fontSize: 12,
-                                                color: "#64748b",
-                                              }}
-                                            >
-                                              Attendance
-                                            </Typography>
-                                            <Typography
-                                              sx={{
-                                                fontSize: 13,
-                                                fontWeight: 800,
-                                                color:
-                                                  Number(pct) >= 75
-                                                    ? "#16a34a"
-                                                    : Number(pct) >= 50
-                                                      ? "#d97706"
-                                                      : "#dc2626",
-                                              }}
-                                            >
-                                              {pct}%
-                                            </Typography>
-                                          </Box>
-                                          <Box
-                                            sx={{
-                                              height: 8,
-                                              background: "#e2e8f0",
-                                              borderRadius: 4,
-                                              overflow: "hidden",
-                                            }}
-                                          >
-                                            <Box
-                                              sx={{
-                                                height: "100%",
-                                                borderRadius: 4,
-                                                width: `${Math.min(Number(pct), 100)}%`,
-                                                background:
-                                                  Number(pct) >= 75
-                                                    ? "#16a34a"
-                                                    : Number(pct) >= 50
-                                                      ? "#f59e0b"
-                                                      : "#dc2626",
-                                                transition: "width 0.3s",
-                                              }}
-                                            />
-                                          </Box>
-                                          <Typography
-                                            sx={{
-                                              fontSize: 11,
-                                              fontWeight: 600,
-                                              mt: 0.5,
-                                              color:
-                                                Number(pct) >= 75
-                                                  ? "#16a34a"
-                                                  : Number(pct) >= 50
-                                                    ? "#d97706"
-                                                    : "#dc2626",
-                                            }}
-                                          >
-                                            {Number(pct) >= 75
-                                              ? "🟢 Good"
-                                              : Number(pct) >= 50
-                                                ? "🟡 Average"
-                                                : "🔴 Low"}
-                                          </Typography>
-                                        </Box>
-                                      ) : (
-                                        <Typography
-                                          sx={{
-                                            color: "#94a3b8",
-                                            fontSize: 12,
-                                            fontStyle: "italic",
-                                            px: 1,
-                                          }}
-                                        >
-                                          Fill working days & present to see %
-                                        </Typography>
-                                      )}
-                                    </Grid>
-                                  </Grid>
-                                </Box>
-                              );
-                            })}
-
-                            {/* Overall Summary */}
-                            {row.monthlyAttendance &&
-                              row.monthlyAttendance.length > 0 &&
-                              (() => {
-                                const totalWorking =
-                                  row.monthlyAttendance.reduce(
-                                    (s, r) => s + Number(r.workingDays || 0),
-                                    0,
-                                  );
-                                const totalPresent =
-                                  row.monthlyAttendance.reduce(
-                                    (s, r) => s + Number(r.present || 0),
-                                    0,
-                                  );
-                                const overallPct =
-                                  totalWorking > 0
-                                    ? (
-                                        (totalPresent / totalWorking) *
-                                        100
-                                      ).toFixed(1)
-                                    : null;
-                                if (!totalWorking) return null;
-                                return (
-                                  <Box
-                                    sx={{
-                                      mt: 1,
-                                      p: 2,
-                                      borderRadius: 2,
-                                      background:
-                                        "linear-gradient(135deg, #e3f2fd, #f0f7ff)",
-                                      border: "1px solid #90caf9",
-                                    }}
-                                  >
-                                    <Typography
-                                      sx={{
-                                        fontWeight: 700,
-                                        color: "#1976d2",
-                                        mb: 1.5,
-                                        fontSize: 14,
-                                      }}
-                                    >
-                                      📊 Annual Summary
-                                    </Typography>
-                                    <Grid container spacing={2}>
-                                      <Grid item xs={6} sm={3}>
-                                        <Box
-                                          sx={{
-                                            textAlign: "center",
-                                            background: "#fff",
-                                            borderRadius: 2,
-                                            py: 1.5,
-                                          }}
-                                        >
-                                          <Typography
-                                            sx={{
-                                              fontSize: 22,
-                                              fontWeight: 800,
-                                              color: "#1976d2",
-                                            }}
-                                          >
-                                            {totalWorking}
-                                          </Typography>
-                                          <Typography
-                                            sx={{
-                                              fontSize: 11,
-                                              color: "#64748b",
-                                            }}
-                                          >
-                                            Total Working Days
-                                          </Typography>
-                                        </Box>
-                                      </Grid>
-                                      <Grid item xs={6} sm={3}>
-                                        <Box
-                                          sx={{
-                                            textAlign: "center",
-                                            background: "#fff",
-                                            borderRadius: 2,
-                                            py: 1.5,
-                                          }}
-                                        >
-                                          <Typography
-                                            sx={{
-                                              fontSize: 22,
-                                              fontWeight: 800,
-                                              color: "#16a34a",
-                                            }}
-                                          >
-                                            {totalPresent}
-                                          </Typography>
-                                          <Typography
-                                            sx={{
-                                              fontSize: 11,
-                                              color: "#64748b",
-                                            }}
-                                          >
-                                            Total Present
-                                          </Typography>
-                                        </Box>
-                                      </Grid>
-                                      <Grid item xs={6} sm={3}>
-                                        <Box
-                                          sx={{
-                                            textAlign: "center",
-                                            background: "#fff",
-                                            borderRadius: 2,
-                                            py: 1.5,
-                                          }}
-                                        >
-                                          <Typography
-                                            sx={{
-                                              fontSize: 22,
-                                              fontWeight: 800,
-                                              color: "#c62828",
-                                            }}
-                                          >
-                                            {totalWorking - totalPresent}
-                                          </Typography>
-                                          <Typography
-                                            sx={{
-                                              fontSize: 11,
-                                              color: "#64748b",
-                                            }}
-                                          >
-                                            Total Absent
-                                          </Typography>
-                                        </Box>
-                                      </Grid>
-                                      {overallPct && (
-                                        <Grid item xs={6} sm={3}>
-                                          <Box
-                                            sx={{
-                                              textAlign: "center",
-                                              borderRadius: 2,
-                                              py: 1.5,
-                                              background:
-                                                Number(overallPct) >= 75
-                                                  ? "#dcfce7"
-                                                  : Number(overallPct) >= 50
-                                                    ? "#fef3c7"
-                                                    : "#fee2e2",
-                                            }}
-                                          >
-                                            <Typography
-                                              sx={{
-                                                fontSize: 22,
-                                                fontWeight: 800,
-                                                color:
-                                                  Number(overallPct) >= 75
-                                                    ? "#16a34a"
-                                                    : Number(overallPct) >= 50
-                                                      ? "#d97706"
-                                                      : "#dc2626",
-                                              }}
-                                            >
-                                              {overallPct}%
-                                            </Typography>
-                                            <Typography
-                                              sx={{
-                                                fontSize: 11,
-                                                color: "#64748b",
-                                              }}
-                                            >
-                                              Overall Attendance
-                                            </Typography>
-                                          </Box>
-                                        </Grid>
-                                      )}
-                                    </Grid>
-                                  </Box>
-                                );
-                              })()}
-
-                            {/* Add Month Button */}
-                            <Box mt={2}>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={() => {
-                                  const u = [...enrollmentRows];
-                                  if (!u[rowIndex].monthlyAttendance)
-                                    u[rowIndex].monthlyAttendance = [];
-                                  u[rowIndex].monthlyAttendance.push({
-                                    month: "",
-                                    workingDays: "",
-                                    present: "",
-                                  });
-                                  setEnrollmentRows(u);
-                                }}
-                              >
-                                + Add Month
-                              </Button>
-                            </Box>
-                          </>
-                        )}
-                      </Box>
 
                       {/* ── DROPOUT DETAILS ── */}
                       <Typography
@@ -7243,6 +7896,172 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         >
                           + Add Achievement
                         </Button>
+                        {row.class === "12" && (
+                          <Box mt={3}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+                            >
+                              Competitive Examination Selection with Admission
+                            </Typography>
+
+                            <Grid container spacing={2}>
+                              {/* Exam Name */}
+                              <Grid item xs={12} md={3}>
+                                <TextField
+                                  label="Name of Examination"
+                                  fullWidth
+                                  size="small"
+                                  value={row.competitiveExam?.examName || ""}
+                                  onChange={(e) => {
+                                    const updatedRows = [...enrollmentRows];
+
+                                    updatedRows[rowIndex] = {
+                                      ...updatedRows[rowIndex],
+                                      competitiveExam: {
+                                        ...(updatedRows[rowIndex]
+                                          .competitiveExam || {}),
+                                        examName: e.target.value,
+                                      },
+                                    };
+
+                                    setEnrollmentRows(updatedRows);
+                                  }}
+                                />
+                              </Grid>
+
+                              {/* Qualified */}
+                              <Grid item xs={12} md={2}>
+                                <TextField
+                                  label="No. of Students Qualified"
+                                  fullWidth
+                                  size="small"
+                                  value={row.competitiveExam?.qualified || ""}
+                                  onChange={(e) => {
+                                    const updatedRows = [...enrollmentRows];
+
+                                    updatedRows[rowIndex] = {
+                                      ...updatedRows[rowIndex],
+                                      competitiveExam: {
+                                        ...(updatedRows[rowIndex]
+                                          .competitiveExam || {}),
+                                        qualified: e.target.value,
+                                      },
+                                    };
+
+                                    setEnrollmentRows(updatedRows);
+                                  }}
+                                />
+                              </Grid>
+
+                              {/* Admission */}
+                              <Grid item xs={12} md={3}>
+                                <TextField
+                                  label="Students Secured Admission"
+                                  fullWidth
+                                  size="small"
+                                  value={row.competitiveExam?.admission || ""}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value || 0);
+
+                                    let marks = 0;
+                                    if (val >= 30) marks = 7;
+                                    else if (val >= 20) marks = 5;
+                                    else if (val >= 10) marks = 3;
+                                    else if (val > 0) marks = 1;
+
+                                    const updatedRows = [...enrollmentRows];
+
+                                    updatedRows[rowIndex] = {
+                                      ...updatedRows[rowIndex],
+                                      competitiveExam: {
+                                        ...(updatedRows[rowIndex]
+                                          .competitiveExam || {}),
+                                        admission: e.target.value,
+                                        marks: marks,
+                                      },
+                                    };
+
+                                    setEnrollmentRows(updatedRows);
+                                  }}
+                                />
+                              </Grid>
+
+                              {/* Total */}
+                              <Grid item xs={12} md={2}>
+                                <TextField
+                                  label="Total"
+                                  fullWidth
+                                  size="small"
+                                  value={row.competitiveExam?.total || ""}
+                                  onChange={(e) => {
+                                    const updatedRows = [...enrollmentRows];
+
+                                    updatedRows[rowIndex] = {
+                                      ...updatedRows[rowIndex],
+                                      competitiveExam: {
+                                        ...(updatedRows[rowIndex]
+                                          .competitiveExam || {}),
+                                        total: e.target.value,
+                                      },
+                                    };
+
+                                    setEnrollmentRows(updatedRows);
+                                  }}
+                                />
+                              </Grid>
+
+                              {/* Marks */}
+                              <Grid item xs={12} md={2}>
+                                <TextField
+                                  label="Marks (out of 7)"
+                                  fullWidth
+                                  size="small"
+                                  value={row.competitiveExam?.marks || ""}
+                                  InputProps={{ readOnly: true }}
+                                />
+                              </Grid>
+                            </Grid>
+
+                            {/* Marking Table */}
+                            <Box
+                              mt={2}
+                              display="flex"
+                              justifyContent="flex-end"
+                            >
+                              <TableContainer
+                                component={Paper}
+                                sx={{ maxWidth: 400 }}
+                              >
+                                <Table size="small">
+                                  <TableHead>
+                                    <TableRow>
+                                      <TableCell>
+                                        <strong>Students with Admission</strong>
+                                      </TableCell>
+                                      <TableCell>
+                                        <strong>Marks</strong>
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableHead>
+                                  <TableBody>
+                                    {[
+                                      { condition: "30 or above", marks: 7 },
+                                      { condition: "20 or above", marks: 5 },
+                                      { condition: "10 or above", marks: 3 },
+                                      { condition: "Below 10", marks: 1 },
+                                    ].map((item, i) => (
+                                      <TableRow key={i}>
+                                        <TableCell>{item.condition}</TableCell>
+                                        <TableCell>{item.marks}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </TableContainer>
+                            </Box>
+                          </Box>
+                        )}
                       </Box>
                     </Box>
                   </Box>
@@ -7278,7 +8097,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                             PVTG: "",
                             "DNT/NT/SNT": "",
                             Orphan: "",
-                            LWE: "",
                             Divyang: "",
                           },
                           monthlyAttendance: [],
@@ -7312,6 +8130,13 @@ const EMRSForm = ({ addSubmittedForm }) => {
                               recognition: "",
                             },
                           ],
+                          competitiveExam: {
+                            examName: "",
+                            qualified: "",
+                            admission: "",
+                            total: "",
+                            marks: "",
+                          },
                         },
                       ])
                     }
@@ -7344,6 +8169,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                   </Grid>
                 </Grid>
 
+                {/* ✅ MAP — only row-specific fields */}
                 {extraCurricularRows.map((row, index) => (
                   <Box
                     key={index}
@@ -7386,7 +8212,53 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         </TextField>
                       </Grid>
 
-                      {/* Application / Initiative Name */}
+                      {/* Class */}
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField
+                          select
+                          label="Class"
+                          fullWidth
+                          size="small"
+                          sx={{ minWidth: 220 }}
+                          value={row.class}
+                          onChange={(e) => {
+                            const u = [...extraCurricularRows];
+                            u[index].class = e.target.value;
+                            setExtraCurricularRows(u);
+                          }}
+                        >
+                          {["6", "7", "8", "9", "10", "11", "12"].map((c) => (
+                            <MenuItem key={c} value={c}>
+                              {c}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Grid>
+
+                      {/* Section */}
+                      <Grid item xs={12} sm={6} md={4}>
+                        <TextField
+                          select
+                          label="Section"
+                          fullWidth
+                          size="small"
+                          sx={{ minWidth: 220 }}
+                          value={row.section}
+                          onChange={(e) => {
+                            const u = [...extraCurricularRows];
+                            u[index].section = e.target.value;
+                            setExtraCurricularRows(u);
+                          }}
+                        >
+                          {["A", "B", "C"].map((s) => (
+                            <MenuItem key={s} value={s}>
+                              {s}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Grid>
+
+                      {/* Name of Program */}
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           label="Name of the Program"
@@ -7416,45 +8288,79 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         />
                       </Grid>
 
-                      {/* Areas of Development - multi select */}
-                      <Grid item xs={12} sm={6} md={4}>
-                        <TextField
-                          select
-                          label="Areas of Development"
-                          fullWidth
-                          size="small"
-                          sx={{ minWidth: 220 }}
-                          value={row.areasOfDevelopment}
-                          onChange={(e) => {
-                            const u = [...extraCurricularRows];
-                            u[index].areasOfDevelopment = e.target.value;
-                            setExtraCurricularRows(u);
-                          }}
-                        >
-                          {[
-                            "Sports",
-                            "Culture",
-                            "Health & Wellness",
-                            "Value Education",
-                            "Computer Skills",
-                            "Personality Development",
-                            "Excursions",
-                            "Career Guidance",
-                            "Exposure",
-                            "Competitive Exam Training",
-                            "Enhancing Learning Skills",
-                            "Adventure Activities",
-                            "STEM Learning",
-                            "Innovation",
-                          ].map((area) => (
-                            <MenuItem key={area} value={area}>
-                              {area}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                      {/* Areas of Development */}
+                      <Grid item xs={12} sm={6} md={6}>
+                        <Grid container spacing={1}>
+                          {/* Dropdown */}
+                          <Grid
+                            item
+                            xs={row.areasOfDevelopment === "Others" ? 6 : 12}
+                          >
+                            <TextField
+                              select
+                              label="Areas of Development"
+                              fullWidth
+                              size="small"
+                              sx={{ minWidth: 220 }}
+                              value={row.areasOfDevelopment || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const u = [...extraCurricularRows];
+
+                                u[index].areasOfDevelopment = value;
+
+                                if (value !== "Others") {
+                                  u[index].otherAreaOfDevelopment = "";
+                                }
+
+                                setExtraCurricularRows(u);
+                              }}
+                            >
+                              {[
+                                "Sports",
+                                "Culture",
+                                "Health & Wellness",
+                                "Value Education",
+                                "Kaushalya Skill Internship",
+                                "Computer Skills",
+                                "Personality Development",
+                                "Excursions",
+                                "Career Guidance",
+                                "Exposure",
+                                "Competitive Exam Training",
+                                "Enhancing Learning Skills",
+                                "Adventure Activities",
+                                "STEM Learning",
+                                "Innovation",
+                                "Others",
+                              ].map((area) => (
+                                <MenuItem key={area} value={area}>
+                                  {area}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </Grid>
+                          {row.areasOfDevelopment === "Others" && (
+                            <Grid item xs={6}>
+                              <TextField
+                                label="Specify Other"
+                                fullWidth
+                                size="small"
+                                sx={{ minWidth: 220 }}
+                                value={row.otherAreaOfDevelopment || ""}
+                                onChange={(e) => {
+                                  const u = [...extraCurricularRows];
+                                  u[index].otherAreaOfDevelopment =
+                                    e.target.value;
+                                  setExtraCurricularRows(u);
+                                }}
+                              />
+                            </Grid>
+                          )}
+                        </Grid>
                       </Grid>
 
-                      {/* Description / Objectives */}
+                      {/* Description */}
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           label="Description / Objectives"
@@ -7464,21 +8370,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           onChange={(e) => {
                             const u = [...extraCurricularRows];
                             u[index].description = e.target.value;
-                            setExtraCurricularRows(u);
-                          }}
-                        />
-                      </Grid>
-
-                      {/* Class */}
-                      <Grid item xs={12} sm={6} md={4}>
-                        <TextField
-                          label="Class"
-                          fullWidth
-                          size="small"
-                          value={row.targetStudents}
-                          onChange={(e) => {
-                            const u = [...extraCurricularRows];
-                            u[index].targetStudents = e.target.value;
                             setExtraCurricularRows(u);
                           }}
                         />
@@ -7515,7 +8406,645 @@ const EMRSForm = ({ addSubmittedForm }) => {
                   </Box>
                 ))}
 
-                {/* Add Activity Button */}
+                {/* ✅ OUTSIDE MAP — Cultural Meet, NCC, RBVP, Criteria Table */}
+
+                {/* ================= NATIONAL LEVEL CULTURAL MEET ================= */}
+                <Grid container spacing={2} mb={2}>
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        border: "1.5px solid #1a56a0",
+                        borderRadius: 0,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box sx={{ background: "#1a56a0", px: 2, py: 0.9 }}>
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.72rem",
+                            fontWeight: 500,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          2. Student Participation in National Level Cultural
+                          Meet (5 Marks)
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          p: 2,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 2,
+                          background: "#fff",
+                        }}
+                      >
+                        <Box sx={{ flex: "1 1 220px" }}>
+                          <Controller
+                            name="studentsParticipatedCulturalMeet"
+                            control={control}
+                            defaultValue=""
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                size="small"
+                                label="Students Participated (Yes/No)"
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            )}
+                          />
+                        </Box>
+                        {watch("studentsParticipatedCulturalMeet") ===
+                          "Yes" && (
+                          <Box sx={{ flex: "1 1 160px" }}>
+                            <Controller
+                              name="studentsParticipatedCount"
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label="No. of Students"
+                                  type="number"
+                                  fullWidth
+                                  size="small"
+                                  inputProps={{ min: 0 }}
+                                />
+                              )}
+                            />
+                          </Box>
+                        )}
+                        <Box sx={{ flex: "1 1 220px" }}>
+                          <Controller
+                            name="studentsGotMedalCulturalMeet"
+                            control={control}
+                            defaultValue=""
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                size="small"
+                                label="Students Got Rank/Medal (Yes/No)"
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            )}
+                          />
+                        </Box>
+                        {watch("studentsGotMedalCulturalMeet") === "Yes" && (
+                          <Box sx={{ flex: "1 1 160px" }}>
+                            <Controller
+                              name="studentsRankCount"
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label="No. of Students"
+                                  type="number"
+                                  fullWidth
+                                  size="small"
+                                  inputProps={{ min: 0 }}
+                                />
+                              )}
+                            />
+                          </Box>
+                        )}
+                        {/* Marks Obtained */}
+                        <Box
+                          sx={{
+                            flex: "1 1 160px",
+                            display: "flex",
+                            alignItems: "center",
+                            background: "#f7faff",
+                            border: "1px solid #c8d4e8",
+                            borderRadius: 1,
+                            px: 2,
+                            py: 1,
+                            gap: 2,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: "0.72rem",
+                              color: "#5a6a85",
+                              fontWeight: 500,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.4px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Marks Obtained*
+                          </Typography>
+                          {(() => {
+                            const p = watch("studentsParticipatedCulturalMeet");
+                            const m = watch("studentsGotMedalCulturalMeet");
+                            const val = p !== "Yes" ? 0 : m === "Yes" ? 5 : 3;
+                            return (
+                              <Typography
+                                sx={{
+                                  fontSize: "1.2rem",
+                                  fontWeight: 500,
+                                  ml: "auto",
+                                  color:
+                                    val === 5
+                                      ? "#155724"
+                                      : val === 3
+                                        ? "#856404"
+                                        : "#721c24",
+                                }}
+                              >
+                                {val}
+                              </Typography>
+                            );
+                          })()}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* ================= NCC & SCOUT GUIDE ================= */}
+                <Grid container spacing={2} mb={2}>
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        border: "1.5px solid #1a56a0",
+                        borderRadius: 0,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box sx={{ background: "#1a56a0", px: 2, py: 0.9 }}>
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.72rem",
+                            fontWeight: 500,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          3. NCC and Scout Guide in EMRS (5 Marks)
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          p: 2,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 2,
+                          background: "#fff",
+                        }}
+                      >
+                        <Box sx={{ flex: "1 1 220px" }}>
+                          <Controller
+                            name="nccUnitRunning"
+                            control={control}
+                            defaultValue=""
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                size="small"
+                                label="NCC Unit Running (Yes/No)"
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            )}
+                          />
+                        </Box>
+                        {watch("nccUnitRunning") === "Yes" && (
+                          <Box sx={{ flex: "1 1 160px" }}>
+                            <Controller
+                              name="nccStudentsCount"
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label="No. of NCC Students"
+                                  type="number"
+                                  fullWidth
+                                  size="small"
+                                  inputProps={{ min: 0 }}
+                                />
+                              )}
+                            />
+                          </Box>
+                        )}
+                        <Box sx={{ flex: "1 1 220px" }}>
+                          <Controller
+                            name="scoutGuideRunning"
+                            control={control}
+                            defaultValue=""
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                size="small"
+                                label="Scout and Guide Running (Yes/No)"
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            )}
+                          />
+                        </Box>
+                        {watch("scoutGuideRunning") === "Yes" && (
+                          <Box sx={{ flex: "1 1 160px" }}>
+                            <Controller
+                              name="scoutGuideStudentsCount"
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label="No. of Students"
+                                  type="number"
+                                  fullWidth
+                                  size="small"
+                                  inputProps={{ min: 0 }}
+                                />
+                              )}
+                            />
+                          </Box>
+                        )}
+                        {/* Marks Obtained */}
+                        <Box
+                          sx={{
+                            flex: "1 1 160px",
+                            display: "flex",
+                            alignItems: "center",
+                            background: "#f7faff",
+                            border: "1px solid #c8d4e8",
+                            borderRadius: 1,
+                            px: 2,
+                            py: 1,
+                            gap: 2,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: "0.72rem",
+                              color: "#5a6a85",
+                              fontWeight: 500,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.4px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Marks Obtained*
+                          </Typography>
+                          {(() => {
+                            const yes = [
+                              watch("nccUnitRunning"),
+                              watch("scoutGuideRunning"),
+                            ].filter((v) => v === "Yes").length;
+                            const val = yes === 2 ? 5 : yes === 1 ? 3 : 0;
+                            return (
+                              <Typography
+                                sx={{
+                                  fontSize: "1.2rem",
+                                  fontWeight: 500,
+                                  ml: "auto",
+                                  color:
+                                    val === 5
+                                      ? "#155724"
+                                      : val === 3
+                                        ? "#856404"
+                                        : "#721c24",
+                                }}
+                              >
+                                {val}
+                              </Typography>
+                            );
+                          })()}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* ================= RBVP / INSPIRE MANAK ================= */}
+                <Grid container spacing={2} mb={2}>
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        border: "1.5px solid #1a56a0",
+                        borderRadius: 0,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box sx={{ background: "#1a56a0", px: 2, py: 0.9 }}>
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.72rem",
+                            fontWeight: 500,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          4. Selection in RBVP / INSPIRE MANAK Award (5 Marks)
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          p: 2,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 2,
+                          background: "#fff",
+                        }}
+                      >
+                        <Box sx={{ flex: "1 1 220px" }}>
+                          <Controller
+                            name="studentsSelectedRBVP"
+                            control={control}
+                            defaultValue=""
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                size="small"
+                                label="Students Selected for RBVP (Yes/No)"
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            )}
+                          />
+                        </Box>
+                        {watch("studentsSelectedRBVP") === "Yes" && (
+                          <Box sx={{ flex: "1 1 160px" }}>
+                            <Controller
+                              name="rbvpStudentsCount"
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label="No. of Students"
+                                  type="number"
+                                  fullWidth
+                                  size="small"
+                                  inputProps={{ min: 0 }}
+                                />
+                              )}
+                            />
+                          </Box>
+                        )}
+                        <Box sx={{ flex: "1 1 220px" }}>
+                          <Controller
+                            name="studentsSelectedInspireManak"
+                            control={control}
+                            defaultValue=""
+                            render={({ field }) => (
+                              <TextField
+                                {...field}
+                                select
+                                fullWidth
+                                size="small"
+                                label="Students Selected for Inspire MANAK Award (Yes/No)"
+                              >
+                                <MenuItem value="Yes">Yes</MenuItem>
+                                <MenuItem value="No">No</MenuItem>
+                              </TextField>
+                            )}
+                          />
+                        </Box>
+                        {watch("studentsSelectedInspireManak") === "Yes" && (
+                          <Box sx={{ flex: "1 1 160px" }}>
+                            <Controller
+                              name="inspireStudentsCount"
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label="No. of Students"
+                                  type="number"
+                                  fullWidth
+                                  size="small"
+                                  inputProps={{ min: 0 }}
+                                />
+                              )}
+                            />
+                          </Box>
+                        )}
+                        {/* Marks Obtained */}
+                        <Box
+                          sx={{
+                            flex: "1 1 160px",
+                            display: "flex",
+                            alignItems: "center",
+                            background: "#f7faff",
+                            border: "1px solid #c8d4e8",
+                            borderRadius: 1,
+                            px: 2,
+                            py: 1,
+                            gap: 2,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: "0.72rem",
+                              color: "#5a6a85",
+                              fontWeight: 500,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.4px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Marks Obtained*
+                          </Typography>
+                          {(() => {
+                            const yes = [
+                              watch("studentsSelectedRBVP"),
+                              watch("studentsSelectedInspireManak"),
+                            ].filter((v) => v === "Yes").length;
+                            const val = yes === 2 ? 5 : yes === 1 ? 3 : 0;
+                            return (
+                              <Typography
+                                sx={{
+                                  fontSize: "1.2rem",
+                                  fontWeight: 500,
+                                  ml: "auto",
+                                  color:
+                                    val === 5
+                                      ? "#155724"
+                                      : val === 3
+                                        ? "#856404"
+                                        : "#721c24",
+                                }}
+                              >
+                                {val}
+                              </Typography>
+                            );
+                          })()}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* ================= SHARED MARKING CRITERIA (Points 2, 3 & 4) ================= */}
+                <Grid container spacing={2} mb={4}>
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        border: "1.5px solid #1a56a0",
+                        borderRadius: 0,
+                        overflow: "hidden",
+                        maxWidth: 440,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          background: "#1a56a0",
+                          px: 2,
+                          py: 0.8,
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.68rem",
+                            fontWeight: 500,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          *Marking Criteria for Points 2, 3 and 4
+                        </Typography>
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.68rem",
+                            opacity: 0.85,
+                          }}
+                        >
+                          Out of 5
+                        </Typography>
+                      </Box>
+                      <Table size="small" sx={{ tableLayout: "fixed" }}>
+                        <TableHead>
+                          <TableRow sx={{ background: "#e8f0fb" }}>
+                            {["Participation", "Marks"].map((h) => (
+                              <TableCell
+                                key={h}
+                                sx={{
+                                  fontWeight: 500,
+                                  fontSize: "0.68rem",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.3px",
+                                  color: "#0c447c",
+                                  borderBottom: "1.5px solid #1a56a0",
+                                  py: 0.8,
+                                }}
+                              >
+                                {h}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {[
+                            {
+                              status: "Both YES",
+                              marks: 5,
+                              bg: "#d4edda",
+                              color: "#155724",
+                              border: "#b8dfc4",
+                            },
+                            {
+                              status: "One YES",
+                              marks: 3,
+                              bg: "#fff3cd",
+                              color: "#856404",
+                              border: "#f0d78c",
+                            },
+                            {
+                              status: "Both NO",
+                              marks: 0,
+                              bg: "#f8d7da",
+                              color: "#721c24",
+                              border: "#f0b8bd",
+                            },
+                          ].map((r, i) => (
+                            <TableRow
+                              key={i}
+                              sx={{
+                                background: i % 2 === 0 ? "#f7faff" : "#fff",
+                                "&:last-child td": { borderBottom: 0 },
+                              }}
+                            >
+                              <TableCell
+                                sx={{
+                                  fontSize: "0.8rem",
+                                  color: "#1a1a2e",
+                                  py: 0.9,
+                                }}
+                              >
+                                {r.status}
+                              </TableCell>
+                              <TableCell sx={{ py: 0.9 }}>
+                                <Box
+                                  sx={{
+                                    display: "inline-block",
+                                    px: 1.5,
+                                    py: 0.2,
+                                    borderRadius: "3px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 500,
+                                    minWidth: 28,
+                                    textAlign: "center",
+                                    background: r.bg,
+                                    color: r.color,
+                                    border: `0.5px solid ${r.border}`,
+                                  }}
+                                >
+                                  {r.marks}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <Box
+                        sx={{
+                          background: "#e8f0fb",
+                          borderTop: "1px solid #c8d4e8",
+                          px: 2,
+                          py: 0.6,
+                          textAlign: "right",
+                        }}
+                      >
+                        <Typography
+                          sx={{ fontSize: "0.68rem", color: "#0c447c" }}
+                        >
+                          Total: out of 5 marks each
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* ================= ADD ACTIVITY BUTTON ================= */}
                 <Box mb={4}>
                   <Button
                     variant="outlined"
@@ -7577,12 +9106,12 @@ const EMRSForm = ({ addSubmittedForm }) => {
                       variant="subtitle1"
                       sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
                     >
-                      Hospital & Empanelment Details
+                      Hospital Details
                     </Typography>
                     <Grid container spacing={2} mb={2}>
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
-                          label="Hospital Empanelled With"
+                          label="Nearest Government Hospital"
                           fullWidth
                           size="small"
                           value={row.hospitalEmpanelled}
@@ -7593,27 +9122,23 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
-                          label="Validity of Empanelment"
+                          label="Private Hospital Engaged With (if any)"
                           fullWidth
                           size="small"
-                          type="date"
-                          InputLabelProps={{ shrink: true }}
-                          value={row.empanellementValidity}
+                          value={row.privateHospital || ""}
                           onChange={(e) => {
                             const u = [...hospitalizationRows];
-                            u[index].empanellementValidity = e.target.value;
+                            u[index].privateHospital = e.target.value;
                             setHospitalizationRows(u);
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           select
-                          label="Department (Empanelment)"
+                          label="Department"
                           fullWidth
                           size="small"
                           sx={{ minWidth: 220 }}
@@ -7656,7 +9181,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           ))}
                         </TextField>
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           label="Doctor / Treating Physician"
@@ -7693,7 +9217,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={3}>
                         <TextField
                           label="Roll No"
@@ -7707,7 +9230,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={3}>
                         <TextField
                           select
@@ -7729,7 +9251,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           ))}
                         </TextField>
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={3}>
                         <TextField
                           select
@@ -7751,7 +9272,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           ))}
                         </TextField>
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={3}>
                         <TextField
                           label="Guardian Name"
@@ -7765,7 +9285,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={3}>
                         <TextField
                           label="Guardian Contact"
@@ -7787,9 +9306,8 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                 "ArrowRight",
                                 "Tab",
                               ].includes(e.key)
-                            ) {
+                            )
                               e.preventDefault();
-                            }
                           }}
                           error={
                             row.guardianContact &&
@@ -7809,6 +9327,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         />
                       </Grid>
                     </Grid>
+
                     {/* ── ADMISSION INFO ── */}
                     <Typography
                       variant="subtitle1"
@@ -7832,7 +9351,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           label="Date of Discharge"
@@ -7848,7 +9366,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12}>
                         <TextField
                           label="Reason for Hospitalization"
@@ -7873,13 +9390,12 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     >
                       Cost & Claim Details
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={2} mb={3}>
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           label="Estimated Cost (₹)"
                           fullWidth
                           size="small"
-                          sx={{ minWidth: 220 }}
                           type="number"
                           value={row.estimatedCost}
                           inputProps={{ min: 0 }}
@@ -7896,7 +9412,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           label="Amount Claimed (₹)"
@@ -7918,7 +9433,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           }}
                         />
                       </Grid>
-
                       <Grid item xs={12} sm={6} md={4}>
                         <TextField
                           select
@@ -7947,40 +9461,1719 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         </TextField>
                       </Grid>
                     </Grid>
+                    {/* ── Add Case Button ── */}
+                    <Box mb={4}>
+                      <Button
+                        variant="outlined"
+                        onClick={() =>
+                          setHospitalizationRows([
+                            ...hospitalizationRows,
+                            emptyHospitalizationRow(),
+                          ])
+                        }
+                      >
+                        + Add Hospitalization Case
+                      </Button>
+                    </Box>
+
+                    {/* ── HEALTH MONITORING & MEDICAL COMPLIANCE ── */}
+                    <Box
+                      sx={{
+                        border: "1px solid #dce3f0",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        mb: 3,
+                      }}
+                    >
+                      <Box sx={{ background: "#1a56a0", px: 2.5, py: 1.2 }}>
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.72rem",
+                            fontWeight: 500,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          Health Monitoring &amp; Medical Compliance
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          p: 2.5,
+                          display: "flex",
+                          gap: 3,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {/* LEFT — dropdowns + marks */}
+                        <Box
+                          sx={{
+                            flex: 1,
+                            minWidth: 260,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 1.5,
+                          }}
+                        >
+                          {[
+                            "Annual Health Check Conducted",
+                            "Part-Time Doctor Engaged",
+                            "Medical Register Maintained",
+                            "Sickle Cell Screening Conducted",
+                            "ABHA ID Created",
+                            "Eye Checkup Conducted",
+                            "Ear Checkup Conducted",
+                          ].map((label, idx) => (
+                            <TextField
+                              key={idx}
+                              select
+                              fullWidth
+                              size="small"
+                              label={label}
+                              value={row[label] || ""}
+                              onChange={(e) => {
+                                const u = [...hospitalizationRows];
+                                u[index][label] = e.target.value;
+                                u[index].marksHealth = calculateHealthMarks(
+                                  u[index],
+                                );
+                                setHospitalizationRows(u);
+                              }}
+                            >
+                              <MenuItem value="Yes">Yes</MenuItem>
+                              <MenuItem value="No">No</MenuItem>
+                            </TextField>
+                          ))}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              background: "#f7faff",
+                              border: "1px solid #c8d4e8",
+                              borderRadius: 1.5,
+                              px: 2,
+                              py: 1.2,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "0.72rem",
+                                color: "#5a6a85",
+                                fontWeight: 500,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.4px",
+                              }}
+                            >
+                              Marks Obtained (out of 9)
+                            </Typography>
+                            <Typography
+                              sx={{
+                                fontSize: "1.4rem",
+                                fontWeight: 500,
+                                color:
+                                  row.marksHealth === 9
+                                    ? "#b8860b"
+                                    : row.marksHealth === 7
+                                      ? "#155724"
+                                      : row.marksHealth === 5
+                                        ? "#856404"
+                                        : row.marksHealth === 3
+                                          ? "#7d3c0c"
+                                          : row.marksHealth === 0
+                                            ? "#721c24"
+                                            : "#1a1a2e",
+                              }}
+                            >
+                              {row.marksHealth !== undefined &&
+                              row.marksHealth !== null
+                                ? row.marksHealth
+                                : "—"}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        {/* RIGHT — criteria table */}
+                        <Box
+                          sx={{
+                            minWidth: 300,
+                            flex: "0 0 340px",
+                            border: "1.5px solid #1a56a0",
+                            borderRadius: 1.5,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              background: "#1a56a0",
+                              px: 2,
+                              py: 0.9,
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color: "#fff",
+                                fontSize: "0.68rem",
+                                fontWeight: 500,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.4px",
+                              }}
+                            >
+                              Compliance Status
+                            </Typography>
+                            <Typography
+                              sx={{
+                                color: "#fff",
+                                fontSize: "0.68rem",
+                                fontWeight: 500,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.4px",
+                              }}
+                            >
+                              Marks
+                            </Typography>
+                          </Box>
+                          {[
+                            {
+                              status: "All 7 conditions fulfilled",
+                              marks: 9,
+                              bg: "#fff8e1",
+                              color: "#b8860b",
+                              border: "#f9d84a",
+                            },
+                            {
+                              status: "5 or 6 conditions fulfilled",
+                              marks: 7,
+                              bg: "#d4edda",
+                              color: "#155724",
+                              border: "#b8dfc4",
+                            },
+                            {
+                              status: "3 or 4 conditions fulfilled",
+                              marks: 5,
+                              bg: "#fff3cd",
+                              color: "#856404",
+                              border: "#f0d78c",
+                            },
+                            {
+                              status: "1 or 2 conditions fulfilled",
+                              marks: 3,
+                              bg: "#fde8d8",
+                              color: "#7d3c0c",
+                              border: "#f0c09a",
+                            },
+                            {
+                              status: "No condition fulfilled",
+                              marks: 0,
+                              bg: "#f8d7da",
+                              color: "#721c24",
+                              border: "#f0b8bd",
+                            },
+                          ].map((r, i) => (
+                            <Box
+                              key={r.status}
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                px: 2,
+                                py: 1,
+                                borderTop: "0.5px solid #dce3f0",
+                                borderLeft:
+                                  row.marksHealth === r.marks
+                                    ? "3px solid #1a56a0"
+                                    : "3px solid transparent",
+                                background:
+                                  row.marksHealth === r.marks
+                                    ? "#e8f0fb"
+                                    : i % 2 === 0
+                                      ? "#f7faff"
+                                      : "#fff",
+                              }}
+                            >
+                              <Typography
+                                sx={{ fontSize: "0.8rem", color: "#1a1a2e" }}
+                              >
+                                {r.status}
+                              </Typography>
+                              <Box
+                                sx={{
+                                  background: r.bg,
+                                  color: r.color,
+                                  border: `0.5px solid ${r.border}`,
+                                  borderRadius: "3px",
+                                  px: 1.5,
+                                  py: 0.2,
+                                  fontSize: "0.75rem",
+                                  fontWeight: 500,
+                                  minWidth: 28,
+                                  textAlign: "center",
+                                }}
+                              >
+                                {r.marks}
+                              </Box>
+                            </Box>
+                          ))}
+                          <Box
+                            sx={{
+                              background: "#e8f0fb",
+                              borderTop: "1px solid #c8d4e8",
+                              px: 2,
+                              py: 0.7,
+                              textAlign: "right",
+                            }}
+                          >
+                            <Typography
+                              sx={{ fontSize: "0.68rem", color: "#0c447c" }}
+                            >
+                              Total: out of 9 marks
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    {/* ── EYE & EAR HEALTH ── */}
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 1.5,
+                          mb: 3,
+                        }}
+                      >
+                        {/* Eye Header */}
+                        <Typography
+                          sx={{
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            color: "#1a56a0",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.4px",
+                            borderBottom: "1px solid #c8d4e8",
+                            pb: 0.5,
+                          }}
+                        >
+                          👁 Eye Health Details
+                        </Typography>
+
+                        {(row.eyeEntries || []).map((eye, ei) => (
+                          <Box
+                            key={ei}
+                            sx={{
+                              border: "1px solid #e3eaf5",
+                              borderRadius: 1.5,
+                              p: 2,
+                              background: "#f7faff",
+                              position: "relative",
+                            }}
+                          >
+                            {(row.eyeEntries || []).length > 0 && (
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  position: "absolute",
+                                  top: 6,
+                                  right: 6,
+                                  color: "#c62828",
+                                }}
+                                onClick={() => {
+                                  const u = [...hospitalizationRows];
+                                  u[index].eyeEntries = u[
+                                    index
+                                  ].eyeEntries.filter((_, i) => i !== ei);
+                                  setHospitalizationRows(u);
+                                  // Clear error for removed entry
+                                  const errKey = `${index}-${ei}`;
+                                  setEyeDateErrors((prev) => {
+                                    const n = { ...prev };
+                                    delete n[errKey];
+                                    return n;
+                                  });
+                                }}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </IconButton>
+                            )}
+
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Eye Specialist Name"
+                                  fullWidth
+                                  size="small"
+                                  value={eye.eyeSpecialistName || ""}
+                                  onKeyDown={(e) => {
+                                    if (/[0-9]/.test(e.key)) e.preventDefault();
+                                  }}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].eyeEntries[ei].eyeSpecialistName =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+
+                              {/* ── EYE DATE PICKER with 6-month validation ── */}
+                              <Grid item xs={12} sm={6} md={4}>
+                                <DesktopDatePicker
+                                  label="Checkup Date (Bi-Annual)"
+                                  value={
+                                    eye.eyeCheckupDate
+                                      ? dayjs(eye.eyeCheckupDate)
+                                      : null
+                                  }
+                                  format="DD/MM/YYYY"
+                                  onChange={(newVal) => {
+                                    const formatted =
+                                      newVal && newVal.isValid()
+                                        ? newVal.format("YYYY-MM-DD")
+                                        : "";
+                                    const u = [...hospitalizationRows];
+                                    const errKey = `${index}-${ei}`;
+
+                                    // Validate 6-month gap against all other eye entries
+                                    const error = formatted
+                                      ? validateBiAnnualDate(
+                                          formatted,
+                                          u[index].eyeEntries,
+                                          ei,
+                                          "eyeCheckupDate",
+                                        )
+                                      : null;
+
+                                    if (error) {
+                                      setEyeDateErrors((prev) => ({
+                                        ...prev,
+                                        [errKey]: error,
+                                      }));
+                                      // Still update the value so user sees what they typed, but flag error
+                                      u[index].eyeEntries[ei].eyeCheckupDate =
+                                        formatted;
+                                      setHospitalizationRows(u);
+                                    } else {
+                                      setEyeDateErrors((prev) => {
+                                        const n = { ...prev };
+                                        delete n[errKey];
+                                        return n;
+                                      });
+                                      u[index].eyeEntries[ei].eyeCheckupDate =
+                                        formatted;
+                                      setHospitalizationRows(u);
+                                    }
+                                  }}
+                                  slotProps={{
+                                    textField: {
+                                      fullWidth: true,
+                                      size: "small",
+                                      error: !!eyeDateErrors[`${index}-${ei}`],
+                                      helperText: eyeDateErrors[
+                                        `${index}-${ei}`
+                                      ]
+                                        ? `⚠️ ${eyeDateErrors[`${index}-${ei}`]}`
+                                        : "Must be 6+ months from other entries",
+                                      FormHelperTextProps: {
+                                        sx: {
+                                          color: eyeDateErrors[`${index}-${ei}`]
+                                            ? "#c62828"
+                                            : "#888",
+                                          fontSize: "0.68rem",
+                                        },
+                                      },
+                                    },
+                                  }}
+                                />
+                              </Grid>
+
+                              <Grid item xs={6} sm={3} md={2}>
+                                <TextField
+                                  select
+                                  label="Class"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={eye.eyeClass || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].eyeEntries[ei].eyeClass =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {["6", "7", "8", "9", "10", "11", "12"].map(
+                                    (c) => (
+                                      <MenuItem key={c} value={c}>
+                                        {c}
+                                      </MenuItem>
+                                    ),
+                                  )}
+                                </TextField>
+                              </Grid>
+
+                              <Grid item xs={6} sm={3} md={2}>
+                                <TextField
+                                  select
+                                  label="Section"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={eye.eyeSection || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].eyeEntries[ei].eyeSection =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {["A", "B", "C"].map((s) => (
+                                    <MenuItem key={s} value={s}>
+                                      {s}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Grid>
+
+                              {[
+                                {
+                                  label: "No. of Students Screened",
+                                  field: "eyeStudentsScreened",
+                                },
+                                {
+                                  label: "No. of Students with Eye Problem",
+                                  field: "eyeStudentsWithProblem",
+                                },
+                                {
+                                  label: "No. of Students Needing Spectacle",
+                                  field: "eyeNeedsSpectacle",
+                                },
+                                {
+                                  label:
+                                    "No. Needing Higher Investigation/Treatment",
+                                  field: "eyeNeedsHigherInvestigation",
+                                },
+                              ].map(({ label, field }) => (
+                                <Grid item xs={12} sm={6} md={3} key={field}>
+                                  <TextField
+                                    label={label}
+                                    fullWidth
+                                    size="small"
+                                    type="number"
+                                    inputProps={{ min: 0 }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "-" || e.key === "e")
+                                        e.preventDefault();
+                                    }}
+                                    value={eye[field] || ""}
+                                    onChange={(e) => {
+                                      if (Number(e.target.value) >= 0) {
+                                        const u = [...hospitalizationRows];
+                                        u[index].eyeEntries[ei][field] =
+                                          e.target.value;
+                                        setHospitalizationRows(u);
+                                      }
+                                    }}
+                                  />
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </Box>
+                        ))}
+
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{ alignSelf: "flex-start" }}
+                          onClick={() => addEyeRow(index)}
+                        >
+                          + Add Eye Entry
+                        </Button>
+
+                        {/* ══════════════════════════════════════════ */}
+
+                        {/* Ear Header */}
+                        <Typography
+                          sx={{
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            color: "#1a56a0",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.4px",
+                            borderBottom: "1px solid #c8d4e8",
+                            pb: 0.5,
+                            mt: 1,
+                          }}
+                        >
+                          👂 Ear Health Details
+                        </Typography>
+
+                        {(row.earEntries || []).map((ear, eri) => (
+                          <Box
+                            key={eri}
+                            sx={{
+                              border: "1px solid #e3eaf5",
+                              borderRadius: 1.5,
+                              p: 2,
+                              background: "#f7faff",
+                              position: "relative",
+                            }}
+                          >
+                            {(row.earEntries || []).length > 0 && (
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  position: "absolute",
+                                  top: 6,
+                                  right: 6,
+                                  color: "#c62828",
+                                }}
+                                onClick={() => {
+                                  const u = [...hospitalizationRows];
+                                  u[index].earEntries = u[
+                                    index
+                                  ].earEntries.filter((_, i) => i !== eri);
+                                  setHospitalizationRows(u);
+                                  const errKey = `${index}-${eri}`;
+                                  setEarDateErrors((prev) => {
+                                    const n = { ...prev };
+                                    delete n[errKey];
+                                    return n;
+                                  });
+                                }}
+                              >
+                                <DeleteOutlineIcon fontSize="small" />
+                              </IconButton>
+                            )}
+
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Ear Specialist Name"
+                                  fullWidth
+                                  size="small"
+                                  value={ear.earSpecialistName || ""}
+                                  onKeyDown={(e) => {
+                                    if (/[0-9]/.test(e.key)) e.preventDefault();
+                                  }}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].earEntries[eri].earSpecialistName =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+
+                              {/* ── EAR DATE PICKER with 6-month validation ── */}
+                              <Grid item xs={12} sm={6} md={4}>
+                                <DesktopDatePicker
+                                  label="Checkup Date (Bi-Annual)"
+                                  value={
+                                    ear.earCheckupDate
+                                      ? dayjs(ear.earCheckupDate)
+                                      : null
+                                  }
+                                  format="DD/MM/YYYY"
+                                  onChange={(newVal) => {
+                                    const formatted =
+                                      newVal && newVal.isValid()
+                                        ? newVal.format("YYYY-MM-DD")
+                                        : "";
+                                    const u = [...hospitalizationRows];
+                                    const errKey = `${index}-${eri}`;
+
+                                    const error = formatted
+                                      ? validateBiAnnualDate(
+                                          formatted,
+                                          u[index].earEntries,
+                                          eri,
+                                          "earCheckupDate",
+                                        )
+                                      : null;
+
+                                    if (error) {
+                                      setEarDateErrors((prev) => ({
+                                        ...prev,
+                                        [errKey]: error,
+                                      }));
+                                      u[index].earEntries[eri].earCheckupDate =
+                                        formatted;
+                                      setHospitalizationRows(u);
+                                    } else {
+                                      setEarDateErrors((prev) => {
+                                        const n = { ...prev };
+                                        delete n[errKey];
+                                        return n;
+                                      });
+                                      u[index].earEntries[eri].earCheckupDate =
+                                        formatted;
+                                      setHospitalizationRows(u);
+                                    }
+                                  }}
+                                  slotProps={{
+                                    textField: {
+                                      fullWidth: true,
+                                      size: "small",
+                                      error: !!earDateErrors[`${index}-${eri}`],
+                                      helperText: earDateErrors[
+                                        `${index}-${eri}`
+                                      ]
+                                        ? `⚠️ ${earDateErrors[`${index}-${eri}`]}`
+                                        : "Must be 6+ months from other entries",
+                                      FormHelperTextProps: {
+                                        sx: {
+                                          color: earDateErrors[
+                                            `${index}-${eri}`
+                                          ]
+                                            ? "#c62828"
+                                            : "#888",
+                                          fontSize: "0.68rem",
+                                        },
+                                      },
+                                    },
+                                  }}
+                                />
+                              </Grid>
+
+                              <Grid item xs={6} sm={3} md={2}>
+                                <TextField
+                                  select
+                                  label="Class"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={ear.earClass || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].earEntries[eri].earClass =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {["6", "7", "8", "9", "10", "11", "12"].map(
+                                    (c) => (
+                                      <MenuItem key={c} value={c}>
+                                        {c}
+                                      </MenuItem>
+                                    ),
+                                  )}
+                                </TextField>
+                              </Grid>
+
+                              <Grid item xs={6} sm={3} md={2}>
+                                <TextField
+                                  select
+                                  label="Section"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={ear.earSection || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].earEntries[eri].earSection =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {["A", "B", "C"].map((s) => (
+                                    <MenuItem key={s} value={s}>
+                                      {s}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Grid>
+
+                              {[
+                                {
+                                  label: "No. of Students Screened",
+                                  field: "earStudentsScreened",
+                                },
+                                {
+                                  label: "No. of Students with Ear Problem",
+                                  field: "earStudentsWithProblem",
+                                },
+                                {
+                                  label:
+                                    "No. of Students Needing Ear Equipment",
+                                  field: "earNeedsEquipment",
+                                },
+                              ].map(({ label, field }) => (
+                                <Grid item xs={12} sm={6} md={4} key={field}>
+                                  <TextField
+                                    label={label}
+                                    fullWidth
+                                    size="small"
+                                    type="number"
+                                    inputProps={{ min: 0 }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "-" || e.key === "e")
+                                        e.preventDefault();
+                                    }}
+                                    value={ear[field] || ""}
+                                    onChange={(e) => {
+                                      if (Number(e.target.value) >= 0) {
+                                        const u = [...hospitalizationRows];
+                                        u[index].earEntries[eri][field] =
+                                          e.target.value;
+                                        setHospitalizationRows(u);
+                                      }
+                                    }}
+                                  />
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </Box>
+                        ))}
+
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{ alignSelf: "flex-start" }}
+                          onClick={() => addEarRow(index)}
+                        >
+                          + Add Ear Entry
+                        </Button>
+                      </Box>
+                    </LocalizationProvider>
+
+                    {/* ══════════════════════════════════════════════════════════════
+        ✅ NEW: MEDICAL STAFF DETAILS
+    ══════════════════════════════════════════════════════════════ */}
+                    <Box
+                      sx={{
+                        border: "1px solid #dce3f0",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        mb: 3,
+                      }}
+                    >
+                      {/* Header */}
+                      <Box
+                        sx={{
+                          background:
+                            "linear-gradient(to right, #0d47a1, #1976d2)",
+                          px: 2.5,
+                          py: 1.4,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: "#fff",
+                            fontSize: "0.85rem",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.6px",
+                          }}
+                        >
+                          🏥 Medical Staff Details
+                        </Typography>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          p: 2.5,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 3,
+                        }}
+                      >
+                        {/* ── A. STAFF NURSE (24×7) ── */}
+                        <Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              mb: 1.5,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "0.78rem",
+                                fontWeight: 600,
+                                color: "#0d47a1",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                                borderLeft: "3px solid #1976d2",
+                                pl: 1,
+                              }}
+                            >
+                              🩺 Staff Nurse Details (24×7 Duty)
+                            </Typography>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<AddCircleOutlineIcon />}
+                              onClick={() => {
+                                const u = [...hospitalizationRows];
+                                u[index].nurseEntries = [
+                                  ...(u[index].nurseEntries || []),
+                                  blankNurseEntry(),
+                                ];
+                                setHospitalizationRows(u);
+                              }}
+                            >
+                              Add Nurse
+                            </Button>
+                          </Box>
+
+                          {(row.nurseEntries || []).map((nurse, ni) => (
+                            <Box
+                              key={ni}
+                              sx={{
+                                border: "1px solid #e3eaf5",
+                                borderRadius: 1.5,
+                                p: 2,
+                                mb: 1.5,
+                                background: "#f7faff",
+                                position: "relative",
+                              }}
+                            >
+                              {(row.nurseEntries || []).length > 1 && (
+                                <IconButton
+                                  size="small"
+                                  sx={{
+                                    position: "absolute",
+                                    top: 6,
+                                    right: 6,
+                                    color: "#c62828",
+                                  }}
+                                  onClick={() => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].nurseEntries = u[
+                                      index
+                                    ].nurseEntries.filter((_, i) => i !== ni);
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6} md={4}>
+                                  <TextField
+                                    label="Nurse Full Name"
+                                    fullWidth
+                                    size="small"
+                                    value={nurse.nurseName}
+                                    onKeyDown={(e) => {
+                                      if (/[0-9]/.test(e.key))
+                                        e.preventDefault();
+                                    }}
+                                    onChange={(e) => {
+                                      const u = [...hospitalizationRows];
+                                      u[index].nurseEntries[ni].nurseName =
+                                        e.target.value;
+                                      setHospitalizationRows(u);
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={4}>
+                                  <TextField
+                                    select
+                                    label="Qualification"
+                                    fullWidth
+                                    size="small"
+                                    sx={{ minWidth: 220 }}
+                                    value={nurse.nurseQualification}
+                                    onChange={(e) => {
+                                      const u = [...hospitalizationRows];
+                                      u[index].nurseEntries[
+                                        ni
+                                      ].nurseQualification = e.target.value;
+                                      setHospitalizationRows(u);
+                                    }}
+                                  >
+                                    {[
+                                      "GNM (General Nursing & Midwifery)",
+                                      "ANM (Auxiliary Nurse Midwife)",
+                                      "B.Sc Nursing",
+                                      "M.Sc Nursing",
+                                      "Post Basic B.Sc Nursing",
+                                      "Other",
+                                    ].map((q) => (
+                                      <MenuItem key={q} value={q}>
+                                        {q}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={4}>
+                                  <TextField
+                                    label="Nursing Council Reg. No."
+                                    fullWidth
+                                    size="small"
+                                    value={nurse.nurseRegNo}
+                                    onChange={(e) => {
+                                      const u = [...hospitalizationRows];
+                                      u[index].nurseEntries[ni].nurseRegNo =
+                                        e.target.value;
+                                      setHospitalizationRows(u);
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={4}>
+                                  <TextField
+                                    label="Contact Number"
+                                    fullWidth
+                                    size="small"
+                                    sx={{ minWidth: 220 }}
+                                    value={nurse.nurseContact}
+                                    inputProps={{
+                                      maxLength: 10,
+                                      inputMode: "numeric",
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (
+                                        !/[0-9]/.test(e.key) &&
+                                        ![
+                                          "Backspace",
+                                          "Delete",
+                                          "ArrowLeft",
+                                          "ArrowRight",
+                                          "Tab",
+                                        ].includes(e.key)
+                                      )
+                                        e.preventDefault();
+                                    }}
+                                    error={
+                                      nurse.nurseContact &&
+                                      nurse.nurseContact.length !== 10
+                                    }
+                                    helperText={
+                                      nurse.nurseContact &&
+                                      nurse.nurseContact.length !== 10
+                                        ? "Must be 10 digits"
+                                        : ""
+                                    }
+                                    onChange={(e) => {
+                                      const u = [...hospitalizationRows];
+                                      u[index].nurseEntries[ni].nurseContact =
+                                        e.target.value;
+                                      setHospitalizationRows(u);
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={4}>
+                                  <TextField
+                                    select
+                                    label="Duty Shift"
+                                    fullWidth
+                                    size="small"
+                                    sx={{ minWidth: 220 }}
+                                    value={nurse.nurseShift}
+                                    onChange={(e) => {
+                                      const u = [...hospitalizationRows];
+                                      u[index].nurseEntries[ni].nurseShift =
+                                        e.target.value;
+                                      setHospitalizationRows(u);
+                                    }}
+                                  >
+                                    {[
+                                      "Morning (6 AM – 2 PM)",
+                                      "Evening (2 PM – 10 PM)",
+                                      "Night (10 PM – 6 AM)",
+                                      "General (Full Day)",
+                                    ].map((s) => (
+                                      <MenuItem key={s} value={s}>
+                                        {s}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={4}>
+                                  <TextField
+                                    label="Date of Joining"
+                                    fullWidth
+                                    size="small"
+                                    type="date"
+                                    InputLabelProps={{ shrink: true }}
+                                    value={nurse.nurseJoiningDate}
+                                    onChange={(e) => {
+                                      const u = [...hospitalizationRows];
+                                      u[index].nurseEntries[
+                                        ni
+                                      ].nurseJoiningDate = e.target.value;
+                                      setHospitalizationRows(u);
+                                    }}
+                                  />
+                                </Grid>
+                              </Grid>
+                            </Box>
+                          ))}
+                        </Box>
+
+                        <Divider />
+
+                        {/* ── B. DAILY VISITING DOCTOR ── */}
+                        <Box>
+                          <Typography
+                            sx={{
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              color: "#0d47a1",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              borderLeft: "3px solid #1976d2",
+                              pl: 1,
+                              mb: 1.5,
+                            }}
+                          >
+                            👨‍⚕️ Daily Visiting Doctor
+                          </Typography>
+
+                          {/* Doctor Profile */}
+                          <Box
+                            sx={{
+                              border: "1px solid #e3eaf5",
+                              borderRadius: 1.5,
+                              p: 2,
+                              mb: 2,
+                              background: "#f7faff",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "0.7rem",
+                                color: "#5a6a85",
+                                fontWeight: 500,
+                                mb: 1.5,
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Doctor Profile
+                            </Typography>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Doctor Full Name"
+                                  fullWidth
+                                  size="small"
+                                  onKeyDown={(e) => {
+                                    if (/[0-9]/.test(e.key)) e.preventDefault();
+                                  }}
+                                  value={row.visitingDoctorName || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].visitingDoctorName =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  select
+                                  label="Specialization"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={row.visitingDoctorSpecialization || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].visitingDoctorSpecialization =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {[
+                                    "General Medicine / MBBS",
+                                    "Paediatrics",
+                                    "General Surgery",
+                                    "Gynaecology",
+                                    "Orthopaedics",
+                                    "Dermatology",
+                                    "ENT",
+                                    "Ophthalmology",
+                                    "Other",
+                                  ].map((s) => (
+                                    <MenuItem key={s} value={s}>
+                                      {s}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Medical Council Reg. No."
+                                  fullWidth
+                                  size="small"
+                                  value={row.visitingDoctorRegNo || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].visitingDoctorRegNo =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Contact Number"
+                                  fullWidth
+                                  size="small"
+                                  value={row.visitingDoctorContact || ""}
+                                  inputProps={{
+                                    maxLength: 10,
+                                    inputMode: "numeric",
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (
+                                      !/[0-9]/.test(e.key) &&
+                                      ![
+                                        "Backspace",
+                                        "Delete",
+                                        "ArrowLeft",
+                                        "ArrowRight",
+                                        "Tab",
+                                      ].includes(e.key)
+                                    )
+                                      e.preventDefault();
+                                  }}
+                                  error={
+                                    row.visitingDoctorContact &&
+                                    row.visitingDoctorContact.length !== 10
+                                  }
+                                  helperText={
+                                    row.visitingDoctorContact &&
+                                    row.visitingDoctorContact.length !== 10
+                                      ? "Must be 10 digits"
+                                      : ""
+                                  }
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].visitingDoctorContact =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Scheduled Daily Visit Time"
+                                  fullWidth
+                                  size="small"
+                                  type="time"
+                                  InputLabelProps={{ shrink: true }}
+                                  value={row.scheduledVisitTime || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].scheduledVisitTime =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                            </Grid>
+                          </Box>
+
+                          {/* Digital Visit Attendance Log */}
+                          <Box
+                            sx={{
+                              border: "1px solid #dce3f0",
+                              borderRadius: 1.5,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                background: "#1a56a0",
+                                px: 2,
+                                py: 1,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  color: "#fff",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 500,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.4px",
+                                }}
+                              >
+                                📋 Doctor Visit Attendance Log
+                              </Typography>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddCircleOutlineIcon />}
+                                sx={{
+                                  color: "#fff",
+                                  borderColor: "rgba(255,255,255,0.5)",
+                                  fontSize: "0.68rem",
+                                }}
+                                onClick={() => {
+                                  const u = [...hospitalizationRows];
+                                  u[index].doctorVisitLogs = [
+                                    ...(u[index].doctorVisitLogs || []),
+                                    blankVisitLog(),
+                                  ];
+                                  setHospitalizationRows(u);
+                                }}
+                              >
+                                Add Record
+                              </Button>
+                            </Box>
+                            <TableContainer component={Paper} elevation={0}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow sx={{ background: "#e8f0fb" }}>
+                                    {[
+                                      "Visit Date",
+                                      "Actual Visit Time",
+                                      "Visit Status",
+                                      "Remarks / Notes",
+                                      "",
+                                    ].map((h) => (
+                                      <TableCell
+                                        key={h}
+                                        sx={{
+                                          fontSize: "0.7rem",
+                                          fontWeight: 600,
+                                          color: "#1a56a0",
+                                          textTransform: "uppercase",
+                                          letterSpacing: "0.3px",
+                                        }}
+                                      >
+                                        {h}
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {(row.doctorVisitLogs || []).map(
+                                    (log, li) => (
+                                      <TableRow
+                                        key={li}
+                                        sx={{
+                                          "&:hover": { background: "#f7faff" },
+                                        }}
+                                      >
+                                        <TableCell sx={{ minWidth: 150 }}>
+                                          <TextField
+                                            size="small"
+                                            type="date"
+                                            InputLabelProps={{ shrink: true }}
+                                            value={log.visitDate}
+                                            onChange={(e) => {
+                                              const u = [
+                                                ...hospitalizationRows,
+                                              ];
+                                              u[index].doctorVisitLogs[
+                                                li
+                                              ].visitDate = e.target.value;
+                                              setHospitalizationRows(u);
+                                            }}
+                                            sx={{
+                                              "& .MuiInputBase-root": {
+                                                fontSize: "0.78rem",
+                                              },
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell sx={{ minWidth: 130 }}>
+                                          <TextField
+                                            size="small"
+                                            type="time"
+                                            InputLabelProps={{ shrink: true }}
+                                            value={log.actualVisitTime}
+                                            onChange={(e) => {
+                                              const u = [
+                                                ...hospitalizationRows,
+                                              ];
+                                              u[index].doctorVisitLogs[
+                                                li
+                                              ].actualVisitTime =
+                                                e.target.value;
+                                              setHospitalizationRows(u);
+                                            }}
+                                            sx={{
+                                              "& .MuiInputBase-root": {
+                                                fontSize: "0.78rem",
+                                              },
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell sx={{ minWidth: 200 }}>
+                                          <TextField
+                                            select
+                                            size="small"
+                                            fullWidth
+                                            value={log.visitStatus}
+                                            onChange={(e) => {
+                                              const u = [
+                                                ...hospitalizationRows,
+                                              ];
+                                              u[index].doctorVisitLogs[
+                                                li
+                                              ].visitStatus = e.target.value;
+                                              setHospitalizationRows(u);
+                                            }}
+                                            sx={{
+                                              "& .MuiInputBase-root": {
+                                                fontSize: "0.78rem",
+                                              },
+                                            }}
+                                          >
+                                            {[
+                                              {
+                                                label: "Visited",
+                                                bg: "#d4edda",
+                                                color: "#155724",
+                                              },
+                                              {
+                                                label: "Absent",
+                                                bg: "#f8d7da",
+                                                color: "#721c24",
+                                              },
+                                              {
+                                                label: "Rescheduled",
+                                                bg: "#fff3cd",
+                                                color: "#856404",
+                                              },
+                                              {
+                                                label: "Emergency Call",
+                                                bg: "#cce5ff",
+                                                color: "#004085",
+                                              },
+                                              {
+                                                label: "Early Departure",
+                                                bg: "#e2e3e5",
+                                                color: "#383d41",
+                                              },
+                                            ].map(({ label, bg, color }) => (
+                                              <MenuItem
+                                                key={label}
+                                                value={label}
+                                              >
+                                                <Chip
+                                                  label={label}
+                                                  size="small"
+                                                  sx={{
+                                                    fontSize: "0.68rem",
+                                                    background: bg,
+                                                    color,
+                                                  }}
+                                                />
+                                              </MenuItem>
+                                            ))}
+                                          </TextField>
+                                        </TableCell>
+                                        <TableCell sx={{ minWidth: 200 }}>
+                                          <TextField
+                                            size="small"
+                                            fullWidth
+                                            placeholder="Optional remarks…"
+                                            value={log.remarks}
+                                            onChange={(e) => {
+                                              const u = [
+                                                ...hospitalizationRows,
+                                              ];
+                                              u[index].doctorVisitLogs[
+                                                li
+                                              ].remarks = e.target.value;
+                                              setHospitalizationRows(u);
+                                            }}
+                                            sx={{
+                                              "& .MuiInputBase-root": {
+                                                fontSize: "0.78rem",
+                                              },
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          {(row.doctorVisitLogs || []).length >
+                                            1 && (
+                                            <IconButton
+                                              size="small"
+                                              sx={{ color: "#c62828" }}
+                                              onClick={() => {
+                                                const u = [
+                                                  ...hospitalizationRows,
+                                                ];
+                                                u[index].doctorVisitLogs = u[
+                                                  index
+                                                ].doctorVisitLogs.filter(
+                                                  (_, i) => i !== li,
+                                                );
+                                                setHospitalizationRows(u);
+                                              }}
+                                            >
+                                              <DeleteOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ),
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          </Box>
+                        </Box>
+
+                        <Divider />
+
+                        {/* ── C. PSYCHOLOGICAL COUNSELLOR ── */}
+                        <Box>
+                          <Typography
+                            sx={{
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              color: "#0d47a1",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              borderLeft: "3px solid #1976d2",
+                              pl: 1,
+                              mb: 1.5,
+                            }}
+                          >
+                            🧠 Psychological Counsellor
+                          </Typography>
+                          <Box
+                            sx={{
+                              border: "1px solid #e3eaf5",
+                              borderRadius: 1.5,
+                              p: 2,
+                              background: "#f7faff",
+                            }}
+                          >
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Counsellor Full Name"
+                                  fullWidth
+                                  size="small"
+                                  value={row.counsellorName || ""}
+                                  onKeyDown={(e) => {
+                                    if (/[0-9]/.test(e.key)) e.preventDefault();
+                                  }}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].counsellorName = e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  select
+                                  label="Qualification"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={row.counsellorQualification || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].counsellorQualification =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {[
+                                    "M.A. Psychology",
+                                    "M.Sc. Psychology",
+                                    "M.Phil. Clinical Psychology",
+                                    "Ph.D. Psychology",
+                                    "RCI Registered Counsellor",
+                                    "REBT / CBT Certified",
+                                    "Other",
+                                  ].map((q) => (
+                                    <MenuItem key={q} value={q}>
+                                      {q}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Registration / Certificate No."
+                                  fullWidth
+                                  size="small"
+                                  value={row.counsellorRegNo || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].counsellorRegNo = e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Contact Number"
+                                  fullWidth
+                                  size="small"
+                                  value={row.counsellorContact || ""}
+                                  inputProps={{
+                                    maxLength: 10,
+                                    inputMode: "numeric",
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (
+                                      !/[0-9]/.test(e.key) &&
+                                      ![
+                                        "Backspace",
+                                        "Delete",
+                                        "ArrowLeft",
+                                        "ArrowRight",
+                                        "Tab",
+                                      ].includes(e.key)
+                                    )
+                                      e.preventDefault();
+                                  }}
+                                  error={
+                                    row.counsellorContact &&
+                                    row.counsellorContact.length !== 10
+                                  }
+                                  helperText={
+                                    row.counsellorContact &&
+                                    row.counsellorContact.length !== 10
+                                      ? "Must be 10 digits"
+                                      : ""
+                                  }
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].counsellorContact = e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  select
+                                  label="Available Days"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  SelectProps={{
+                                    multiple: true,
+                                    renderValue: (selected) => (
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          flexWrap: "wrap",
+                                          gap: 0.5,
+                                        }}
+                                      >
+                                        {selected.map((v) => (
+                                          <Chip
+                                            key={v}
+                                            label={v}
+                                            size="small"
+                                          />
+                                        ))}
+                                      </Box>
+                                    ),
+                                  }}
+                                  value={row.counsellorAvailableDays || []}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].counsellorAvailableDays =
+                                      typeof e.target.value === "string"
+                                        ? e.target.value.split(",")
+                                        : e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {[
+                                    "Mon",
+                                    "Tue",
+                                    "Wed",
+                                    "Thu",
+                                    "Fri",
+                                    "Sat",
+                                    "Sun",
+                                  ].map((d) => (
+                                    <MenuItem key={d} value={d}>
+                                      {d}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  select
+                                  label="Session Type"
+                                  fullWidth
+                                  size="small"
+                                  sx={{ minWidth: 220 }}
+                                  value={row.counsellorSessionType || ""}
+                                  onChange={(e) => {
+                                    const u = [...hospitalizationRows];
+                                    u[index].counsellorSessionType =
+                                      e.target.value;
+                                    setHospitalizationRows(u);
+                                  }}
+                                >
+                                  {[
+                                    "Individual",
+                                    "Group",
+                                    "Both Individual & Group",
+                                  ].map((t) => (
+                                    <MenuItem key={t} value={t}>
+                                      {t}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Sessions Conducted (This Month)"
+                                  fullWidth
+                                  size="small"
+                                  type="number"
+                                  inputProps={{ min: 0 }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "-" || e.key === "e")
+                                      e.preventDefault();
+                                  }}
+                                  value={row.counsellorSessionsConducted || ""}
+                                  onChange={(e) => {
+                                    if (Number(e.target.value) >= 0) {
+                                      const u = [...hospitalizationRows];
+                                      u[index].counsellorSessionsConducted =
+                                        e.target.value;
+                                      setHospitalizationRows(u);
+                                    }
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6} md={4}>
+                                <TextField
+                                  label="Students Counselled (This Month)"
+                                  fullWidth
+                                  size="small"
+                                  type="number"
+                                  inputProps={{ min: 0 }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "-" || e.key === "e")
+                                      e.preventDefault();
+                                  }}
+                                  value={row.counsellorStudentsCounselled || ""}
+                                  onChange={(e) => {
+                                    if (Number(e.target.value) >= 0) {
+                                      const u = [...hospitalizationRows];
+                                      u[index].counsellorStudentsCounselled =
+                                        e.target.value;
+                                      setHospitalizationRows(u);
+                                    }
+                                  }}
+                                />
+                              </Grid>
+                            </Grid>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Box>
+                    {/* END MEDICAL STAFF DETAILS */}
                   </Box>
                 ))}
-
-                {/* Add Case Button */}
-                <Box mb={4}>
-                  <Button
-                    variant="outlined"
-                    onClick={() =>
-                      setHospitalizationRows([
-                        ...hospitalizationRows,
-                        {
-                          studentName: "",
-                          rollNo: "",
-                          class: "",
-                          section: "",
-                          admissionDate: "",
-                          dischargeDate: "",
-                          reasonForHospitalization: "",
-                          hospitalEmpanelled: "",
-                          empanellementValidity: "",
-                          empanelmentDepartment: "",
-                          doctorName: "",
-                          estimatedCost: "",
-                          amountClaimed: "",
-                          claimStatus: "",
-                          guardianName: "",
-                          guardianContact: "",
-                        },
-                      ])
-                    }
-                  >
-                    + Add Hospitalization Case
-                  </Button>
-                </Box>
               </>
             )}
             {currentStep === 7 && (
@@ -8017,7 +11210,59 @@ const EMRSForm = ({ addSubmittedForm }) => {
                       backgroundColor: "#fff",
                     }}
                   >
-                    {/* ── SECTION 1: PERSONAL & POST DETAILS ── */}
+                    {/* ── SANCTIONED STRENGTH ── */}
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+                    >
+                      Sanctioned Strength
+                    </Typography>
+                    <Box
+                      sx={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 1,
+                        p: 2,
+                        mb: 2,
+                        backgroundColor: "#f8fafc",
+                      }}
+                    >
+                      <Grid container spacing={2}>
+                        {teachingStaffSummaryFields
+                          .filter(
+                            (f) =>
+                              f.name === "total" ||
+                              f.name === "filled" ||
+                              f.name === "vacant",
+                          )
+
+                          .map((field) => (
+                            <Grid item xs={12} sm={4} key={field.name}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                type={field.type}
+                                label={field.label}
+                                value={
+                                  field.name === "vacant"
+                                    ? Number(row.total || 0) -
+                                        Number(row.filled || 0) || ""
+                                    : row[field.name]
+                                }
+                                inputProps={{ min: 0 }}
+                                InputProps={{ readOnly: field.readOnly }}
+                                onChange={(e) => {
+                                  const updatedRows = [...teachingRows];
+                                  updatedRows[index][field.name] =
+                                    e.target.value;
+                                  setteachingRows(updatedRows);
+                                }}
+                              />
+                            </Grid>
+                          ))}
+                      </Grid>
+                    </Box>
+
+                    {/* ── STAFF DETAILS ── */}
                     <Typography
                       variant="subtitle1"
                       sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
@@ -8049,44 +11294,12 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                   fullWidth
                                   size="small"
                                   sx={{ minWidth: 220 }}
-                                  type={
-                                    field.name === "contact" ? "text" : "text"
-                                  }
                                   label={field.label}
-                                  value={row[field.name]}
+                                  value={row[field.name] ?? ""}
                                   InputProps={{ readOnly: field.readOnly }}
                                   InputLabelProps={{
                                     shrink: field.type === "date" || undefined,
                                   }}
-                                  {...(field.name === "contact" && {
-                                    inputProps: {
-                                      maxLength: 10,
-                                      inputMode: "numeric",
-                                      pattern: "[0-9]*",
-                                    },
-                                    onKeyDown: (e) => {
-                                      if (
-                                        !/[0-9]/.test(e.key) &&
-                                        ![
-                                          "Backspace",
-                                          "Delete",
-                                          "ArrowLeft",
-                                          "ArrowRight",
-                                          "Tab",
-                                        ].includes(e.key)
-                                      ) {
-                                        e.preventDefault();
-                                      }
-                                    },
-                                    error:
-                                      row.contact &&
-                                      row.contact.toString().length !== 10,
-                                    helperText:
-                                      row.contact &&
-                                      row.contact.toString().length !== 10
-                                        ? "Must be exactly 10 digits"
-                                        : "",
-                                  })}
                                   onChange={(e) => {
                                     const updatedRows = [...teachingRows];
                                     updatedRows[index][field.name] =
@@ -8106,7 +11319,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                                   fullWidth
                                   size="small"
                                   sx={{ minWidth: 220 }}
-                                  type={field.type}
+                                  type={field.type || "text"}
                                   label={field.label}
                                   value={row[field.name]}
                                   InputProps={{ readOnly: field.readOnly }}
@@ -8125,79 +11338,8 @@ const EMRSForm = ({ addSubmittedForm }) => {
                           ))}
                       </Grid>
                     </Box>
-                    {/* ── SECTION 4: ATTENDANCE ── */}
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ fontWeight: 600, color: "#1976d2", mb: 1, mt: 2 }}
-                    >
-                      Staff Attendance
-                    </Typography>
-                    <Box
-                      sx={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 1,
-                        p: 2,
-                        background: "#f8fafc",
-                      }}
-                    >
-                      {renderStaffAttendance(
-                        teachingRows,
-                        setteachingRows,
-                        index,
-                      )}
-                    </Box>
 
-                    {/* ── SECTION 2: SANCTIONED STRENGTH ── */}
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
-                    >
-                      Sanctioned Strength
-                    </Typography>
-                    <Box
-                      sx={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 1,
-                        p: 2,
-                        mb: 2,
-                        backgroundColor: "#f8fafc",
-                      }}
-                    >
-                      <Grid container spacing={2}>
-                        {teachingStaffSummaryFields
-                          .filter(
-                            (f) =>
-                              f.name === "total" ||
-                              f.name === "filled" ||
-                              f.name === "vacant",
-                          )
-                          .map((field) => (
-                            <Grid item xs={12} sm={4} key={field.name}>
-                              <TextField
-                                fullWidth
-                                size="small"
-                                type={field.type}
-                                label={field.label}
-                                value={
-                                  field.name === "vacant"
-                                    ? Number(row.total || 0) -
-                                        Number(row.filled || 0) || ""
-                                    : row[field.name]
-                                }
-                                InputProps={{ readOnly: field.readOnly }}
-                                onChange={(e) => {
-                                  const updatedRows = [...teachingRows];
-                                  updatedRows[index][field.name] =
-                                    e.target.value;
-                                  setteachingRows(updatedRows);
-                                }}
-                              />
-                            </Grid>
-                          ))}
-                      </Grid>
-                    </Box>
-
-                    {/* ── SECTION 3: EDUCATIONAL QUALIFICATION ── */}
+                    {/* ── EDUCATIONAL QUALIFICATION ── */}
                     <Typography
                       variant="subtitle1"
                       sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
@@ -8218,78 +11360,62 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         index,
                       )}
                     </Box>
+
+                    {/* ── ADD POST BUTTON ── */}
+                    <Grid container>
+                      <Grid item xs={12}>
+                        <Box mt={1} mb={4}>
+                          <Button
+                            variant="outlined"
+                            sx={{ mb: 4 }}
+                            onClick={() =>
+                              setteachingRows([
+                                ...teachingRows,
+                                {
+                                  post: "",
+                                  name: "",
+                                  dob: "",
+                                  doj: "",
+                                  email: "",
+                                  contact: "",
+                                  total: "",
+                                  filled: "",
+                                  vacant: "",
+                                  academicQualifications: [
+                                    {
+                                      qualification: "",
+                                      course: "",
+                                      registrationNo: "",
+                                      rollNo: "",
+                                      college: "",
+                                      marksObtained: "",
+                                      university: "",
+                                      passingYear: "",
+                                    },
+                                  ],
+                                  professionalQualifications: [
+                                    {
+                                      qualification: "",
+                                      registrationNo: "",
+                                      rollNo: "",
+                                      examConductedBy: "",
+                                      passingYear: "",
+                                      marksObtained: "",
+                                      affiliationBody: "",
+                                    },
+                                  ],
+                                },
+                              ])
+                            }
+                          >
+                            + Add Post
+                          </Button>
+                        </Box>
+                      </Grid>
+                    </Grid>
                   </Box>
                 ))}
-                {/* Add Post Button */}
-                <Grid container>
-                  <Grid item xs={12}>
-                    <Box mt={1} mb={4}>
-                      <Button
-                        variant="outlined"
-                        sx={{ mb: 4 }}
-                        onClick={() =>
-                          setteachingRows([
-                            ...teachingRows,
-                            {
-                              post: "",
-                              name: "",
-                              dob: "",
-                              doj: "",
-                              email: "",
-                              contact: "",
-                              total: "",
-                              filled: "",
-                              vacant: "",
-                              academicQualifications: [
-                                {
-                                  post: "",
-                                  name: " ",
-                                  qualification: "",
-                                  course: "",
-                                  registrationNo: "",
-                                  rollNo: "",
-                                  college: "",
-                                  marksObtained: "",
-                                  university: "",
-                                  passingYear: "",
-                                },
-                              ],
-                              professionalQualifications: [
-                                {
-                                  post: "",
-                                  name: " ",
-                                  qualification: "",
-                                  registrationNo: "",
-                                  rollNo: "",
-                                  examConductedBy: "",
-                                  passingYear: "",
-                                  marksObtained: "",
-                                  affiliationBody: "",
-                                },
-                              ],
-                              tetQualifications: [
-                                {
-                                  post: "",
-                                  name: " ",
-                                  qualification: "",
-                                  registrationNo: "",
-                                  rollNo: "",
-                                  examConductedBy: "",
-                                  passingYear: "",
-                                  marksObtained: "",
-                                  affiliationBody: "",
-                                },
-                              ],
-                              monthlyAttendance: [],
-                            },
-                          ])
-                        }
-                      >
-                        + Add Post
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
+
                 {/* =================NON TEACHING STAFF DETAILS SECTION ================= */}
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
@@ -8322,7 +11448,57 @@ const EMRSForm = ({ addSubmittedForm }) => {
                       backgroundColor: "#fff",
                     }}
                   >
-                    {/* ── SECTION 1: STAFF DETAILS ── */}
+                    {/* ── SECTION 2: SANCTIONED STRENGTH ── */}
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+                    >
+                      Sanctioned Strength
+                    </Typography>
+                    <Box
+                      sx={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 1,
+                        p: 2,
+                        mb: 2,
+                        backgroundColor: "#f8fafc",
+                      }}
+                    >
+                      <Grid container spacing={2}>
+                        {nonTeachingStaffDetailFields
+                          .filter(
+                            (f) =>
+                              f.name === "total" ||
+                              f.name === "filled" ||
+                              f.name === "vacant",
+                          )
+                          .map((field) => (
+                            <Grid item xs={12} sm={4} key={field.name}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                type={field.type}
+                                label={field.label}
+                                value={
+                                  field.name === "vacant"
+                                    ? Number(row.total || 0) -
+                                        Number(row.filled || 0) || ""
+                                    : row[field.name]
+                                }
+                                InputProps={{ readOnly: field.readOnly }}
+                                onChange={(e) => {
+                                  const updatedRows = [...nonTeachingRows];
+                                  updatedRows[index][field.name] =
+                                    e.target.value;
+                                  setnonTeachingRows(updatedRows);
+                                }}
+                              />
+                            </Grid>
+                          ))}
+                      </Grid>
+                    </Box>
+
+                    {/*  STAFF DETAILS ── */}
                     <Typography
                       variant="subtitle1"
                       sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
@@ -8431,57 +11607,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                       </Grid>
                     </Box>
 
-                    {/* ── SECTION 2: SANCTIONED STRENGTH ── */}
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
-                    >
-                      Sanctioned Strength
-                    </Typography>
-                    <Box
-                      sx={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 1,
-                        p: 2,
-                        mb: 2,
-                        backgroundColor: "#f8fafc",
-                      }}
-                    >
-                      <Grid container spacing={2}>
-                        {nonTeachingStaffDetailFields
-                          .filter(
-                            (f) =>
-                              f.name === "total" ||
-                              f.name === "filled" ||
-                              f.name === "vacant",
-                          )
-                          .map((field) => (
-                            <Grid item xs={12} sm={4} key={field.name}>
-                              <TextField
-                                fullWidth
-                                size="small"
-                                type={field.type}
-                                label={field.label}
-                                value={
-                                  field.name === "vacant"
-                                    ? Number(row.total || 0) -
-                                        Number(row.filled || 0) || ""
-                                    : row[field.name]
-                                }
-                                InputProps={{ readOnly: field.readOnly }}
-                                onChange={(e) => {
-                                  const updatedRows = [...nonTeachingRows];
-                                  updatedRows[index][field.name] =
-                                    e.target.value;
-                                  setnonTeachingRows(updatedRows);
-                                }}
-                              />
-                            </Grid>
-                          ))}
-                      </Grid>
-                    </Box>
-
-                    {/* ── SECTION 3: EDUCATIONAL QUALIFICATION ── */}
+                    {/*  EDUCATIONAL QUALIFICATION ── */}
                     <Typography
                       variant="subtitle1"
                       sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
@@ -8503,85 +11629,1046 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         false,
                       )}
                     </Box>
-                    {/* ── SECTION 4: ATTENDANCE ── */}
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ fontWeight: 600, color: "#1976d2", mb: 1, mt: 2 }}
-                    >
-                      Staff Attendance
-                    </Typography>
-                    <Box
-                      sx={{
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 1,
-                        p: 2,
-                        background: "#f8fafc",
-                      }}
-                    >
-                      {renderStaffAttendance(
-                        nonTeachingRows,
-                        setnonTeachingRows,
-                        index,
-                      )}
-                    </Box>
+
+                    {/* Add Post Button */}
+                    <Grid container>
+                      <Grid item xs={12}>
+                        <Box mt={1} mb={4}>
+                          <Button
+                            variant="outlined"
+                            sx={{ mb: 4 }}
+                            onClick={() =>
+                              setnonTeachingRows([
+                                ...nonTeachingRows,
+                                {
+                                  post: "",
+                                  name: "",
+                                  dob: "",
+                                  doj: "",
+                                  email: "",
+                                  contact: "",
+                                  total: "",
+                                  filled: "",
+                                  vacant: "",
+                                  academicQualifications: [
+                                    {
+                                      qualification: "",
+                                      course: "",
+                                      registrationNo: "",
+                                      rollNo: "",
+                                      college: "",
+                                      marksObtained: "",
+                                      university: "",
+                                      passingYear: "",
+                                    },
+                                  ],
+                                  professionalQualifications: [
+                                    {
+                                      qualification: "",
+                                      registrationNo: "",
+                                      rollNo: "",
+                                      examConductedBy: "",
+                                      passingYear: "",
+                                      marksObtained: "",
+                                      affiliationBody: "",
+                                    },
+                                  ],
+                                },
+                              ])
+                            }
+                          >
+                            + Add Post
+                          </Button>
+                        </Box>
+                      </Grid>
+                    </Grid>
                   </Box>
                 ))}
-                {/* Add Post Button */}
-                <Grid container>
-                  <Grid item xs={12}>
-                    <Box mt={1} mb={4}>
-                      <Button
-                        variant="outlined"
-                        sx={{ mb: 4 }}
-                        onClick={() =>
-                          setnonTeachingRows([
-                            ...nonTeachingRows,
-                            {
-                              post: "",
-                              name: "",
-                              dob: "",
-                              doj: "",
-                              email: "",
-                              contact: "",
-                              total: "",
-                              filled: "",
-                              vacant: "",
-                              academicQualifications: [
-                                {
-                                  qualification: "",
-                                  course: "",
-                                  registrationNo: "",
-                                  rollNo: "",
-                                  college: "",
-                                  marksObtained: "",
-                                  university: "",
-                                  passingYear: "",
-                                },
-                              ],
-                              professionalQualifications: [
-                                {
-                                  qualification: "",
-                                  registrationNo: "",
-                                  rollNo: "",
-                                  examConductedBy: "",
-                                  passingYear: "",
-                                  marksObtained: "",
-                                  affiliationBody: "",
-                                },
-                              ],
-                              monthlyAttendance: [],
-                            },
-                          ])
-                        }
-                      >
-                        + Add Post
-                      </Button>
-                    </Box>
-                  </Grid>
-                </Grid>
               </>
             )}
             {currentStep === 8 && (
+              <>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    background: "linear-gradient(to right, #16a34a, #4ade80)",
+                    color: "#fff",
+                    padding: "10px 16px",
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    mb: 3,
+                  }}
+                >
+                  📊 Attendance Management
+                </Typography>
+
+                {/* ================= STUDENT ATTENDANCE ================= */}
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+                >
+                  📘 Student Attendance
+                </Typography>
+
+                <Box
+                  sx={{
+                    border: "1px solid #e2e8f0",
+                    p: 2,
+                    borderRadius: 2,
+                    mb: 3,
+                  }}
+                >
+                  <Grid container spacing={2}>
+                    {/* Class */}
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        label="Class"
+                        value={selectedClass}
+                        onChange={(e) => setSelectedClass(e.target.value)}
+                      >
+                        {["6", "7", "8", "9", "10", "11", "12"].map((c) => (
+                          <MenuItem key={c} value={c}>
+                            {c}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    {/* Section */}
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        label="Section"
+                        value={selectedSection}
+                        onChange={(e) => setSelectedSection(e.target.value)}
+                      >
+                        {["A", "B", "C"].map((s) => (
+                          <MenuItem key={s} value={s}>
+                            {s}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    {/* Month */}
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        type="month"
+                        fullWidth
+                        size="small"
+                        label="Month"
+                        InputLabelProps={{ shrink: true }}
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                      />
+                    </Grid>
+
+                    {/* Upload Excel */}
+                    <Grid item xs={12} md={3}>
+                      <Button variant="outlined" component="label" fullWidth>
+                        Upload Excel
+                        <input type="file" hidden />
+                      </Button>
+                    </Grid>
+                  </Grid>
+
+                  {/* Monthly Attendance */}
+                  <Typography
+                    variant="subtitle1"
+                    sx={{ fontWeight: 600, color: "#1976d2", mt: 2, mb: 1 }}
+                  >
+                    Monthly Attendance
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      border: "1px solid #bbdefb",
+                      borderRadius: 2,
+                      p: 2,
+                      mb: 2,
+                      background: "#f0f7ff",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontWeight: 600,
+                        color: "#1976d2",
+                        mb: 2,
+                        fontSize: 14,
+                      }}
+                    >
+                      📅 Monthly Attendance — Class {selectedClass || "—"}
+                      {selectedSection ? ` (Section ${selectedSection})` : ""}
+                    </Typography>
+
+                    {/* Guard — show message if class/section not selected */}
+                    {!selectedClass || !selectedSection ? (
+                      <Typography
+                        sx={{
+                          color: "#94a3b8",
+                          fontStyle: "italic",
+                          fontSize: 13,
+                        }}
+                      >
+                        Please select Class and Section above to record
+                        attendance.
+                      </Typography>
+                    ) : (
+                      <>
+                        {(monthlyAttendance || []).map((att, aIdx) => {
+                          const totalStudents = Number(att.totalStudents || 0);
+                          const workingDays = Number(att.workingDays || 0);
+                          const totalPresent = Number(att.totalPresent || 0);
+
+                          // Avg Present/Day = Days Present ÷ Working Days
+                          const avgPresent =
+                            workingDays > 0 && totalPresent > 0
+                              ? (totalPresent / workingDays).toFixed(1)
+                              : null;
+
+                          // Avg Absent/Day = Total Students - Avg Present/Day
+                          const avgAbsent =
+                            avgPresent !== null && totalStudents > 0
+                              ? (totalStudents - Number(avgPresent)).toFixed(1)
+                              : null;
+
+                          const attendancePct =
+                            workingDays > 0 && totalPresent > 0
+                              ? ((totalPresent / workingDays) * 100).toFixed(1)
+                              : null;
+                          const updateAtt = (field, val) =>
+                            setMonthlyAttendance((prev) =>
+                              (prev || []).map((item, i) =>
+                                i === aIdx ? { ...item, [field]: val } : item,
+                              ),
+                            );
+                          return (
+                            <Box
+                              key={aIdx}
+                              sx={{
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 2,
+                                p: 2,
+                                mb: 2,
+                                background: "#fff",
+                                position: "relative",
+                              }}
+                            >
+                              {/* Delete button */}
+                              <Box
+                                sx={{ position: "absolute", top: 8, right: 8 }}
+                              >
+                                <Button
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  sx={{
+                                    minWidth: 0,
+                                    px: 1,
+                                    py: 0.2,
+                                    fontSize: 12,
+                                  }}
+                                  onClick={() =>
+                                    setMonthlyAttendance((prev) =>
+                                      prev.filter((_, i) => i !== aIdx),
+                                    )
+                                  }
+                                >
+                                  ✕
+                                </Button>
+                              </Box>
+
+                              <Grid container spacing={2} alignItems="center">
+                                {/* Month dropdown */}
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <TextField
+                                    select
+                                    label="Month"
+                                    fullWidth
+                                    size="small"
+                                    sx={{ minWidth: 220 }}
+                                    value={att.month}
+                                    onChange={(e) =>
+                                      updateAtt("month", e.target.value)
+                                    }
+                                  >
+                                    {[
+                                      "April",
+                                      "May",
+                                      "June",
+                                      "July",
+                                      "August",
+                                      "September",
+                                      "October",
+                                      "November",
+                                      "December",
+                                      "January",
+                                      "February",
+                                      "March",
+                                    ].map((m) => (
+                                      <MenuItem key={m} value={m}>
+                                        {m}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                </Grid>
+                                <Grid item xs={6} sm={4} md={1.5}>
+                                  <TextField
+                                    label="Total Students"
+                                    type="number"
+                                    fullWidth
+                                    size="small"
+                                    value={att.totalStudents}
+                                    inputProps={{ min: 0 }}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      if (val < 0) return;
+                                      updateAtt(
+                                        "totalStudents",
+                                        e.target.value,
+                                      );
+                                    }}
+                                  />
+                                </Grid>
+
+                                {/* Working Days */}
+                                <Grid item xs={12} sm={6} md={2}>
+                                  <TextField
+                                    label="Working Days"
+                                    type="number"
+                                    fullWidth
+                                    size="small"
+                                    value={att.workingDays}
+                                    inputProps={{ min: 0, max: 31 }}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      if (val < 0) return;
+                                      updateAtt("workingDays", e.target.value);
+                                    }}
+                                  />
+                                </Grid>
+
+                                {/* ✅ NEW — Days Present field */}
+                                <Grid item xs={6} sm={4} md={1.5}>
+                                  <TextField
+                                    label="Days Present"
+                                    type="number"
+                                    fullWidth
+                                    size="small"
+                                    value={att.totalPresent || ""}
+                                    inputProps={{ min: 0 }}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      if (val < 0) return;
+                                      updateAtt("totalPresent", e.target.value);
+                                    }}
+                                  />
+                                </Grid>
+
+                                {/* Avg Present/Day — auto calculated */}
+                                <Grid item xs={6} sm={4} md={1.5}>
+                                  <TextField
+                                    label="Avg Present/Day"
+                                    fullWidth
+                                    size="small"
+                                    value={
+                                      avgPresent !== null ? avgPresent : ""
+                                    }
+                                    InputProps={{
+                                      readOnly: true,
+                                      sx: {
+                                        background: "#f0fdf4",
+                                        color: "#166534",
+                                        fontWeight: 700,
+                                      },
+                                    }}
+                                  />
+                                </Grid>
+
+                                {/* Avg Absent/Day — auto calculated */}
+                                <Grid item xs={6} sm={4} md={1.5}>
+                                  <TextField
+                                    label="Avg Absent/Day"
+                                    fullWidth
+                                    size="small"
+                                    value={avgAbsent !== null ? avgAbsent : ""}
+                                    InputProps={{
+                                      readOnly: true,
+                                      sx: {
+                                        background:
+                                          avgAbsent > 0 ? "#fef2f2" : "#f0fdf4",
+                                        color:
+                                          avgAbsent > 0 ? "#991b1b" : "#166534",
+                                        fontWeight: 700,
+                                      },
+                                    }}
+                                  />
+                                </Grid>
+
+                                {/* Attendance % progress bar */}
+                                <Grid item xs={12} sm={6} md={3}>
+                                  {attendancePct !== null ? (
+                                    <Box sx={{ px: 1 }}>
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          mb: 0.5,
+                                        }}
+                                      >
+                                        <Typography
+                                          sx={{
+                                            fontSize: 12,
+                                            color: "#64748b",
+                                          }}
+                                        >
+                                          Attendance
+                                        </Typography>
+                                        <Typography
+                                          sx={{
+                                            fontSize: 13,
+                                            fontWeight: 800,
+                                            color:
+                                              Number(attendancePct) >= 75
+                                                ? "#16a34a"
+                                                : Number(attendancePct) >= 50
+                                                  ? "#d97706"
+                                                  : "#dc2626",
+                                          }}
+                                        >
+                                          {attendancePct}%
+                                        </Typography>
+                                      </Box>
+                                      <Box
+                                        sx={{
+                                          height: 8,
+                                          background: "#e2e8f0",
+                                          borderRadius: 4,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            height: "100%",
+                                            borderRadius: 4,
+                                            width: `${Math.min(Number(attendancePct), 100)}%`,
+                                            background:
+                                              Number(attendancePct) >= 75
+                                                ? "#16a34a"
+                                                : Number(attendancePct) >= 50
+                                                  ? "#f59e0b"
+                                                  : "#dc2626",
+                                            transition: "width 0.3s",
+                                          }}
+                                        />
+                                      </Box>
+                                      <Typography
+                                        sx={{
+                                          fontSize: 11,
+                                          fontWeight: 600,
+                                          mt: 0.5,
+                                          color:
+                                            Number(attendancePct) >= 75
+                                              ? "#16a34a"
+                                              : Number(attendancePct) >= 50
+                                                ? "#d97706"
+                                                : "#dc2626",
+                                        }}
+                                      >
+                                        {Number(attendancePct) >= 75
+                                          ? "🟢 Good"
+                                          : Number(attendancePct) >= 50
+                                            ? "🟡 Average"
+                                            : "🔴 Low"}
+                                      </Typography>
+                                    </Box>
+                                  ) : (
+                                    <Typography
+                                      sx={{
+                                        color: "#94a3b8",
+                                        fontSize: 12,
+                                        fontStyle: "italic",
+                                        px: 1,
+                                      }}
+                                    >
+                                      Fill working days & present to see %
+                                    </Typography>
+                                  )}
+                                </Grid>
+                              </Grid>
+                            </Box>
+                          );
+                        })}
+
+                        {/* Add month button */}
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() =>
+                            setMonthlyAttendance((prev) => [
+                              ...prev,
+                              { month: "", workingDays: "", present: "" },
+                            ])
+                          }
+                        >
+                          + Add Month
+                        </Button>
+                      </>
+                    )}
+                  </Box>
+                </Box>
+                {/* ================= TEACHER ATTENDANCE ================= */}
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+                >
+                  👩‍🏫 Teacher Attendance
+                </Typography>
+
+                {/* Global month + working days */}
+                <Box
+                  sx={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 2,
+                    bgcolor: "#f8faff",
+                  }}
+                >
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        type="month"
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        fullWidth
+                        label="Month & Year"
+                        value={monthYear}
+                        onChange={(e) => setMonthYear(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {/* ── TEACHING STAFF ── */}
+                <Typography sx={{ fontWeight: 600, mt: 2, mb: 1 }}>
+                  Teaching Staff
+                </Typography>
+
+                {teachRows.map((row, index) => {
+                  const present = Math.max(
+                    0,
+                    (Number(row.workingDays) || 0) -
+                      (Number(row.cl) || 0) -
+                      (Number(row.el) || 0) -
+                      (Number(row.ml) || 0) -
+                      (Number(row.mat) || 0),
+                  );
+                  const absent = Math.max(
+                    0,
+                    (Number(row.workingDays) || 0) - present,
+                  );
+
+                  const updateField = (field, val) =>
+                    setTeachRows((prev) =>
+                      prev.map((r) =>
+                        r.id === row.id ? { ...r, [field]: val } : r,
+                      ),
+                    );
+
+                  return (
+                    <Box
+                      key={row.id}
+                      sx={{
+                        border: "1px solid #e2e8f0",
+                        p: 2,
+                        borderRadius: 2,
+                        mb: 2,
+                      }}
+                    >
+                      {/* identity */}
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                            label="Post"
+                            value={row.post}
+                            onChange={(e) =>
+                              updateField("post", e.target.value)
+                            }
+                          >
+                            <MenuItem value="Principal">Principal</MenuItem>
+                            <MenuItem value="Vice Principal">
+                              Vice Principal
+                            </MenuItem>
+                            <MenuItem value="PGT">PGT</MenuItem>
+                            <MenuItem value="TGT">TGT</MenuItem>
+                            <MenuItem value="PRT">PRT</MenuItem>
+                            <MenuItem value="HM">HM</MenuItem>
+                            <MenuItem value="Lecturer">Lecturer</MenuItem>
+                          </TextField>
+                        </Grid>
+
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Name"
+                            value={row.name}
+                            onChange={(e) =>
+                              updateField("name", e.target.value)
+                            }
+                            placeholder="Enter name"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                            label="Working Days"
+                            type="number"
+                            value={row.workingDays}
+                            inputProps={{ min: 0, max: 31 }}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (val < 0) return;
+                              updateField("workingDays", val);
+                            }}
+                          />
+                        </Grid>
+
+                        <Grid
+                          item
+                          xs={12}
+                          md={2}
+                          sx={{ display: "flex", alignItems: "center" }}
+                        >
+                          {row.name &&
+                            (() => {
+                              const rate =
+                                workingDays > 0
+                                  ? Math.round((present / workingDays) * 100)
+                                  : 0;
+                              const bg =
+                                rate >= 90
+                                  ? "#e8f5e9"
+                                  : rate >= 75
+                                    ? "#fff8e1"
+                                    : "#fce4ec";
+                              const color =
+                                rate >= 90
+                                  ? "#2e7d32"
+                                  : rate >= 75
+                                    ? "#f57f17"
+                                    : "#c62828";
+                              const label =
+                                rate >= 90
+                                  ? "Good"
+                                  : rate >= 75
+                                    ? "Average"
+                                    : "Low";
+                              return (
+                                <Chip
+                                  size="small"
+                                  label={`${rate}% · ${label}`}
+                                  sx={{
+                                    bgcolor: bg,
+                                    color,
+                                    fontWeight: 600,
+                                    fontSize: 12,
+                                  }}
+                                />
+                              );
+                            })()}
+                        </Grid>
+
+                        <Grid item xs={12} md={2} sx={{ textAlign: "right" }}>
+                          {teachRows.length > 1 && (
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              onClick={() =>
+                                setTeachRows((p) =>
+                                  p.filter((r) => r.id !== row.id),
+                                )
+                              }
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </Grid>
+                      </Grid>
+
+                      {/* leave details */}
+                      <Typography
+                        sx={{ fontWeight: 600, mt: 2, mb: 1, fontSize: 14 }}
+                      >
+                        📌 Leave Details
+                      </Typography>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Casual Leave"
+                            type="number"
+                            value={row.cl}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("cl", e.target.value)}
+                          />
+                        </Grid>
+
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Earned Leave"
+                            type="number"
+                            value={row.el}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("el", e.target.value)}
+                          />
+                        </Grid>
+
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Medical Leave"
+                            type="number"
+                            value={row.ml}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("ml", e.target.value)}
+                          />
+                        </Grid>
+
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Maternity/Paternity"
+                            type="number"
+                            value={row.mat}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("mat", e.target.value)}
+                          />
+                        </Grid>
+
+                        {/* ✅ Present Days — auto calculated */}
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Present Days"
+                            value={present}
+                            InputProps={{
+                              readOnly: true,
+                              sx: {
+                                bgcolor: "#f0fdf4",
+                                color: "#166534",
+                                fontWeight: 700,
+                              },
+                            }}
+                          />
+                        </Grid>
+
+                        {/* ✅ Absent Days — auto calculated */}
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Absent Days"
+                            value={absent}
+                            InputProps={{
+                              readOnly: true,
+                              sx: {
+                                bgcolor: "#fef2f2",
+                                color: "#991b1b",
+                                fontWeight: 700,
+                              },
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  );
+                })}
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{ mb: 3 }}
+                  onClick={() =>
+                    setTeachRows((p) => [
+                      ...p,
+                      {
+                        id: Date.now(),
+                        post: "",
+                        name: "",
+                        cl: "",
+                        el: "",
+                        ml: "",
+                        mat: "",
+                      },
+                    ])
+                  }
+                >
+                  + Add Teaching Staff
+                </Button>
+
+                {/* ── NON-TEACHING STAFF ── */}
+                <Typography sx={{ fontWeight: 600, mt: 2, mb: 1 }}>
+                  Non-Teaching Staff
+                </Typography>
+
+                {ntRows.map((row) => {
+                  const present = Math.max(
+                    0,
+                    (Number(row.workingDays) || 0) -
+                      (Number(row.cl) || 0) -
+                      (Number(row.el) || 0) -
+                      (Number(row.ml) || 0) -
+                      (Number(row.mat) || 0),
+                  );
+                  const absent = Math.max(
+                    0,
+                    (Number(row.workingDays) || 0) - present,
+                  );
+
+                  const updateField = (field, val) =>
+                    setNtRows((prev) =>
+                      prev.map((r) =>
+                        r.id === row.id ? { ...r, [field]: val } : r,
+                      ),
+                    );
+
+                  return (
+                    <Box
+                      key={row.id}
+                      sx={{
+                        border: "1px solid #e2e8f0",
+                        p: 2,
+                        borderRadius: 2,
+                        mb: 2,
+                      }}
+                    >
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                            label="Post"
+                            value={row.post}
+                            onChange={(e) =>
+                              updateField("post", e.target.value)
+                            }
+                          >
+                            <MenuItem value="Librarian">Librarian</MenuItem>
+                            <MenuItem value="Lab Assistant">
+                              Lab Assistant
+                            </MenuItem>
+                            <MenuItem value="Clerk">Clerk</MenuItem>
+                            <MenuItem value="Accountant">Accountant</MenuItem>
+                            <MenuItem value="Peon">Peon</MenuItem>
+                            <MenuItem value="Security Guard">
+                              Security Guard
+                            </MenuItem>
+                            <MenuItem value="Computer Operator">
+                              Computer Operator
+                            </MenuItem>
+                            <MenuItem value="Sweeper">Sweeper</MenuItem>
+                          </TextField>
+                        </Grid>
+
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label=" Name"
+                            value={row.name}
+                            onChange={(e) =>
+                              updateField("name", e.target.value)
+                            }
+                            placeholder="Enter name"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            sx={{ minWidth: 220 }}
+                            label="Working Days"
+                            type="number"
+                            value={row.workingDays}
+                            inputProps={{ min: 0, max: 31 }}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (val < 0) return;
+                              updateField("workingDays", val);
+                            }}
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} md={2} sx={{ textAlign: "right" }}>
+                          {ntRows.length > 1 && (
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              onClick={() =>
+                                setNtRows((p) =>
+                                  p.filter((r) => r.id !== row.id),
+                                )
+                              }
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </Grid>
+                      </Grid>
+
+                      <Typography
+                        sx={{ fontWeight: 600, mt: 2, mb: 1, fontSize: 14 }}
+                      >
+                        📌 Leave Details
+                      </Typography>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Casual Leave"
+                            type="number"
+                            value={row.cl}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("cl", e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Earned Leave"
+                            type="number"
+                            value={row.el}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("el", e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Medical Leave"
+                            type="number"
+                            value={row.ml}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("ml", e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Maternity/Paternity"
+                            type="number"
+                            value={row.mat}
+                            inputProps={{ min: 0 }}
+                            onChange={(e) => updateField("mat", e.target.value)}
+                          />
+                        </Grid>
+
+                        {/* ✅ Present Days — auto calculated */}
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Present Days"
+                            value={present}
+                            InputProps={{
+                              readOnly: true,
+                              sx: {
+                                bgcolor: "#f0fdf4",
+                                color: "#166534",
+                                fontWeight: 700,
+                              },
+                            }}
+                          />
+                        </Grid>
+
+                        {/* ✅ Absent Days — auto calculated */}
+                        <Grid item xs={6} md={2}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Absent Days"
+                            value={absent}
+                            InputProps={{
+                              readOnly: true,
+                              sx: {
+                                bgcolor: "#fef2f2",
+                                color: "#991b1b",
+                                fontWeight: 700,
+                              },
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  );
+                })}
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{ mb: 3 }}
+                  onClick={() =>
+                    setNtRows((p) => [
+                      ...p,
+                      {
+                        id: Date.now(),
+                        post: "",
+                        name: "",
+                        cl: "",
+                        el: "",
+                        ml: "",
+                        mat: "",
+                      },
+                    ])
+                  }
+                >
+                  + Add Non-Teaching Staff
+                </Button>
+
+                {/* ── PUBLIC HOLIDAYS ── */}
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}
+                >
+                  📅 Public Holidays
+                </Typography>
+              </>
+            )}
+            {currentStep === 9 && (
               <>
                 {/* ================= OPERATIONAL COST DETAILS ================= */}
                 <Grid container spacing={2}>
@@ -8888,7 +12975,933 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     </Typography>
                   </Box>
                 )}
+              </>
+            )}
+            {currentStep === 10 && (
+              <>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        background:
+                          "linear-gradient(to right, #1976d2, #42a5f5)",
+                        color: "#fff",
+                        padding: "8px 16px",
+                        borderRadius: 2,
+                        fontWeight: 600,
+                        mb: 2,
+                      }}
+                    >
+                      Financial Management and Procurement Compliance
+                    </Typography>
+                  </Grid>
+                </Grid>
+                {/* --- Add your Financial Management and Procurement Compliance fields here --- */}
+                <Box
+                  sx={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 2,
+                    p: 3,
+                    background: "#fff",
+                    mb: 4,
+                  }}
+                >
+                  <Grid container spacing={2}>
+                    {/* NEW Academic Year Dropdown */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        sx={{ minWidth: 220 }}
+                        label="Academic Year"
+                      >
+                        <MenuItem value="2023-2024">2023-2024</MenuItem>
+                        <MenuItem value="2024-2025">2024-2025</MenuItem>
+                        <MenuItem value="2025-2026">2025-2026</MenuItem>
+                        <MenuItem value="2027-2028">2027-2028</MenuItem>
+                      </TextField>
+                    </Grid>
+                  </Grid>
+                  {/* Procurement through GeM Portal */}
+                  <Typography variant="h6" sx={{ mt: 3, mb: 2, color: "#333" }}>
+                    Procurement through GeM Portal (5 Marks)
+                  </Typography>
 
+                  {/* Add Procurement Button */}
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setProcurementDialogOpen(true)}
+                    sx={{ mb: 2, backgroundColor: "#1976d2" }}
+                  >
+                    + Add Procurement
+                  </Button>
+
+                  {/* Procurement Entries Table */}
+                  {procurements.length > 0 && (
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        border: "1px solid #e0e0e0",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ background: "#e3f2fd" }}>
+                          <th style={thStyle}>Type</th>
+                          <th style={thStyle}>Description</th>
+                          <th style={thStyle}>Total No.</th>
+                          <th style={thStyle}>Order Date</th>
+                          <th style={thStyle}>Value (₹)</th>
+                          <th style={thStyle}>Vendor</th>
+                          <th style={thStyle}>Through GeM</th>
+                          <th style={thStyle}>GeM %</th>
+                          <th style={thStyle}>Marks</th>
+                          <th style={thStyle}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {procurements.map((p, i) => {
+                          const rowPct =
+                            Number(p.totalNumber) > 0
+                              ? (
+                                  (Number(p.throughGem) /
+                                    Number(p.totalNumber)) *
+                                  100
+                                ).toFixed(2)
+                              : "0.00";
+                          const rowMarks = getGemMarks(rowPct);
+                          return (
+                            <tr key={i}>
+                              <td style={tdStyle}>{p.type}</td>
+                              <td style={tdStyle}>{p.description}</td>
+                              <td style={tdStyle}>{p.totalNumber}</td>
+                              <td style={tdStyle}>{p.orderDate}</td>
+                              <td style={tdStyle}>{p.value}</td>
+                              <td style={tdStyle}>{p.vendor}</td>
+                              <td style={tdStyle}>{p.throughGem}</td>
+                              <td style={tdStyle}>{rowPct}%</td>
+                              <td style={tdStyle}>{rowMarks}</td>
+                              <td style={tdStyle}>
+                                <Button
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  onClick={() =>
+                                    setProcurements((prev) =>
+                                      prev.filter((_, idx) => idx !== i),
+                                    )
+                                  }
+                                >
+                                  Remove
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                  {/* Marking Criteria Table */}
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                      *Marking Criteria (Out of 5) - GeM Procurement Percentage
+                    </Typography>
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ background: "#f5f5f5" }}>
+                          <th style={thStyle}>GeM Procurement Percentage</th>
+                          <th style={thStyle}>Marks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { label: "100% procurement through GeM", marks: 5 },
+                          {
+                            label: "75% – 99% procurement through GeM",
+                            marks: 4,
+                          },
+                          {
+                            label: "50% – 74% procurement through GeM",
+                            marks: 3,
+                          },
+                          {
+                            label: "25% – 49% procurement through GeM",
+                            marks: 1,
+                          },
+                          { label: "Below 25%", marks: 0 },
+                        ].map((row, i) => (
+                          <tr
+                            key={i}
+                            style={{
+                              background:
+                                gemMarks === row.marks &&
+                                procurements.length > 0
+                                  ? "#e8f5e9"
+                                  : "white",
+                            }}
+                          >
+                            <td style={tdStyle}>{row.label}</td>
+                            <td style={tdStyle}>{row.marks}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Grid>
+
+                  {/* Add Procurement Dialog */}
+                  <Dialog
+                    open={procurementDialogOpen}
+                    onClose={() => setProcurementDialogOpen(false)}
+                    maxWidth="sm"
+                    fullWidth
+                  >
+                    <DialogTitle
+                      sx={{ backgroundColor: "#1976d2", color: "white" }}
+                    >
+                      Add Procurement Entry
+                    </DialogTitle>
+                    <DialogContent sx={{ mt: 2 }}>
+                      <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                        <Grid item xs={12}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Type of Procurement</InputLabel>
+                            <Select
+                              value={currentProcurement.type}
+                              label="Type of Procurement"
+                              onChange={(e) =>
+                                setCurrentProcurement((prev) => ({
+                                  ...prev,
+                                  type: e.target.value,
+                                }))
+                              }
+                            >
+                              <MenuItem value="Goods">Goods</MenuItem>
+                              <MenuItem value="Services">Services</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Description"
+                            value={currentProcurement.description}
+                            onChange={(e) =>
+                              setCurrentProcurement((prev) => ({
+                                ...prev,
+                                description: e.target.value,
+                              }))
+                            }
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Total Number of Procurements"
+                            type="number"
+                            value={currentProcurement.totalNumber}
+                            onChange={(e) =>
+                              setCurrentProcurement((prev) => ({
+                                ...prev,
+                                totalNumber: e.target.value,
+                              }))
+                            }
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Procurement Order Date"
+                            type="date"
+                            InputLabelProps={{ shrink: true }}
+                            value={currentProcurement.orderDate}
+                            onChange={(e) =>
+                              setCurrentProcurement((prev) => ({
+                                ...prev,
+                                orderDate: e.target.value,
+                              }))
+                            }
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Procurement Value (₹)"
+                            type="number"
+                            value={currentProcurement.value}
+                            onChange={(e) =>
+                              setCurrentProcurement((prev) => ({
+                                ...prev,
+                                value: e.target.value,
+                              }))
+                            }
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Vendor"
+                            value={currentProcurement.vendor}
+                            onChange={(e) =>
+                              setCurrentProcurement((prev) => ({
+                                ...prev,
+                                vendor: e.target.value,
+                              }))
+                            }
+                          />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Procurement through GeM Portal (count)"
+                            type="number"
+                            value={currentProcurement.throughGem}
+                            onChange={(e) =>
+                              setCurrentProcurement((prev) => ({
+                                ...prev,
+                                throughGem: e.target.value,
+                              }))
+                            }
+                          />
+                        </Grid>
+
+                        {/* Live preview inside dialog */}
+                        {currentProcurement.totalNumber &&
+                          currentProcurement.throughGem && (
+                            <Grid item xs={12}>
+                              <Typography
+                                variant="body2"
+                                sx={{ color: "#1976d2", fontWeight: 600 }}
+                              >
+                                GeM %:{" "}
+                                {(
+                                  (Number(currentProcurement.throughGem) /
+                                    Number(currentProcurement.totalNumber)) *
+                                  100
+                                ).toFixed(2)}
+                                % &nbsp;→&nbsp; Marks:{" "}
+                                {getGemMarks(
+                                  (
+                                    (Number(currentProcurement.throughGem) /
+                                      Number(currentProcurement.totalNumber)) *
+                                    100
+                                  ).toFixed(2),
+                                )}
+                              </Typography>
+                            </Grid>
+                          )}
+                      </Grid>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                      <Button
+                        onClick={() => {
+                          setCurrentProcurement({
+                            type: "",
+                            description: "",
+                            totalNumber: "",
+                            orderDate: "",
+                            value: "",
+                            vendor: "",
+                            throughGem: "",
+                          });
+                          setProcurementDialogOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="contained"
+                        disabled={
+                          !currentProcurement.type ||
+                          !currentProcurement.totalNumber ||
+                          !currentProcurement.throughGem
+                        }
+                        onClick={() => {
+                          setProcurements((prev) => [
+                            ...prev,
+                            currentProcurement,
+                          ]);
+                          setCurrentProcurement({
+                            type: "",
+                            description: "",
+                            totalNumber: "",
+                            orderDate: "",
+                            value: "",
+                            vendor: "",
+                            throughGem: "",
+                          });
+                          setProcurementDialogOpen(false);
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </DialogActions>
+                  </Dialog>
+                  <Typography variant="h6" sx={{ mt: 3, mb: 2, color: "#333" }}>
+                    Fund Utilization Efficiency
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {/* KPI: Fund Utilization Efficiency */}
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Total Funds Allocated"
+                        type="number"
+                        inputProps={{ min: 0 }}
+                        value={financialData.totalFundsAllocated}
+                        onChange={(e) =>
+                          handleFundsChange(
+                            "totalFundsAllocated",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </Grid>
+
+                    {/* Total Funds Utilized */}
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Total Funds Utilized"
+                        type="number"
+                        inputProps={{ min: 0 }}
+                        value={financialData.totalFundsUtilized}
+                        onChange={(e) =>
+                          handleFundsChange(
+                            "totalFundsUtilized",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </Grid>
+
+                    {/* Utilization Percentage - NOW READ ONLY, auto-calculated */}
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Utilization Percentage (%)"
+                        type="number"
+                        value={financialData.utilizationPercentage}
+                        InputProps={{ readOnly: true }} // ← add readOnly here
+                      />
+                    </Grid>
+
+                    {/* Marks Obtained */}
+                    <Grid item xs={12} sm={6} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Marks Obtained"
+                        type="number"
+                        InputProps={{ readOnly: true }}
+                        value={financialData.fundUtilMarksObtained}
+                      />
+                    </Grid>
+
+                    {/* Audit Conducted Annually */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Audit Conducted Annually"
+                      />
+                    </Grid>
+                    {/* Marking Criteria for Fund Utilization (Visual Table) - MOVED HERE */}
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+                        *Marking Criteria (Out of 5) - Fund Utilization
+                      </Typography>
+                      <table
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          border: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <thead>
+                          <tr style={{ background: "#f5f5f5" }}>
+                            <th
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                                textAlign: "left",
+                              }}
+                            >
+                              Fund Utilization
+                            </th>
+                            <th
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                                textAlign: "left",
+                              }}
+                            >
+                              Marks
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              95% – 100%
+                            </td>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              5
+                            </td>
+                          </tr>
+                          <tr>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              70% – 94%
+                            </td>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              3
+                            </td>
+                          </tr>
+                          <tr>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              50% – 69%
+                            </td>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              1
+                            </td>
+                          </tr>
+                          <tr>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              Below 50%
+                            </td>
+                            <td
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                              }}
+                            >
+                              0
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </Grid>
+                  </Grid>
+                </Box>
+                {/* ===== RECURRING COST BREAKUP TABLE ===== */}
+                <Typography variant="h6" sx={{ mt: 3, mb: 2, color: "#333" }}>
+                  Component-wise Breakup of Recurring Fund (300 Students)
+                </Typography>
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    border: "1px solid #e0e0e0",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: "#1976d2", color: "#fff" }}>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "center",
+                          width: "50px",
+                        }}
+                      >
+                        S.No
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "left",
+                        }}
+                      >
+                        Component
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          width: "140px",
+                        }}
+                      >
+                        Max. Permissible Annual Expenditure per Student (w.e.f.
+                        01.04.2025) (A)
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          width: "150px",
+                        }}
+                      >
+                        Max. Permissible Annual Expenditure for FY 2025-26 for
+                        300 Students as per MIS Portal (B) = (A) × 300
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          width: "140px",
+                        }}
+                      >
+                        Fund Demanded by State Society for FY 2025-26 (C)
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          width: "140px",
+                        }}
+                      >
+                        Funds Already Released to the Society (D)
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          width: "150px",
+                        }}
+                      >
+                        Fund Released for Remaining Period of FY 2025-26 (E)
+                      </th>
+                      <th
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "left",
+                          width: "160px",
+                        }}
+                      >
+                        Remarks
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recurringBreakup.map((row, index) => (
+                      <tr
+                        key={index}
+                        style={{
+                          background: index % 2 === 0 ? "#fafafa" : "#fff",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {/* S.No */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "8px",
+                            textAlign: "center",
+                          }}
+                        >
+                          {row.sno}
+                        </td>
+
+                        {/* Component - read only, auto populated */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "8px",
+                            fontWeight: "500",
+                            color: "#333",
+                          }}
+                        >
+                          {row.component}
+                        </td>
+
+                        {/* Column A - user input */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "4px",
+                            textAlign: "right",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            type="number"
+                            inputProps={{
+                              min: 0,
+                              style: { textAlign: "right" },
+                            }}
+                            value={row.colA}
+                            onChange={(e) =>
+                              handleBreakupChange(index, "colA", e.target.value)
+                            }
+                            sx={{ width: "130px" }}
+                          />
+                        </td>
+
+                        {/* Column B - auto calculated = A × 300 */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "4px",
+                            textAlign: "right",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={(Number(row.colA) || 0) * 300}
+                            InputProps={{ readOnly: true }}
+                            inputProps={{
+                              style: {
+                                textAlign: "right",
+                                background: "#f0f4ff",
+                                color: "#1976d2",
+                              },
+                            }}
+                            sx={{ width: "140px" }}
+                          />
+                        </td>
+
+                        {/* Column C - user input */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "4px",
+                            textAlign: "right",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            type="number"
+                            inputProps={{
+                              min: 0,
+                              style: { textAlign: "right" },
+                            }}
+                            value={row.colC}
+                            onChange={(e) =>
+                              handleBreakupChange(index, "colC", e.target.value)
+                            }
+                            sx={{ width: "130px" }}
+                          />
+                        </td>
+
+                        {/* Column D - user input */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "4px",
+                            textAlign: "right",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            type="number"
+                            inputProps={{
+                              min: 0,
+                              style: { textAlign: "right" },
+                            }}
+                            value={row.colD}
+                            onChange={(e) =>
+                              handleBreakupChange(index, "colD", e.target.value)
+                            }
+                            sx={{ width: "130px" }}
+                          />
+                        </td>
+
+                        {/* Column E - user input */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "4px",
+                            textAlign: "right",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            type="number"
+                            inputProps={{
+                              min: 0,
+                              style: { textAlign: "right" },
+                            }}
+                            value={row.colE}
+                            onChange={(e) =>
+                              handleBreakupChange(index, "colE", e.target.value)
+                            }
+                            sx={{ width: "140px" }}
+                          />
+                        </td>
+
+                        {/* Remarks - user input */}
+                        <td
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "4px",
+                          }}
+                        >
+                          <TextField
+                            size="small"
+                            placeholder="Remarks"
+                            value={row.remarks}
+                            onChange={(e) =>
+                              handleBreakupChange(
+                                index,
+                                "remarks",
+                                e.target.value,
+                              )
+                            }
+                            sx={{ width: "150px" }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* TOTAL ROW */}
+                    <tr style={{ background: "#e3f2fd" }}>
+                      <td
+                        colSpan={2}
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        TOTAL
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ₹
+                        {recurringBreakup
+                          .reduce((sum, r) => sum + (Number(r.colA) || 0), 0)
+                          .toLocaleString("en-IN")}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ₹
+                        {recurringBreakup
+                          .reduce(
+                            (sum, r) => sum + (Number(r.colA) || 0) * 300,
+                            0,
+                          )
+                          .toLocaleString("en-IN")}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ₹
+                        {recurringBreakup
+                          .reduce((sum, r) => sum + (Number(r.colC) || 0), 0)
+                          .toLocaleString("en-IN")}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ₹
+                        {recurringBreakup
+                          .reduce((sum, r) => sum + (Number(r.colD) || 0), 0)
+                          .toLocaleString("en-IN")}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px",
+                          textAlign: "right",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ₹
+                        {recurringBreakup
+                          .reduce((sum, r) => sum + (Number(r.colE) || 0), 0)
+                          .toLocaleString("en-IN")}
+                      </td>
+                      <td
+                        style={{ border: "1px solid #e0e0e0", padding: "8px" }}
+                      ></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            )}
+            {currentStep === 11 && (
+              <>
                 {/* ================= IMAGE UPLOAD SECTION ================= */}
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
@@ -8918,7 +13931,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     Add Photo
                   </Button>
                 </Grid>
-
                 {/* Preview */}
                 {uploadedImage && (
                   <Grid item xs={12} md={4}>
@@ -8941,7 +13953,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
                     </Typography>
                   </Grid>
                 )}
-
                 {/* ── PREVIEW ── */}
                 <Box
                   sx={{

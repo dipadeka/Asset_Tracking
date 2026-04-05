@@ -29,6 +29,7 @@ const Sidebar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const [openScheme, setOpenScheme] = useState(false);
+  const [openApplied, setOpenApplied] = useState(false);
 
   const logoutUser = () => {
     dispatch(logout());
@@ -80,24 +81,7 @@ const Sidebar = () => {
             <ListItemText primary="New Application" />
           </ListItemButton>
 
-          {/* Already Applied */}
-          <ListItemButton
-            selected={isActive("/dashboard/applied")}
-            onClick={() => navigate("/dashboard/applied")}
-            sx={{
-              borderRadius: 2,
-              mb: 1,
-              "&.Mui-selected": {
-                background: "#2563eb",
-              },
-              "&:hover": { background: "rgba(255,255,255,0.08)" },
-            }}
-          >
-            <ListItemIcon sx={{ color: "#fff" }}>
-              <CheckCircle />
-            </ListItemIcon>
-            <ListItemText primary="Already Applied" />
-          </ListItemButton>
+         
 
           {/* Scheme */}
           <ListItemButton
@@ -135,9 +119,63 @@ const Sidebar = () => {
               </ListItemButton>
             </List>
           </Collapse>
-        </List>
-      </Box>
+        
+ {/* Already Applied */}
+<ListItemButton
+  onClick={() => setOpenApplied(!openApplied)}
+  sx={{
+    borderRadius: 2,
+    "&:hover": { background: "rgba(255,255,255,0.08)" },
+  }}
+>
+  <ListItemIcon sx={{ color: "#fff" }}>
+    <CheckCircle />
+  </ListItemIcon>
 
+  <ListItemText primary="Already Applied" />
+
+  {openApplied ? <ExpandLess /> : <ExpandMore />}
+</ListItemButton>
+
+<Collapse in={openApplied}>
+  <List component="div" disablePadding>
+
+    {/* EMRS Applied */}
+    <ListItemButton
+      selected={isActive("/dashboard/applied/emrs")}
+      onClick={() => navigate("/dashboard/applied/emrs")}
+      sx={{
+        pl: 6,
+        borderRadius: 2,
+        "&.Mui-selected": {
+          background: "#2563eb",
+        },
+        "&:hover": { background: "rgba(255,255,255,0.08)" },
+      }}
+    >
+      <ListItemText sx={{ pl: 3 }} primary="EMRS" />
+    </ListItemButton>
+
+    {/* Asset Applied */}
+    <ListItemButton
+      selected={isActive("/dashboard/applied/assets")}
+      onClick={() => navigate("/dashboard/applied/assets")}
+      sx={{
+        pl: 6,
+        borderRadius: 2,
+        "&.Mui-selected": {
+          background: "#2563eb",
+        },
+        "&:hover": { background: "rgba(255,255,255,0.08)" },
+      }}
+    >
+      <ListItemText sx={{ pl: 3 }} primary="Assets" />
+    </ListItemButton>
+
+  </List>
+</Collapse>
+</List>
+      </Box>
       {/* LOGOUT */}
       <Button
         variant="contained"
