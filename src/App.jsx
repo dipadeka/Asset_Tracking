@@ -25,7 +25,7 @@ function App() {
 
       <BrowserRouter>
         <Routes>
-          {/* ── HOME PAGE ── */}
+          {/* ── HOME PAGE (dashboard lives here) ── */}
           <Route path="/" element={<HomePage />} />
 
           {/* ── AUTH PAGES ── */}
@@ -50,8 +50,8 @@ function App() {
             <Route path="applied/emrs" element={<AlreadyApplied />} />
             <Route path="applied/assets" element={<AssetApplied />} />
 
-            {/* Forms */}
-            <Route path="EMRS" element={<EMRSForm />} />
+            {/* Forms — emrs (lowercase) matches sidebar link */}
+            <Route path="emrs" element={<EMRSForm />} />
             <Route path="assets" element={<AssetForm />} />
           </Route>
         </Routes>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import EMRSDashboard from "./Dashboard";
 
 const ASSAM_PATH = `M 72 118 L 84 94 L 106 76 L 140 64 L 178 56 L 218 50 L 258 46
   L 298 43 L 338 41 L 378 40 L 416 42 L 452 47 L 484 57 L 512 72
@@ -41,11 +42,11 @@ const HomePage = () => {
   const [activePortal,  setActivePortal]  = useState(null);
   const [selectedEmrs,  setSelectedEmrs]  = useState(null);
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [counters,      setCounters]      = useState({ schools: 0, students: 0, assets: 0, districts: 0 });
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) navigate("/dashboard/emrs");
+  
     const handleScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", handleScroll);
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -71,6 +72,21 @@ const HomePage = () => {
     { label: "Assets Tracked",    value: counters.assets,   suffix: "+", icon: "🏗️", color: "#f59e0b" },
     { label: "Districts Covered", value: counters.districts,suffix: "+", icon: "🗺️", color: "#10b981" },
   ];
+
+  const navItems = ["Home", "About", "Portals", "Dashboard", "Contact"];
+  const handleNavClick = (item) => {
+    if (item === "Dashboard") {
+      setShowDashboard(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (item === "Home") {
+      setShowDashboard(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setShowDashboard(false);
+  };
 
   const portals = [
     {
@@ -167,8 +183,9 @@ const HomePage = () => {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {["Home","About","Portals","Contact"].map(item => (
+          {navItems.map(item => (
             <button key={item} style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.7)", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 14, transition: "all 0.2s" }}
+              onClick={() => handleNavClick(item)}
               onMouseEnter={e => { e.target.style.color="#fff"; e.target.style.background="rgba(255,255,255,0.08)"; }}
               onMouseLeave={e => { e.target.style.color="rgba(255,255,255,0.7)"; e.target.style.background="transparent"; }}>
               {item}
@@ -212,6 +229,25 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {showDashboard && (
+        <section style={{ background: "#0b1221", padding: "40px 40px 60px" }}>
+          <div style={{ maxWidth: 1300, margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+              <div>
+                <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>EMRS Dashboard Preview</h2>
+                <p style={{ color: "rgba(255,255,255,0.7)", margin: "8px 0 0", maxWidth: 680 }}>
+                  Live EMRS analytics appear below. Use the Dashboard navigation button again to close this preview.
+                </p>
+              </div>
+              <button onClick={() => setShowDashboard(false)} style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 20px", fontWeight: 700, cursor: "pointer" }}>
+                Close Dashboard
+              </button>
+            </div>
+            <EMRSDashboard />
+          </div>
+        </section>
+      )}
 
       {/* ── STATS ── */}
       <section style={{ background: "#0f172a", padding: "0 40px" }}>

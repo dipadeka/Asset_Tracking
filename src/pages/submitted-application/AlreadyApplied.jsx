@@ -1,17 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Box, Typography, Card, CardContent, CircularProgress, Chip,
+  Box, Typography, CircularProgress, Chip,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Tooltip, Accordion, AccordionSummary, AccordionDetails,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import DownloadIcon from "@mui/icons-material/Download";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import TableChartIcon from "@mui/icons-material/TableChart";
 
-// ── helpers ──────────────────────────────────────────────
+const LS_KEY = "emrs_submitted_forms";
+
+// ── Read localStorage synchronously ──────────────────────
+const readLS = () => {
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const writeLS = (forms) => {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(forms));
+  } catch { /* ignore */ }
+};
+
+// ── helpers ───────────────────────────────────────────────
 const cell = (label, value) => ({ label, value: value ?? "—" });
 
 const buildSections = (form) => [
@@ -102,54 +118,39 @@ const exportCSV = (form) => {
   const sections = buildSections(form);
   let csv = `EMRS Form Export - ${form.schoolname || "School"}\n\n`;
   sections.forEach((sec) => {
-    csv += `${sec.title}\n`;
-    csv += "Field,Value\n";
+    csv += `${sec.title}\nField,Value\n`;
     sec.rows.forEach((r) => {
       csv += `"${r.label}","${String(r.value).replace(/"/g, '""')}"\n`;
     });
     csv += "\n";
   });
-
-  // Enrollment
   if (form.classStrength?.length) {
-    csv += "🎓 Enrollment Details\n";
-    csv += "Academic Year,Class,Section,Sanctioned Capacity,Current Enrollment\n";
+    csv += "🎓 Enrollment Details\nAcademic Year,Class,Section,Sanctioned Capacity,Current Enrollment\n";
     form.classStrength.forEach((c) => {
       csv += `"${c.academicYear}","${c.class}","${c.section}","${c.sanctionedCapacity}","${c.currentEnrollment}"\n`;
     });
     csv += "\n";
   }
-
-  // Teaching Staff
   if (form.teachingStaff?.length) {
-    csv += "👨‍🏫 Teaching Staff\n";
-    csv += "Post,Name,DOB,DOJ,Email,Contact,Total,Filled,Vacant\n";
+    csv += "👨‍🏫 Teaching Staff\nPost,Name,DOB,DOJ,Email,Contact,Total,Filled,Vacant\n";
     form.teachingStaff.forEach((s) => {
       csv += `"${s.post}","${s.name}","${s.dob}","${s.doj}","${s.email}","${s.contact}","${s.total}","${s.filled}","${s.vacant}"\n`;
     });
     csv += "\n";
   }
-
-  // Non Teaching Staff
   if (form.nonTeachingStaff?.length) {
-    csv += "👷 Non-Teaching Staff\n";
-    csv += "Post,Name,DOB,DOJ,Email,Contact,Total,Filled,Vacant\n";
+    csv += "👷 Non-Teaching Staff\nPost,Name,DOB,DOJ,Email,Contact,Total,Filled,Vacant\n";
     form.nonTeachingStaff.forEach((s) => {
       csv += `"${s.post}","${s.name}","${s.dob}","${s.doj}","${s.email}","${s.contact}","${s.total}","${s.filled}","${s.vacant}"\n`;
     });
     csv += "\n";
   }
-
-  // Operational Cost
   if (form.operationalCost?.length) {
-    csv += "💰 Operational Cost\n";
-    csv += "Year,Month,Cost Type,Amount\n";
+    csv += "💰 Operational Cost\nYear,Month,Cost Type,Amount\n";
     form.operationalCost.forEach((o) => {
       csv += `"${o.year}","${o.month}","${o.costType}","${o.amount}"\n`;
     });
-    csv += "\n";
   }
-
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -162,101 +163,42 @@ const exportCSV = (form) => {
 // ── PDF Export ────────────────────────────────────────────
 const exportPDF = (form) => {
   const sections = buildSections(form);
-  let html = `
-    <html><head><style>
-      body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
-      h1 { color: #1976d2; font-size: 18px; }
-      h2 { color: #1976d2; font-size: 14px; margin-top: 20px; border-bottom: 2px solid #1976d2; padding-bottom: 4px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-      th { background: #1976d2; color: white; padding: 6px 10px; text-align: left; font-size: 11px; }
-      td { padding: 5px 10px; border: 1px solid #e2e8f0; font-size: 11px; }
-      tr:nth-child(even) { background: #f8fafc; }
-      .header { background: linear-gradient(to right,#1976d2,#42a5f5); color:white; padding:16px; border-radius:8px; margin-bottom:20px; }
-      .header p { margin:4px 0; font-size:12px; }
-    </style></head><body>
-    <div class="header">
-      <h1 style="margin:0;color:white">EMRS Form — ${form.schoolname || "—"}</h1>
-      <p>EMRS Code: ${form.EMRScode || "—"} &nbsp;|&nbsp; District: ${form.district || "—"}</p>
-      <p>Submitted: ${form.createdAt ? new Date(form.createdAt).toLocaleString() : "—"}</p>
-    </div>`;
-
+  let html = `<html><head><style>
+    body{font-family:Arial,sans-serif;font-size:12px;margin:20px}
+    h2{color:#1976d2;font-size:14px;margin-top:20px;border-bottom:2px solid #1976d2;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    th{background:#1976d2;color:white;padding:6px 10px;text-align:left;font-size:11px}
+    td{padding:5px 10px;border:1px solid #e2e8f0;font-size:11px}
+    tr:nth-child(even){background:#f8fafc}
+    .hdr{background:linear-gradient(to right,#1976d2,#42a5f5);color:white;padding:16px;border-radius:8px;margin-bottom:20px}
+    .hdr p{margin:4px 0;font-size:12px}
+  </style></head><body>
+  <div class="hdr">
+    <h1 style="margin:0;color:white">EMRS Form — ${form.schoolname||"—"}</h1>
+    <p>EMRS Code: ${form.EMRScode||"—"} | District: ${form.district||"—"}</p>
+    <p>Submitted: ${form.createdAt?new Date(form.createdAt).toLocaleString():"—"}</p>
+  </div>`;
   sections.forEach((sec) => {
     html += `<h2>${sec.title}</h2><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody>`;
-    sec.rows.forEach((r) => {
-      html += `<tr><td><strong>${r.label}</strong></td><td>${r.value}</td></tr>`;
-    });
+    sec.rows.forEach((r) => { html += `<tr><td><b>${r.label}</b></td><td>${r.value}</td></tr>`; });
     html += `</tbody></table>`;
   });
-
-  // Enrollment table
   if (form.classStrength?.length) {
-    html += `<h2>🎓 Enrollment Details</h2>
-    <table><thead><tr>
-      <th>Academic Year</th><th>Class</th><th>Section</th>
-      <th>Sanctioned Capacity</th><th>Current Enrollment</th>
-    </tr></thead><tbody>`;
-    form.classStrength.forEach((c) => {
-      html += `<tr><td>${c.academicYear}</td><td>${c.class}</td><td>${c.section}</td>
-               <td>${c.sanctionedCapacity}</td><td>${c.currentEnrollment}</td></tr>`;
-    });
+    html += `<h2>🎓 Enrollment</h2><table><thead><tr><th>Year</th><th>Class</th><th>Section</th><th>Capacity</th><th>Enrollment</th></tr></thead><tbody>`;
+    form.classStrength.forEach((c) => { html += `<tr><td>${c.academicYear}</td><td>${c.class}</td><td>${c.section}</td><td>${c.sanctionedCapacity}</td><td>${c.currentEnrollment}</td></tr>`; });
     html += `</tbody></table>`;
   }
-
-  // Teaching Staff table
-  if (form.teachingStaff?.length) {
-    html += `<h2>👨‍🏫 Teaching Staff</h2>
-    <table><thead><tr>
-      <th>Post</th><th>Name</th><th>DOB</th><th>DOJ</th>
-      <th>Email</th><th>Contact</th><th>Total</th><th>Filled</th><th>Vacant</th>
-    </tr></thead><tbody>`;
-    form.teachingStaff.forEach((s) => {
-      html += `<tr><td>${s.post}</td><td>${s.name}</td><td>${s.dob}</td><td>${s.doj}</td>
-               <td>${s.email}</td><td>${s.contact}</td><td>${s.total}</td>
-               <td>${s.filled}</td><td>${s.vacant}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-  }
-
-  // Non Teaching Staff
-  if (form.nonTeachingStaff?.length) {
-    html += `<h2>👷 Non-Teaching Staff</h2>
-    <table><thead><tr>
-      <th>Post</th><th>Name</th><th>DOB</th><th>DOJ</th>
-      <th>Email</th><th>Contact</th><th>Total</th><th>Filled</th><th>Vacant</th>
-    </tr></thead><tbody>`;
-    form.nonTeachingStaff.forEach((s) => {
-      html += `<tr><td>${s.post}</td><td>${s.name}</td><td>${s.dob}</td><td>${s.doj}</td>
-               <td>${s.email}</td><td>${s.contact}</td><td>${s.total}</td>
-               <td>${s.filled}</td><td>${s.vacant}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-  }
-
-  // Operational Cost
-  if (form.operationalCost?.length) {
-    html += `<h2>💰 Operational Cost</h2>
-    <table><thead><tr><th>Year</th><th>Month</th><th>Cost Type</th><th>Amount (₹)</th></tr></thead><tbody>`;
-    form.operationalCost.forEach((o) => {
-      html += `<tr><td>${o.year}</td><td>${o.month}</td><td>${o.costType}</td><td>₹${Number(o.amount).toLocaleString("en-IN")}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-  }
-
   html += `</body></html>`;
-
   const win = window.open("", "_blank");
   win.document.write(html);
   win.document.close();
-  win.print(); // opens print/save as PDF dialog
+  win.print();
 };
 
-// ── Section Table Component ───────────────────────────────
+// ── Section Table ─────────────────────────────────────────
 const SectionTable = ({ title, rows }) => (
   <Box mb={2}>
-    <Typography sx={{
-      fontWeight: 700, fontSize: 13, color: "#1976d2",
-      mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5
-    }}>
+    <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>
       {title}
     </Typography>
     <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
@@ -282,65 +224,50 @@ const SectionTable = ({ title, rows }) => (
 
 // ── Main Component ────────────────────────────────────────
 const AlreadyApplied = () => {
-  const [submittedForms, setSubmittedForms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // ── LOAD SYNCHRONOUSLY from localStorage on first render ──
+  // This guarantees data shows instantly — no network wait, no timing issue.
+  const [submittedForms, setSubmittedForms] = useState(() => readLS());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { fetchForms(); }, []);
+  // ── Reload from localStorage (called after new submission event) ──
+  const reloadFromLS = useCallback(() => {
+    setSubmittedForms(readLS());
+  }, []);
 
-  const fetchForms = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/emrs");
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-      const result = await response.json();
-      if (result.success && Array.isArray(result.data)) {
-        setSubmittedForms(result.data);
-      } else {
-        setSubmittedForms([]);
-      }
-    } catch (err) {
-      setError(`Could not load submitted forms. ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    // Reload every time this component mounts (page navigation)
+    reloadFromLS();
 
+    // Also listen for the custom event fired by EMRSForm after submit
+    window.addEventListener("emrs-form-submitted", reloadFromLS);
+    return () => window.removeEventListener("emrs-form-submitted", reloadFromLS);
+  }, [reloadFromLS]);
+
+  // ── Delete ─────────────────────────────────────────────
   const handleDeleteClick = (id) => { setSelectedFormId(id); setDeleteDialogOpen(true); };
   const handleDeleteCancel = () => { setDeleteDialogOpen(false); setSelectedFormId(null); };
 
   const handleDeleteConfirm = async () => {
     setDeleting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/emrs/${selectedFormId}`, { method: "DELETE" });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        setSubmittedForms(prev => prev.filter(f => f._id !== selectedFormId));
-        setDeleteDialogOpen(false);
-        setSelectedFormId(null);
-      } else {
-        alert("Failed to delete: " + (result.message || "Unknown error"));
+      const updated = submittedForms.filter(
+        (f) => String(f._id || f.id) !== String(selectedFormId)
+      );
+      setSubmittedForms(updated);
+      writeLS(updated);
+
+      // Best-effort API delete
+      if (!String(selectedFormId).startsWith("local_")) {
+        fetch(`http://localhost:5000/api/emrs/${selectedFormId}`, { method: "DELETE" }).catch(() => {});
       }
-    } catch (err) {
-      alert("Delete failed: " + err.message);
+      setDeleteDialogOpen(false);
+      setSelectedFormId(null);
     } finally {
       setDeleting(false);
     }
   };
-
-  if (loading) return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
-      <CircularProgress />
-    </Box>
-  );
-
-  if (error) return (
-    <Box sx={{ p: 4, textAlign: "center" }}>
-      <Typography color="error">{error}</Typography>
-    </Box>
-  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -350,10 +277,7 @@ const AlreadyApplied = () => {
       </Typography>
 
       {submittedForms.length === 0 ? (
-        <Box sx={{
-          textAlign: "center", p: 6,
-          border: "2px dashed #e2e8f0", borderRadius: 3, background: "#f8fafc"
-        }}>
+        <Box sx={{ textAlign: "center", p: 6, border: "2px dashed #e2e8f0", borderRadius: 3, background: "#f8fafc" }}>
           <Typography fontSize={48}>📋</Typography>
           <Typography fontWeight={600} mt={1}>No forms submitted yet</Typography>
           <Typography color="text.secondary" fontSize={14}>
@@ -362,51 +286,40 @@ const AlreadyApplied = () => {
         </Box>
       ) : (
         submittedForms.map((form, index) => (
-          
-          <Accordion key={form._id || index} sx={{ mb: 2, borderRadius: "12px !important", boxShadow: 2 }}>
-
-            {/* ── Accordion Header ── */}
-            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{
-              background: "linear-gradient(to right, #1e3a5f, #1976d2)",
-              borderRadius: "12px 12px 0 0", color: "#fff",
-              "& .MuiAccordionSummary-expandIconWrapper": { color: "#fff" }
-            }}>
+          <Accordion
+            key={form._id || form.id || index}
+            sx={{ mb: 2, borderRadius: "12px !important", boxShadow: 2 }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{
+                background: "linear-gradient(to right, #1e3a5f, #1976d2)",
+                borderRadius: "12px 12px 0 0", color: "#fff",
+                "& .MuiAccordionSummary-expandIconWrapper": { color: "#fff" },
+              }}
+            >
               <Box display="flex" justifyContent="space-between" alignItems="center" width="100%" flexWrap="wrap" gap={1} pr={1}>
                 <Box>
-                  <Typography fontWeight={700} fontSize={16}>
-                    {form.schoolname || "—"}
-                  </Typography>
+                  <Typography fontWeight={700} fontSize={16}>{form.schoolname || "—"}</Typography>
                   <Typography fontSize={12} sx={{ opacity: 0.85 }}>
                     EMRS Code: {form.EMRScode} &nbsp;|&nbsp; District: {form.district} &nbsp;|&nbsp;
                     Submitted: {form.createdAt ? new Date(form.createdAt).toLocaleString() : "—"}
                   </Typography>
                 </Box>
-                <Box display="flex" alignItems="center" gap={1} onClick={e => e.stopPropagation()}>
+                <Box display="flex" alignItems="center" gap={1} onClick={(e) => e.stopPropagation()}>
                   <Chip label="Submitted ✅" size="small" sx={{ background: "#dcfce7", color: "#16a34a", fontWeight: 700 }} />
-
-                  {/* CSV Export */}
                   <Tooltip title="Export as CSV/Excel">
-                    <IconButton size="small"
-                      sx={{ background: "#fff", "&:hover": { background: "#e3f2fd" } }}
-                      onClick={() => exportCSV(form)}>
+                    <IconButton size="small" sx={{ background: "#fff", "&:hover": { background: "#e3f2fd" } }} onClick={() => exportCSV(form)}>
                       <TableChartIcon fontSize="small" sx={{ color: "#16a34a" }} />
                     </IconButton>
                   </Tooltip>
-
-                  {/* PDF Export */}
                   <Tooltip title="Export as PDF">
-                    <IconButton size="small"
-                      sx={{ background: "#fff", "&:hover": { background: "#fee2e2" } }}
-                      onClick={() => exportPDF(form)}>
+                    <IconButton size="small" sx={{ background: "#fff", "&:hover": { background: "#fee2e2" } }} onClick={() => exportPDF(form)}>
                       <PictureAsPdfIcon fontSize="small" sx={{ color: "#dc2626" }} />
                     </IconButton>
                   </Tooltip>
-
-                  {/* Delete */}
                   <Tooltip title="Delete">
-                    <IconButton size="small"
-                      sx={{ background: "#fff", "&:hover": { background: "#fee2e2" } }}
-                      onClick={() => handleDeleteClick(form._id)}>
+                    <IconButton size="small" sx={{ background: "#fff", "&:hover": { background: "#fee2e2" } }} onClick={() => handleDeleteClick(form._id || form.id)}>
                       <DeleteIcon fontSize="small" sx={{ color: "#dc2626" }} />
                     </IconButton>
                   </Tooltip>
@@ -414,37 +327,29 @@ const AlreadyApplied = () => {
               </Box>
             </AccordionSummary>
 
-            {/* ── Accordion Body — all sections ── */}
             <AccordionDetails sx={{ p: 3, background: "#f8fafc" }}>
-
-              {/* Export buttons inside too */}
               <Box display="flex" gap={1} mb={3} justifyContent="flex-end">
-                <Button variant="outlined" color="success" size="small"
-                  startIcon={<TableChartIcon />} onClick={() => exportCSV(form)}>
+                <Button variant="outlined" color="success" size="small" startIcon={<TableChartIcon />} onClick={() => exportCSV(form)}>
                   Export CSV / Excel
                 </Button>
-                <Button variant="outlined" color="error" size="small"
-                  startIcon={<PictureAsPdfIcon />} onClick={() => exportPDF(form)}>
+                <Button variant="outlined" color="error" size="small" startIcon={<PictureAsPdfIcon />} onClick={() => exportPDF(form)}>
                   Export PDF
                 </Button>
               </Box>
 
-              {/* All sections */}
               {buildSections(form).map((sec) => (
                 <SectionTable key={sec.title} title={sec.title} rows={sec.rows} />
               ))}
 
-              {/* Enrollment Table */}
+              {/* Enrollment */}
               {form.classStrength?.length > 0 && (
                 <Box mb={2}>
-                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>
-                    🎓 Enrollment Details
-                  </Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>🎓 Enrollment Details</Typography>
                   <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ background: "#e3f2fd" }}>
-                          {["Academic Year", "Class", "Section", "Sanctioned Capacity", "Current Enrollment"].map(h => (
+                          {["Academic Year","Class","Section","Sanctioned Capacity","Current Enrollment"].map((h) => (
                             <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
                           ))}
                         </TableRow>
@@ -452,10 +357,8 @@ const AlreadyApplied = () => {
                       <TableBody>
                         {form.classStrength.map((c, i) => (
                           <TableRow key={i} sx={{ "&:nth-of-type(even)": { background: "#f8fafc" } }}>
-                            <TableCell>{c.academicYear}</TableCell>
-                            <TableCell>{c.class}</TableCell>
-                            <TableCell>{c.section}</TableCell>
-                            <TableCell>{c.sanctionedCapacity}</TableCell>
+                            <TableCell>{c.academicYear}</TableCell><TableCell>{c.class}</TableCell>
+                            <TableCell>{c.section}</TableCell><TableCell>{c.sanctionedCapacity}</TableCell>
                             <TableCell>{c.currentEnrollment}</TableCell>
                           </TableRow>
                         ))}
@@ -465,17 +368,15 @@ const AlreadyApplied = () => {
                 </Box>
               )}
 
-              {/* Teaching Staff Table */}
+              {/* Teaching Staff */}
               {form.teachingStaff?.length > 0 && (
                 <Box mb={2}>
-                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>
-                    👨‍🏫 Teaching Staff
-                  </Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>👨‍🏫 Teaching Staff</Typography>
                   <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflowX: "auto" }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ background: "#e3f2fd" }}>
-                          {["Post", "Name", "DOB", "DOJ", "Email", "Contact", "Total", "Filled", "Vacant"].map(h => (
+                          {["Post","Name","DOB","DOJ","Email","Contact","Total","Filled","Vacant"].map((h) => (
                             <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{h}</TableCell>
                           ))}
                         </TableRow>
@@ -483,15 +384,10 @@ const AlreadyApplied = () => {
                       <TableBody>
                         {form.teachingStaff.map((s, i) => (
                           <TableRow key={i} sx={{ "&:nth-of-type(even)": { background: "#f8fafc" } }}>
-                            <TableCell>{s.post}</TableCell>
-                            <TableCell>{s.name}</TableCell>
-                            <TableCell>{s.dob}</TableCell>
-                            <TableCell>{s.doj}</TableCell>
-                            <TableCell>{s.email}</TableCell>
-                            <TableCell>{s.contact}</TableCell>
-                            <TableCell>{s.total}</TableCell>
-                            <TableCell>{s.filled}</TableCell>
-                            <TableCell>{s.vacant}</TableCell>
+                            <TableCell>{s.post}</TableCell><TableCell>{s.name}</TableCell>
+                            <TableCell>{s.dob}</TableCell><TableCell>{s.doj}</TableCell>
+                            <TableCell>{s.email}</TableCell><TableCell>{s.contact}</TableCell>
+                            <TableCell>{s.total}</TableCell><TableCell>{s.filled}</TableCell><TableCell>{s.vacant}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -500,17 +396,15 @@ const AlreadyApplied = () => {
                 </Box>
               )}
 
-              {/* Non Teaching Staff Table */}
+              {/* Non-Teaching Staff */}
               {form.nonTeachingStaff?.length > 0 && (
                 <Box mb={2}>
-                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>
-                    👷 Non-Teaching Staff
-                  </Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>👷 Non-Teaching Staff</Typography>
                   <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflowX: "auto" }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ background: "#e3f2fd" }}>
-                          {["Post", "Name", "DOB", "DOJ", "Email", "Contact", "Total", "Filled", "Vacant"].map(h => (
+                          {["Post","Name","DOB","DOJ","Email","Contact","Total","Filled","Vacant"].map((h) => (
                             <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{h}</TableCell>
                           ))}
                         </TableRow>
@@ -518,15 +412,10 @@ const AlreadyApplied = () => {
                       <TableBody>
                         {form.nonTeachingStaff.map((s, i) => (
                           <TableRow key={i} sx={{ "&:nth-of-type(even)": { background: "#f8fafc" } }}>
-                            <TableCell>{s.post}</TableCell>
-                            <TableCell>{s.name}</TableCell>
-                            <TableCell>{s.dob}</TableCell>
-                            <TableCell>{s.doj}</TableCell>
-                            <TableCell>{s.email}</TableCell>
-                            <TableCell>{s.contact}</TableCell>
-                            <TableCell>{s.total}</TableCell>
-                            <TableCell>{s.filled}</TableCell>
-                            <TableCell>{s.vacant}</TableCell>
+                            <TableCell>{s.post}</TableCell><TableCell>{s.name}</TableCell>
+                            <TableCell>{s.dob}</TableCell><TableCell>{s.doj}</TableCell>
+                            <TableCell>{s.email}</TableCell><TableCell>{s.contact}</TableCell>
+                            <TableCell>{s.total}</TableCell><TableCell>{s.filled}</TableCell><TableCell>{s.vacant}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -535,17 +424,15 @@ const AlreadyApplied = () => {
                 </Box>
               )}
 
-              {/* Operational Cost Table */}
+              {/* Operational Cost */}
               {form.operationalCost?.length > 0 && (
                 <Box mb={2}>
-                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>
-                    💰 Operational Cost
-                  </Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>💰 Operational Cost</Typography>
                   <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                     <Table size="small">
                       <TableHead>
                         <TableRow sx={{ background: "#e3f2fd" }}>
-                          {["Year", "Month", "Cost Type", "Amount (₹)"].map(h => (
+                          {["Year","Month","Cost Type","Amount (₹)"].map((h) => (
                             <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
                           ))}
                         </TableRow>
@@ -553,8 +440,7 @@ const AlreadyApplied = () => {
                       <TableBody>
                         {form.operationalCost.map((o, i) => (
                           <TableRow key={i} sx={{ "&:nth-of-type(even)": { background: "#f8fafc" } }}>
-                            <TableCell>{o.year}</TableCell>
-                            <TableCell>{o.month}</TableCell>
+                            <TableCell>{o.year}</TableCell><TableCell>{o.month}</TableCell>
                             <TableCell>{o.costType}</TableCell>
                             <TableCell>₹{Number(o.amount || 0).toLocaleString("en-IN")}</TableCell>
                           </TableRow>
@@ -564,19 +450,15 @@ const AlreadyApplied = () => {
                   </TableContainer>
                 </Box>
               )}
-
             </AccordionDetails>
           </Accordion>
         ))
       )}
 
-      {/* ── Delete Dialog ── */}
       <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
         <DialogTitle sx={{ fontWeight: 700, color: "#dc2626" }}>🗑️ Delete Form</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete this form? This action <strong>cannot be undone</strong>.
-          </Typography>
+          <Typography>Are you sure you want to delete this form? This action <strong>cannot be undone</strong>.</Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button onClick={handleDeleteCancel} variant="outlined" disabled={deleting}>Cancel</Button>

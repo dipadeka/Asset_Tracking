@@ -3,6 +3,7 @@ import { composeWithDevTools } from '@redux-devtools/extension';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // defaults to localStorage
 import authReducer from './slices/authSlice';
+import emrsReducer from './slices/emrsSlice';
 
 // Persist config for auth slice
 const authPersistConfig = {
@@ -16,6 +17,7 @@ const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
 export const store = configureStore({
   reducer: {
     auth: persistedAuthReducer,
+     emrs: emrsReducer, 
   },
   devTools: composeWithDevTools({
     name: 'Asset Tracking App',

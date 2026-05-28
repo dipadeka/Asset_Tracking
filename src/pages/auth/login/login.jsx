@@ -33,7 +33,8 @@ export default function SignInPage() {
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isLoading } = useSelector((state) => state.auth);
+  const { isLoading, user} = useSelector((state) => state.auth);
+  console.log("user:", user);
   const [showPassword, setShowPassword] = React.useState(false);
 
   const {
