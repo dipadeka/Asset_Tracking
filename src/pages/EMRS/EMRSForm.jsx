@@ -69,6 +69,12 @@ import { GirlSharp } from "@mui/icons-material";
 // ─── FIX: import useAuth so we can read the logged-in school's credentials ───
 import { useAuth } from "../../context/AuthContext";
 import { SCHOOL_CREDENTIALS } from "./Schoolcredentials";
+import {
+  sanitizeConstructionComponents,
+  toSafeNumber,
+  toOptionalNumber,
+  validateEmrsFormData,
+} from "./utils/emrsPayloadUtils";
 
 const thStyle = {
   border: "1px solid #e0e0e0",
@@ -82,7 +88,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
   // ─── FIX: pull the logged-in user so we can stamp their credentials ───────
   const { user } = useAuth();
 
-  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
@@ -223,24 +228,37 @@ useEffect(() => {
   setValue("contactno", school.contact || "");
   setValue("emailid", school.email || "");
 }, [user, setValue]);
-  const labValues = watch([
-    "physicsLabFunctional",
-    "chemistryLabFunctional",
-    "biologyLabFunctional",
-    "computerLabFunctional",
-    "mathLabFunctional",
-    "skillLabFunctional",
-  ]);
+  const physicsLabFunctional = watch("physicsLabFunctional");
+  const chemistryLabFunctional = watch("chemistryLabFunctional");
+  const biologyLabFunctional = watch("biologyLabFunctional");
+  const computerLabFunctional = watch("computerLabFunctional");
+  const mathLabFunctional = watch("mathLabFunctional");
+  const skillLabFunctional = watch("skillLabFunctional");
 
   useEffect(() => {
-    const yesCount = labValues.filter((val) => val === "Yes").length;
+    const yesCount = [
+      physicsLabFunctional,
+      chemistryLabFunctional,
+      biologyLabFunctional,
+      computerLabFunctional,
+      mathLabFunctional,
+      skillLabFunctional,
+    ].filter((val) => val === "Yes").length;
     let marks = 0;
     if (yesCount === 6) marks = 5;
     else if (yesCount >= 3) marks = 3;
     else if (yesCount >= 1) marks = 1;
     else marks = 0;
     setValue("marksLabFunctional", marks);
-  }, [labValues, setValue]);
+  }, [
+    physicsLabFunctional,
+    chemistryLabFunctional,
+    biologyLabFunctional,
+    computerLabFunctional,
+    mathLabFunctional,
+    skillLabFunctional,
+    setValue,
+  ]);
 
   const [enrollmentRows, setEnrollmentRows] = useState([
     {
@@ -294,7 +312,7 @@ useEffect(() => {
       academicYear: "",
       initiativeName: "",
       collaboratingPartner: "",
-      areasOfDevelopment: [],
+      areasOfDevelopment: "",
       description: "",
       targetStudents: "",
       status: "",
@@ -393,7 +411,7 @@ useEffect(() => {
     "ABHA ID Created": "",
     "Eye Checkup Conducted": "",
     "Ear Checkup Conducted": "",
-    marksHealth: undefined,
+    marksHealth: "",
     eyeCheckupConducted: "",
     eyeEntries: [blankEyeEntry()],
     earCheckupConducted: "",
@@ -450,7 +468,7 @@ useEffect(() => {
   };
 
   const [hospitalizationRows, setHospitalizationRows] = useState([
-    emptyHospitalizationRow,
+    emptyHospitalizationRow(),
   ]);
 
   const [teachingRows, setteachingRows] = useState([
@@ -543,6 +561,8 @@ useEffect(() => {
     month: "March",
     purchaseDate: "",
     purchasedFrom: "",
+    billNo: "",
+    paymentMethod: "",
     items: [{ category: "", name: "", quantity: "", unit: "", price: "", total: 0 }],
     weeklyMenuDisplayed: "",
     messInspectionRegister: "",
@@ -713,29 +733,34 @@ useEffect(() => {
     return 0;
   };
 
-const prepareBasicDetails = (data) => ({
-  EMRScode: data.EMRScode?.trim(),
-  EMRSid: data.EMRSid?.trim(),
-  udaisecode: data.udaisecode?.trim(),
-  schoolname: data.schoolname?.trim(),
-  schooltype: data.schooltype?.trim(),
-  affiliation: data.affiliation?.trim() || data.Affiliation?.trim(),
-  principalName: data.principalName?.trim() || data.NameofthePrincipal?.trim(),
-  contactno: data.contactno?.trim(),
-  email: data.email?.trim() || data.emailid?.trim(),
-});
+const prepareBasicDetails = (data) => {
+  const details = {
+    EMRScode: data.EMRScode?.trim(),
+    EMRSid: data.EMRSid?.trim(),
+    schoolname: data.schoolname?.trim(),
+    schooltype: data.schooltype?.trim(),
+    affiliation: data.affiliation?.trim() || data.Affiliation?.trim(),
+    principalName: data.principalName?.trim() || data.NameofthePrincipal?.trim(),
+    contactno: data.contactno?.trim(),
+    email: data.email?.trim() || data.emailid?.trim(),
+  };
+  const udise = toOptionalNumber(data.udaisecode);
+  if (udise !== undefined) details.udaisecode = udise;
+  return details;
+};
   const prepareLocationDetails = (data) => ({
-    state: data.state,
-    district: data.district,
-    block: data.block,
-    gramPanchayat: data.gramPanchayat,
-    village: data.village,
+    pincode: data.pincode || "",
+    state: data.state || "",
+    district: data.district || "",
+    block: data.block || "",
+    grampanchayat: data.gramPanchayat || data.grampanchayat || "",
+    village: data.village || "",
   });
 
   const prepareInfrastructureDetails = (data) => ({
-    totalClassrooms: Number(data.totalClassrooms || 0),
-    classroomWithSmartClass: Number(data.classroomWithSmartClass || 0),
-    classroomWithProjector: Number(data.classroomWithProjector || 0),
+    totalClassrooms: toSafeNumber(data.totalClassrooms),
+    classroomWithSmartClass: toSafeNumber(data.classroomWithSmartClass),
+    classroomWithProjector: toSafeNumber(data.classroomWithProjector),
     scienceLab: data.scienceLab || "",
     biologyLab: data.biologyLab || "",
     chemistryLab: data.chemistryLab || "",
@@ -743,45 +768,45 @@ const prepareBasicDetails = (data) => ({
     computerLab: data.computerLab || "",
     internetComputerLab: data.internetComputerLab || "",
     library: data.library || "",
-    booksInLibrary: Number(data.booksInLibrary || 0),
+    booksInLibrary: toSafeNumber(data.booksInLibrary),
     playground: data.playground || "",
-    playgroundArea: Number(data.playgroundArea || 0),
+    playgroundArea: toSafeNumber(data.playgroundArea),
     auditorium: data.Auditorium || "",
-    auditoriumCapacity: Number(data.auditoriumCapacity || 0),
+    auditoriumCapacity: toSafeNumber(data.auditoriumCapacity),
     medicalRoom: data["Medical Room"] || "",
-    totalFireExtinguishers: Number(data.totalFireExtinguishers || 0),
-    functionalFireExtinguishers: Number(data.functionalFireExtinguishers || 0),
+    totalFireExtinguishers: toSafeNumber(data.totalFireExtinguishers),
+    functionalFireExtinguishers: toSafeNumber(data.functionalFireExtinguishers),
     electricalSafetyInspection: data.electricalSafetyInspection || "",
     fireSafetyDrill: data.fireSafetyDrill || "",
   });
 
   const prepareConstructionDetails = (data, constructionRows) => ({
-    projectStartDate: data.projectStartDate || null,
-    expectedEndDate: data.projectEndDate || null,
-    totalBudget: Number(data.totalProjectBudget || 0),
-    school: constructionRows.school,
-    residence: constructionRows.residence,
-    outdoor: constructionRows.outdoor,
-    utilities: constructionRows.utilities,
+    projectStartDate: data.projectStartDate || "",
+    expectedEndDate: data.projectEndDate || "",
+    totalBudget: toSafeNumber(data.totalProjectBudget),
+    school: sanitizeConstructionComponents(constructionRows.school),
+    residence: sanitizeConstructionComponents(constructionRows.residence),
+    outdoor: sanitizeConstructionComponents(constructionRows.outdoor),
+    utilities: sanitizeConstructionComponents(constructionRows.utilities),
   });
 
   const prepareHostelAdministration = (data) => ({
     boysHostel: {
-      capacity: Number(data.boysHostelCapacity || 0),
-      bedsAvailable: Number(data.boysBedsAvailable || 0),
-      currentOccupancy: Number(data.boysCurrentOccupancy || 0),
-      cctvInstalled: data.boysCCTVInstalled,
-      noOfCCTV: Number(data.boysNoOfCCTV || 0),
+      capacity: toSafeNumber(data.boysHostelCapacity),
+      bedsAvailable: toSafeNumber(data.boysBedsAvailable),
+      currentOccupancy: toSafeNumber(data.boysCurrentOccupancy),
+      cctvInstalled: data.boysCCTVInstalled || "",
+      noOfCCTV: toSafeNumber(data.boysNoOfCCTV),
       securityAgencyName: data.boysSecurityAgencyName || null,
       securityAgencyContact: data.boysSecurityAgencyContact || null,
       warden: { name: data.boysWardenName, email: data.boysWardenEmail, contact: data.boysWardenContact },
     },
     girlsHostel: {
-      capacity: Number(data.girlsHostelCapacity || 0),
-      bedsAvailable: Number(data.girlsBedsAvailable || 0),
-      currentOccupancy: Number(data.girlsCurrentOccupancy || 0),
-      cctvInstalled: data.girlsCCTVInstalled,
-      noOfCCTV: Number(data.girlsNoOfCCTV || 0),
+      capacity: toSafeNumber(data.girlsHostelCapacity),
+      bedsAvailable: toSafeNumber(data.girlsBedsAvailable),
+      currentOccupancy: toSafeNumber(data.girlsCurrentOccupancy),
+      cctvInstalled: data.girlsCCTVInstalled || "",
+      noOfCCTV: toSafeNumber(data.girlsNoOfCCTV),
       securityAgencyName: data.girlsSecurityAgencyName || null,
       securityAgencyContact: data.girlsSecurityAgencyContact || null,
       warden: { name: data.girlsWardenName, email: data.girlsWardenEmail, contact: data.girlsWardenContact },
@@ -819,6 +844,23 @@ const prepareBasicDetails = (data) => ({
       return;
     }
 
+    const validationErrors = validateEmrsFormData({
+      data,
+      constructionRows,
+      operationalCostRows,
+      enrollmentRows,
+      teachingRows,
+      nonTeachingRows,
+      hospitalizationRows,
+    });
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      if (validationErrors.length > 1) {
+        console.warn("EMRS validation errors:", validationErrors);
+      }
+      return;
+    }
+
     setLoading(true);
     const loadingToast = toast.loading("Submitting EMRS data...");
 
@@ -835,19 +877,19 @@ const prepareBasicDetails = (data) => ({
           academicYear: row.academicYear,
           class: row.class,
           section: row.section,
-          sanctionedCapacity: Number(row.sanctionedCapacity || 0),
-          currentEnrollment: Number(row.currentEnrollment || 0),
+          sanctionedCapacity: toSafeNumber(row.sanctionedCapacity),
+          currentEnrollment: toSafeNumber(row.currentEnrollment),
           categoryBreakdown: row.categoryBreakdown || {},
           academicPerformance: {
-            appeared: Number(row.appeared || 0),
-            passed: Number(row.passed || 0),
-            passPercent: row.passPercent,
-            above75: Number(row.above75 || 0),
-            below50: Number(row.below50 || 0),
-            stream: row.stream || null,
-            distinctions: Number(row.distinctions || 0),
-            topScorer: row.topScorer || null,
-            topScore: Number(row.topScore || 0),
+            appeared: toSafeNumber(row.appeared),
+            passed: toSafeNumber(row.passed),
+            passPercent: row.passPercent || "",
+            above75: toSafeNumber(row.above75),
+            below50: toSafeNumber(row.below50),
+            stream: row.stream || "",
+            distinctions: toSafeNumber(row.distinctions),
+            topScorer: row.topScorer || "",
+            topScore: toSafeNumber(row.topScore),
           },
           dropouts: row.dropouts.map((d) => ({
             rollNo: d.rollNo,
@@ -872,7 +914,7 @@ const prepareBasicDetails = (data) => ({
           academicYear: item.academicYear,
           initiativeName: item.initiativeName?.trim(),
           collaboratingPartner: item.collaboratingPartner?.trim(),
-          areasOfDevelopment: item.areasOfDevelopment,
+          areasOfDevelopment: item.areasOfDevelopment ? [item.areasOfDevelopment] : [],
           description: item.description?.trim(),
           targetStudents: item.targetStudents?.trim(),
           status: item.status,
@@ -889,8 +931,8 @@ const prepareBasicDetails = (data) => ({
           empanellementValidity: item.empanellementValidity,
           treatmentDetails: item.treatmentDetails?.trim(),
           doctorName: item.doctorName?.trim(),
-          estimatedCost: Number(item.estimatedCost || 0),
-          amountClaimed: Number(item.amountClaimed || 0),
+          estimatedCost: toSafeNumber(item.estimatedCost),
+          amountClaimed: toSafeNumber(item.amountClaimed),
           claimStatus: item.claimStatus,
           guardianName: item.guardianName?.trim(),
           guardianContact: item.guardianContact,
@@ -902,9 +944,9 @@ const prepareBasicDetails = (data) => ({
           doj: staff.doj,
           email: staff.email?.trim(),
           contact: staff.contact,
-          total: Number(staff.total || 0),
-          filled: Number(staff.filled || 0),
-          vacant: Number(staff.total || 0) - Number(staff.filled || 0),
+          total: toSafeNumber(staff.total),
+          filled: toSafeNumber(staff.filled),
+          vacant: toSafeNumber(staff.total) - toSafeNumber(staff.filled),
           academicQualifications: staff.academicQualifications,
           professionalQualifications: staff.professionalQualifications,
           tetQualifications: staff.tetQualifications,
@@ -917,9 +959,9 @@ const prepareBasicDetails = (data) => ({
           doj: staff.doj,
           email: staff.email?.trim(),
           contact: staff.contact,
-          total: Number(staff.total || 0),
-          filled: Number(staff.filled || 0),
-          vacant: Number(staff.total || 0) - Number(staff.filled || 0),
+          total: toSafeNumber(staff.total),
+          filled: toSafeNumber(staff.filled),
+          vacant: toSafeNumber(staff.total) - toSafeNumber(staff.filled),
           academicQualifications: staff.academicQualifications,
           professionalQualifications: staff.professionalQualifications,
           monthlyAttendance: staff.monthlyAttendance || [],
@@ -928,7 +970,7 @@ const prepareBasicDetails = (data) => ({
           year: row.year,
           month: row.month,
           costType: row.costType,
-          amount: Number(row.amount || 0),
+          amount: toSafeNumber(row.amount),
         })),
       };
 
@@ -1049,11 +1091,12 @@ const prepareBasicDetails = (data) => ({
 
       toast.dismiss(loadingToast);
       toast.success("✅ EMRS Form Submitted Successfully!");
-      setSubmitSuccess(true);
 
       if (addSubmittedForm) {
         addSubmittedForm(submittedRecord);
       }
+
+      navigate("/dashboard/applied/emrs");
     } catch (error) {
       toast.dismiss(loadingToast);
       toast.error("❌ Submission failed: " + error.message);
@@ -1367,7 +1410,7 @@ const onPincodeChange = async (pincode) => {
         <Divider />
         <CardContent sx={{ backgroundColor: "#f8fafc", padding: 4, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}>
           <form
-            onSubmit={(e) => { e.preventDefault(); onSubmit(watch()); }}
+            onSubmit={handleSubmit(onSubmit, () => toast.error("Please fix the highlighted form errors before submitting."))}
             style={{ pointerEvents: loading ? "none" : "auto", opacity: loading ? 0.6 : 1 }}
           >
             {/* ── STEP 0: School Details ── */}
@@ -2131,18 +2174,6 @@ const onPincodeChange = async (pincode) => {
         </DialogActions>
       </Dialog>
 
-      {/* Success Dialog */}
-      <Dialog open={submitSuccess} onClose={() => setSubmitSuccess(false)}>
-        <DialogTitle sx={{ color: "#16a34a", fontWeight: 700 }}>✅ Form Uploaded Successfully!</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Your EMRS form has been submitted successfully. You can view it in the <strong>Already Applied</strong> section below.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSubmitSuccess(false)} variant="contained" color="success">OK</Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

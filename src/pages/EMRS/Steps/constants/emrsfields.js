@@ -1,6 +1,6 @@
 export const emrsBasicFields = [
     { name: "EMRScode", label: "EMRS Code" },
-    { name: "udaisecode", label: "UDISE Code" },
+    { name: "udaisecode", label: "UDISE Code", type: "number" },
     { name: "schoolname", label: "School Name" },
     {
       name: "schooltype",

@@ -178,6 +178,14 @@ export default function SchoolDetails({
                     validate: (v) =>
                       !v || /^[0-9]{10}$/.test(String(v)) || "Must be exactly 10 digits",
                   }),
+                  ...(fieldItem.name === "udaisecode" && {
+                    validate: (v) =>
+                      !v || /^\d+$/.test(String(v).trim()) || "UDISE Code must contain digits only",
+                  }),
+                  ...(fieldItem.name === "emailid" && {
+                    validate: (v) =>
+                      !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim()) || "Enter a valid email",
+                  }),
                 }}
                 render={({ field, fieldState: { error } }) => (
                   <TextField
@@ -195,6 +203,17 @@ export default function SchoolDetails({
                         if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key))
                           e.preventDefault();
                       },
+                    })}
+                    {...(fieldItem.name === "udaisecode" && {
+                      inputProps: { inputMode: "numeric", pattern: "[0-9]*" },
+                      onKeyDown: (e) => {
+                        if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key))
+                          e.preventDefault();
+                      },
+                    })}
+                    {...(fieldItem.type === "number" && fieldItem.name !== "contactno" && fieldItem.name !== "udaisecode" && {
+                      type: "number",
+                      inputProps: { min: 0 },
                     })}
                     {...(["NameofthePrincipal", "emailid"].includes(fieldItem.name) && {
                       onKeyDown: (e) => { if (/^[0-9]$/.test(e.key)) e.preventDefault(); },
