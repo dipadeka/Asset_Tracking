@@ -9,10 +9,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import TableChartIcon from "@mui/icons-material/TableChart";
+import { useLocation } from "react-router-dom";
 
 const LS_KEY = "emrs_submitted_forms";
 
-// ── Read localStorage synchronously ──────────────────────
 const readLS = () => {
   try {
     return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
@@ -25,6 +25,36 @@ const writeLS = (forms) => {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(forms));
   } catch { /* ignore */ }
+};
+
+// ── DEDUPLICATION HELPER ──────────────────────────────────
+// Removes duplicate entries. Keeps the most "complete" copy when
+// two entries look like the same submission (same school + code,
+// or one entry has a blank EMRScode/createdAt).
+const deduplicate = (forms) => {
+  const seen = new Map();
+
+  forms.forEach((form) => {
+    const id = String(form._id || form.id || "");
+    const stableKey = `${(form.schoolname || "").trim().toLowerCase()}__${(form.EMRScode || "").trim()}`;
+    const hasData = form.EMRScode && form.createdAt;
+
+    // If we have a real id, use it as the primary key
+    const key = id && !id.startsWith("local_temp") ? id : stableKey;
+
+    if (!seen.has(key)) {
+      seen.set(key, form);
+    } else {
+      const existing = seen.get(key);
+      const existingHasData = existing.EMRScode && existing.createdAt;
+      // Prefer the entry that has more data filled in
+      if (!existingHasData && hasData) {
+        seen.set(key, form);
+      }
+    }
+  });
+
+  return Array.from(seen.values());
 };
 
 // ── helpers ───────────────────────────────────────────────
@@ -224,26 +254,30 @@ const SectionTable = ({ title, rows }) => (
 
 // ── Main Component ────────────────────────────────────────
 const AlreadyApplied = () => {
-  // ── LOAD SYNCHRONOUSLY from localStorage on first render ──
-  // This guarantees data shows instantly — no network wait, no timing issue.
-  const [submittedForms, setSubmittedForms] = useState(() => readLS());
+  const location = useLocation();
+
+  const [submittedForms, setSubmittedForms] = useState(() => deduplicate(readLS()));
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // ── Reload from localStorage (called after new submission event) ──
   const reloadFromLS = useCallback(() => {
-    setSubmittedForms(readLS());
+    const raw = readLS();
+    const deduped = deduplicate(raw);
+    // If deduplication removed entries, persist the clean version back
+    if (deduped.length !== raw.length) {
+      writeLS(deduped);
+    }
+    setSubmittedForms(deduped);
   }, []);
 
   useEffect(() => {
-    // Reload every time this component mounts (page navigation)
     reloadFromLS();
-
-    // Also listen for the custom event fired by EMRSForm after submit
     window.addEventListener("emrs-form-submitted", reloadFromLS);
-    return () => window.removeEventListener("emrs-form-submitted", reloadFromLS);
-  }, [reloadFromLS]);
+    return () => {
+      window.removeEventListener("emrs-form-submitted", reloadFromLS);
+    };
+  }, [reloadFromLS, location.pathname]);
 
   // ── Delete ─────────────────────────────────────────────
   const handleDeleteClick = (id) => { setSelectedFormId(id); setDeleteDialogOpen(true); };
@@ -258,7 +292,6 @@ const AlreadyApplied = () => {
       setSubmittedForms(updated);
       writeLS(updated);
 
-      // Best-effort API delete
       if (!String(selectedFormId).startsWith("local_")) {
         fetch(`http://localhost:5000/api/emrs/${selectedFormId}`, { method: "DELETE" }).catch(() => {});
       }

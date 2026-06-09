@@ -80,7 +80,6 @@ const updateSubsection = (id, field, value) => {
 
   const startDate = watch("constructionStartDate");
   const completionMonths = watch("timeOfCompletion");
-  const endDate = watch("constructionEndDate");
   const status = watch("status");
 
   // ================= SUBMIT =================
@@ -220,7 +219,7 @@ const updateSubsection = (id, field, value) => {
 
   useEffect(() => {
     getLiveLocation();
-  }, []);
+  }, [getLiveLocation]);
 
   useEffect(() => {
     if (startDate && completionMonths) {
@@ -272,7 +271,7 @@ const updateSubsection = (id, field, value) => {
   ];
 
   // ================= FINANCIAL FIELDS =================
-  const finencialFields = [
+  const financialFields = [
     { name: "schemeName", label: "Name of the Scheme" },
     {
       name: "fundingSource",

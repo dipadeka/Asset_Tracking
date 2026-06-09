@@ -8,7 +8,6 @@ import {
   Chip,
 } from "@mui/material";
 import { Controller } from "react-hook-form";
-
 // ─────────────────────────────────────────────
 // All 17 EMRS schools — only 5 are functional
 // ─────────────────────────────────────────────
@@ -16,122 +15,122 @@ const EMRS_SCHOOLS = [
   // ── Baksa ──────────────────────────────────
   {
     district: "Baksa",
-    name: "Dalbari, Barama",
-    value: "Dalbari, Barama",
+    name: "EMRS, Dalbari, Barama",
+    value: "EMRS, Dalbari, Barama",
     enabled: false,
   },
   {
     district: "Baksa",
-    name: "Jalah, Vill. Daodhara",
-    value: "Jalah, Vill. Daodhara",
-    enabled: true,       // ✅ FUNCTIONAL
+    name: "EMRS, Jalah, Vill. Daodhara",
+    value: "EMRS, Jalah, Vill. Daodhara",
+    enabled: true,  // ✅ FUNCTIONAL
   },
   {
     district: "Baksa",
-    name: "Sarupeta, Vill. Tatikuchi",
-    value: "Sarupeta, Vill. Tatikuchi",
+    name: "EMRS, Sarupeta, Vill. Tatikuchi",
+    value: "EMRS, Sarupeta, Vill. Tatikuchi",
     enabled: false,
   },
 
   // ── Bajali ─────────────────────────────────
   {
     district: "Bajali",
-    name: "Kharadhara",
-    value: "Kharadhara",
-    enabled: true,       // ✅ FUNCTIONAL
+    name: "EMRS, Kharadhara",
+    value: "EMRS,Kharadhara",
+    enabled: true, // ✅ FUNCTIONAL
   },
 
   // ── Kokrajhar ──────────────────────────────
   {
     district: "Kokrajhar",
-    name: "Bedlangmari",
-    value: "Bedlangmari",
+    name: "EMRS, Bedlangmari",
+    value: "EMRS, Bedlangmari",
     enabled: false,
   },
 
   // ── Karbi Anglong ──────────────────────────
   {
     district: "Karbi Anglong",
-    name: "Howraghat",
-    value: "Howraghat",
+    name: "EMRS, Howraghat",
+    value: "EMRS, Howraghat",
     enabled: true,       // ✅ FUNCTIONAL
   },
   {
     district: "Karbi Anglong",
-    name: "Phuloni, Vill. Donghap",
-    value: "Phuloni, Vill. Donghap",
+    name: "EMRS, Phuloni, Vill. Donghap",
+    value: "EMRS, Phuloni, Vill. Donghap",
     enabled: false,
   },
   {
     district: "Karbi Anglong",
-    name: "Silonijan, Vill. Thengkur Terang",
-    value: "Silonijan, Vill. Thengkur Terang",
+    name: "EMRS, Silonijan, Vill. Thengkur Terang",
+    value: "EMRS, Silonijan, Vill. Thengkur Terang",
     enabled: false,
   },
 
   // ── West Karbi Anglong ─────────────────────
   {
     district: "West Karbi Anglong",
-    name: "Donka, Vill. Taralangso NC",
-    value: "Donka, Vill. Taralangso NC",
+    name: "EMRS, Donka, Vill. Taralangso NC",
+    value: "EMRS, Donka, Vill. Taralangso NC",
     enabled: false,
   },
 
   // ── Dhemaji ────────────────────────────────
   {
     district: "Dhemaji",
-    name: "Jonai, Vill. Purana Jhelom",
-    value: "Jonai, Vill. Purana Jhelom",
+    name: "EMRS, Jonai, Vill. Purana Jhelom",
+    value: "EMRS, Jonai, Vill. Purana Jhelom",
     enabled: true,       // ✅ FUNCTIONAL
   },
 
   // ── Dima Hasao ─────────────────────────────
   {
     district: "Dima Hasao",
-    name: "Haflong, Vill. Ardaopur",
-    value: "Haflong, Vill. Ardaopur",
+    name: "EMRS,Haflong, Vill. Ardaopur",
+    value: "EMRS,Haflong, Vill. Ardaopur",
     enabled: true,       // ✅ FUNCTIONAL
   },
   {
     district: "Dima Hasao",
-    name: "Umrangso, Vill. Taisiling Hower",
-    value: "Umrangso, Vill. Taisiling Hower",
+    name: "EMRS,Umrangso, Vill. Taisiling Hower",
+    value: "EMRS,Umrangso, Vill. Taisiling Hower",
     enabled: false,
   },
   {
     district: "Dima Hasao",
-    name: "Harangajao, Vill. Dolaidisa",
-    value: "Harangajao, Vill. Dolaidisa",
+    name: "EMRS, Harangajao, Vill. Dolaidisa",
+    value: "EMRS, Harangajao, Vill. Dolaidisa",
     enabled: false,
   },
   {
     district: "Dima Hasao",
-    name: "Diyungbra, Vill. Larbo",
-    value: "Diyungbra, Vill. Larbo",
+    name: "EMRS, Diyungbra, Vill. Larbo",
+    value: "EMRS, Diyungbra, Vill. Larbo",
     enabled: false,
   },
 
   // ── Kamrup ─────────────────────────────────
   {
     district: "Kamrup",
-    name: "Boko, Vill. Nagopara",
-    value: "Boko, Vill. Nagopara",
+    name: "EMRS,Boko, Vill. Nagopara",
+    value: "EMRS, Boko, Vill. Nagopara",
     enabled: false,
   },
 
   // ── Goalpara ───────────────────────────────
   {
     district: "Goalpara",
-    name: "Dudhnoi, Vill. Jakhuwapara",
-    value: "Dudhnoi, Vill. Jakhuwapara",
+    name: "EMRS, Dudhnoi, Vill. Jakhuwapara",
+    value: "EMRS, Dudhnoi, Vill. Jakhuwapara",
     enabled: false,
   },
 
   // ── Udalguri ───────────────────────────────
   {
     district: "Udalguri",
-    name: "Khoirabari, Vill. Malmura",
-    value: "Khoirabari, Vill. Malmura",
+    name: "EMRS, Khoirabari, Vill. Malmura",
+    value: "EMRS, Khoirabari, Vill. Malmura",
     enabled: false,
   },
 ];
@@ -402,7 +401,7 @@ export default function SchoolDetails({
           inputProps={{ maxLength: 6 }}
           onChange={(e) => {
             field.onChange(e);   // ✅ update RHF state first
-            onPincodeChange(e);  // ✅ then trigger autofill
+            onPincodeChange(e.target.value);  // ✅ then trigger autofill
           }}
           error={!!error}
           helperText={error?.message}

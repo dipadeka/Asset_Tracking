@@ -3,7 +3,7 @@ import SchoolDetails from "./Steps/SchoolDetails";
 import InfrastructureDetails from "./Steps/Infrastructure";
 import ConstructionDetails from "./Steps/Construction";
 import ExtraCurricular from "./Steps/ExtraCurricular";
-import OperationalCost from "./Steps/OperationalCost"; // ← NEW IMPORT
+import OperationalCost from "./Steps/OperationalCost";
 import {
   emrsBasicFields,
   emrsLocationFields,
@@ -65,6 +65,9 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useForm, Controller } from "react-hook-form";
 import { GirlSharp } from "@mui/icons-material";
+// ─── FIX: import useAuth so we can read the logged-in school's credentials ───
+import { useAuth } from "../../context/AuthContext";
+import { SCHOOL_CREDENTIALS } from "./Schoolcredentials";
 
 const thStyle = {
   border: "1px solid #e0e0e0",
@@ -75,6 +78,9 @@ const thStyle = {
 const tdStyle = { border: "1px solid #e0e0e0", padding: "8px" };
 
 const EMRSForm = ({ addSubmittedForm }) => {
+  // ─── FIX: pull the logged-in user so we can stamp their credentials ───────
+  const { user } = useAuth();
+
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
@@ -481,7 +487,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
     },
   ]);
 
-  // ── Operational Cost state lives here and is passed down ──
   const [operationalCostRows, setOperationalCostRows] = useState([
     { year: "", month: "", costType: "", amount: "" },
   ]);
@@ -747,6 +752,19 @@ const EMRSForm = ({ addSubmittedForm }) => {
     },
   });
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FIX: resolve the credential record for the currently logged-in school user.
+  //      We look up by user.username (the login id stored in AuthContext).
+  //      This gives us the canonical schoolCode ("EMRS-AS-03") and schoolName.
+  // ─────────────────────────────────────────────────────────────────────────────
+  const resolveCredential = () => {
+    if (!user) return null;
+    const loginId = String(user.username || user.loginId || user.id || "").trim().toLowerCase();
+    return SCHOOL_CREDENTIALS.find(
+      (c) => String(c.username || "").trim().toLowerCase() === loginId
+    ) || null;
+  };
+
   const onSubmit = async (data) => {
     const hasEyeErrors = Object.keys(eyeDateErrors).length > 0;
     const hasEarErrors = Object.keys(earDateErrors).length > 0;
@@ -868,12 +886,31 @@ const EMRSForm = ({ addSubmittedForm }) => {
         })),
       };
 
+      // ── FIX: resolve the credential and stamp ALL identity fields ────────────
+      // This is the critical fix — without these fields the admin dashboard
+      // cannot match this record back to the right school entry.
+      const cred = resolveCredential();
+      if (cred) {
+        payload.username   = cred.username;   // e.g. "emrs_as_03"
+        payload.loginId    = cred.username;   // alias so both field names work
+        payload.schoolCode = cred.schoolCode; // e.g. "EMRS-AS-03"
+        payload.EMRScode   = cred.schoolCode; // overwrite numeric with canonical code
+        payload.schoolname = payload.schoolname || cred.schoolName;
+        payload.district   = payload.district   || cred.district;
+        payload.block      = payload.block      || cred.block;
+      } else if (user) {
+        // Fallback: at minimum stamp the raw login id so normalization can find it
+        payload.username = String(user.username || user.loginId || user.id || "");
+        payload.loginId  = payload.username;
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       let submittedId = null;
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const response = await fetch("http://localhost:5000/api/emrs", {
+        const response = await fetch("http://localhost:5000/api/emrs/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -931,24 +968,34 @@ const EMRSForm = ({ addSubmittedForm }) => {
       };
 
       try {
-        // Save the FULL payload so AlreadyApplied can read every field
+        // ── FIX: save the FULL payload (which now includes username & schoolCode)
+        //    Match on schoolCode (canonical) to avoid duplicate entries.
         const recordToSave = {
           ...payload,
           _id: submittedId || `local_${Date.now()}`,
           createdAt: new Date().toISOString(),
+          submittedAt: new Date().toISOString(),
         };
+
         const existing = JSON.parse(localStorage.getItem("emrs_submitted_forms") || "[]");
-        const idx = existing.findIndex(
-          (f) => String(f.EMRScode) === String(payload.EMRScode)
-        );
+
+        // ── FIX: deduplicate by canonical schoolCode first, then by username ──
+        const idx = existing.findIndex((f) => {
+          if (payload.schoolCode && f.schoolCode === payload.schoolCode) return true;
+          if (payload.username && f.username === payload.username) return true;
+          // Legacy: numeric EMRScode comparison
+          if (payload.EMRScode && String(f.EMRScode) === String(payload.EMRScode)) return true;
+          return false;
+        });
+
         if (idx !== -1) {
           existing[idx] = recordToSave;   // update existing record
         } else {
           existing.push(recordToSave);    // add new record
         }
         localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));
- 
-        // Tell AlreadyApplied to refresh immediately
+
+        // Tell admin dashboard to refresh immediately
         window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
       } catch (storageError) {
         console.warn("localStorage save failed:", storageError.message);
@@ -970,24 +1017,30 @@ const EMRSForm = ({ addSubmittedForm }) => {
     }
   };
 
-  const onPincodeChange = async (e) => {
-    const pincode = e.target.value;
-    if (pincode.length !== 6) return;
-    try {
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-      const data = await response.json();
-      if (data[0].Status === "Success") {
-        const postOffice = data[0].PostOffice[0];
-        setValue("state", postOffice.State);
-        setValue("district", postOffice.District);
-        setValue("block", postOffice.Block);
-        setValue("gram panchayat", postOffice.gramPanchayat);
-        setValue("village", postOffice.Village);
-      }
-    } catch (error) {
-      console.error("Error fetching location data:", error);
+const onPincodeChange = async (pincode) => {
+  if (!pincode || String(pincode).length !== 6) return;
+  try {
+    const response = await fetch(
+      `https://api.postalpincode.in/pincode/${pincode}`
+    );
+    const data = await response.json();
+
+    if (data[0]?.Status === "Success") {
+      const po = data[0].PostOffice[0];
+      setValue("district",      po.District || "");
+      setValue("block",         po.Block    || "");
+      setValue("gramPanchayat", po.Name     || "");
+      setValue("village",       po.Division || "");
+    } else {
+      setValue("district",      "");
+      setValue("block",         "");
+      setValue("gramPanchayat", "");
+      setValue("village",       "");
     }
-  };
+  } catch (error) {
+    console.error("Pincode lookup failed:", error);
+  }
+};
 
   const syncInfraToConstruction = (fieldName, value) => {
     const map = {

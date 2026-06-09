@@ -1,10 +1,50 @@
-import React from "react";
+import React, { useState } from "react";
 import { Grid, Typography, Box, TextField } from "@mui/material";
 import { Controller } from "react-hook-form";
 import { CONSTRUCTION_CONFIG, CONSTRUCTION_STATUS_STYLE } from "./constants/emrsfields.js";
 
+// ── Default rows for the Physical & Financial Status table ──────────────────
+const DEFAULT_EMRS_STATUS_ROWS = [
+  { emrs: "Dalbari",            district: "Baksa",        physicalProgress: 100,  status: "Completed" },
+  { emrs: "Kharadhara",        district: "Barpeta",       physicalProgress: 100,  status: "Completed" },
+  { emrs: "Diphu (Howraghat)", district: "Karbi Anglong", physicalProgress: 100,  status: "Completed" },
+  { emrs: "Bedlangmari",       district: "Kokrajhar",     physicalProgress: 43.5, status: "Ongoing" },
+  { emrs: "Haflong (Ardaopur)",district: "Dima Hasao",    physicalProgress: 100,  status: "Phase-I Completed" },
+];
+
+const EMRS_STATUS_COLORS = {
+  "Completed":         { bg: "#dcfce7", color: "#16a34a" },
+  "Ongoing":           { bg: "#fef3c7", color: "#d97706" },
+  "Phase-I Completed": { bg: "#dbeafe", color: "#1d4ed8" },
+  "Not Started":       { bg: "#f3f4f6", color: "#6b7280" },
+  "On Hold":           { bg: "#fee2e2", color: "#dc2626" },
+};
+
 export default function ConstructionDetails({ control, constructionRows, setConstructionRows }) {
 
+  // ── State for the new EMRS Physical & Financial Status rows ────────────────
+  const [emrsStatusRows, setEmrsStatusRows] = useState(DEFAULT_EMRS_STATUS_ROWS);
+
+  const addEmrsRow = () => {
+    setEmrsStatusRows((prev) => [
+      ...prev,
+      { emrs: "", district: "", physicalProgress: 0, status: "Not Started" },
+    ]);
+  };
+
+  const updateEmrsRow = (idx, field, val) => {
+    setEmrsStatusRows((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], [field]: val };
+      return updated;
+    });
+  };
+
+  const removeEmrsRow = (idx) => {
+    setEmrsStatusRows((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // ── Existing construction table renderer ───────────────────────────────────
   const renderConstructionTable = (catKey) => {
     const cfg = CONSTRUCTION_CONFIG[catKey];
     const rows = constructionRows[catKey];
@@ -121,12 +161,28 @@ export default function ConstructionDetails({ control, constructionRows, setCons
     );
   };
 
-  // Live summary banner
+  // ── Live summary ───────────────────────────────────────────────────────────
   const all = Object.values(constructionRows).flat();
   const total = all.length;
   const completed = all.filter((r) => r.status === "Completed").length;
   const inProgress = all.filter((r) => r.status === "In Progress").length;
   const pct = total > 0 ? Math.round(all.reduce((s, r) => s + r.progress, 0) / total) : 0;
+
+  // ── Inline styles shared by the new EMRS table ────────────────────────────
+  const emrsThStyle = {
+    background: "#c0392b", color: "#fff", padding: "10px 12px",
+    fontSize: 12, fontWeight: 700, textAlign: "left",
+    whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.25)",
+  };
+  const emrsTdStyle = {
+    padding: "8px 10px", fontSize: 13, verticalAlign: "middle",
+    borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #f1f5f9",
+  };
+  const emrsInput = {
+    width: "100%", border: "1px solid #e2e8f0", borderRadius: 6,
+    padding: "5px 8px", fontSize: 12, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box", background: "#fff",
+  };
 
   return (
     <>
@@ -182,10 +238,10 @@ export default function ConstructionDetails({ control, constructionRows, setCons
           <Grid item xs={12} md={8}>
             <Box display="flex" gap={2} flexWrap="wrap">
               {[
-                { label: "Total", val: total, bg: "rgba(255,255,255,0.15)" },
-                { label: "✅ Completed", val: completed, bg: "rgba(22,163,74,0.35)" },
-                { label: "🔄 In Progress", val: inProgress, bg: "rgba(245,158,11,0.35)" },
-                { label: "⏳ Not Started", val: total - completed - inProgress, bg: "rgba(255,255,255,0.1)" },
+                { label: "Total",          val: total,                            bg: "rgba(255,255,255,0.15)" },
+                { label: "✅ Completed",   val: completed,                        bg: "rgba(22,163,74,0.35)" },
+                { label: "🔄 In Progress", val: inProgress,                      bg: "rgba(245,158,11,0.35)" },
+                { label: "⏳ Not Started", val: total - completed - inProgress,  bg: "rgba(255,255,255,0.1)" },
               ].map(({ label, val, bg }) => (
                 <Box key={label} sx={{ textAlign: "center", background: bg, borderRadius: 2, px: 2.5, py: 1.5 }}>
                   <Typography sx={{ fontSize: 22, fontWeight: 800 }}>{val}</Typography>
@@ -197,6 +253,162 @@ export default function ConstructionDetails({ control, constructionRows, setCons
         </Grid>
       </Box>
 
+      {/* ── Physical & Financial Status of EMRS ─────────────────────────────── */}
+      <Box mb={3}>
+        {/* Section header */}
+        <Box sx={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: "#fff5f5", border: "1px solid #c0392b30",
+          borderRadius: "10px 10px 0 0", px: 2, py: 1.5,
+        }}>
+          <Typography sx={{ fontWeight: 700, color: "#c0392b", fontSize: 15 }}>
+            📊 Physical &amp; Financial Status of EMRS
+          </Typography>
+          <Box display="flex" gap={1} alignItems="center">
+            <Typography sx={{ background: "#dcfce7", color: "#16a34a", px: 1.5, py: 0.3, borderRadius: 10, fontSize: 12, fontWeight: 600 }}>
+              ✅ {emrsStatusRows.filter((r) => r.status === "Completed" || r.status === "Phase-I Completed").length} Completed
+            </Typography>
+            <Typography sx={{ background: "#fef3c7", color: "#d97706", px: 1.5, py: 0.3, borderRadius: 10, fontSize: 12, fontWeight: 600 }}>
+              🔄 {emrsStatusRows.filter((r) => r.status === "Ongoing").length} Ongoing
+            </Typography>
+            <Box
+              component="button"
+              onClick={addEmrsRow}
+              sx={{
+                ml: 1, px: 1.5, py: 0.4, fontSize: 12, fontWeight: 600,
+                background: "#c0392b", color: "#fff", border: "none",
+                borderRadius: 6, cursor: "pointer",
+                "&:hover": { background: "#a93226" },
+              }}
+            >
+              + Add Row
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Table */}
+        <Box sx={{ overflowX: "auto", border: "1px solid #c0392b25", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 750 }}>
+            <thead>
+              <tr>
+                {["S.No", "EMRS", "District", "Physical Progress (%)", "Status", "Action"].map((h) => (
+                  <th key={h} style={emrsThStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {emrsStatusRows.map((row, i) => {
+                const statusStyle = EMRS_STATUS_COLORS[row.status] || { bg: "#f3f4f6", color: "#6b7280" };
+                const progressColor =
+                  row.physicalProgress === 100 ? "#16a34a"
+                  : row.physicalProgress > 0   ? "#f59e0b"
+                  :                              "#d1d5db";
+
+                return (
+                  <tr key={i} style={{ background: i % 2 === 0 ? "#fdf2f2" : "#fff" }}>
+                    {/* S.No */}
+                    <td style={{ ...emrsTdStyle, textAlign: "center", color: "#9ca3af", fontWeight: 600, width: 40 }}>
+                      {i + 1}
+                    </td>
+
+                    {/* EMRS Name */}
+                    <td style={{ ...emrsTdStyle, minWidth: 160 }}>
+                      <input
+                        type="text"
+                        value={row.emrs}
+                        onChange={(e) => updateEmrsRow(i, "emrs", e.target.value)}
+                        placeholder="EMRS Name"
+                        style={emrsInput}
+                      />
+                    </td>
+
+                    {/* District */}
+                    <td style={{ ...emrsTdStyle, minWidth: 140 }}>
+                      <input
+                        type="text"
+                        value={row.district}
+                        onChange={(e) => updateEmrsRow(i, "district", e.target.value)}
+                        placeholder="District"
+                        style={emrsInput}
+                      />
+                    </td>
+
+                    {/* Physical Progress */}
+                    <td style={{ ...emrsTdStyle, minWidth: 160 }}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={row.physicalProgress}
+                          onChange={(e) =>
+                            updateEmrsRow(i, "physicalProgress", Math.min(100, Math.max(0, Number(e.target.value))))
+                          }
+                          style={{ ...emrsInput, width: 70 }}
+                        />
+                        <Typography sx={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>%</Typography>
+                      </Box>
+                      <Box sx={{ mt: 0.5, height: 5, background: "#e5e7eb", borderRadius: 2, overflow: "hidden" }}>
+                        <Box sx={{
+                          height: "100%", borderRadius: 2, transition: "width 0.3s",
+                          width: `${row.physicalProgress}%`,
+                          background: progressColor,
+                        }} />
+                      </Box>
+                    </td>
+
+                    {/* Status */}
+                    <td style={{ ...emrsTdStyle, minWidth: 160 }}>
+                      <select
+                        value={row.status}
+                        onChange={(e) => updateEmrsRow(i, "status", e.target.value)}
+                        style={{
+                          ...emrsInput,
+                          background: statusStyle.bg,
+                          color: statusStyle.color,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {["Not Started", "Ongoing", "Completed", "Phase-I Completed", "On Hold"].map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Remove */}
+                    <td style={{ ...emrsTdStyle, textAlign: "center", width: 60 }}>
+                      <Box
+                        component="button"
+                        onClick={() => removeEmrsRow(i)}
+                        title="Remove row"
+                        sx={{
+                          background: "#fee2e2", color: "#dc2626", border: "none",
+                          borderRadius: 4, px: 1, py: 0.3, fontSize: 16,
+                          cursor: "pointer", lineHeight: 1,
+                          "&:hover": { background: "#fca5a5" },
+                        }}
+                      >
+                        ×
+                      </Box>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {emrsStatusRows.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ ...emrsTdStyle, textAlign: "center", color: "#9ca3af", py: 24 }}>
+                    No EMRS entries yet. Click "+ Add Row" to add one.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </Box>
+      </Box>
+      {/* ── End Physical & Financial Status of EMRS ──────────────────────────── */}
+
       {/* 4 Category Tables */}
       {["school", "residence", "outdoor", "utilities"].map((catKey) =>
         renderConstructionTable(catKey)
@@ -205,4 +417,3 @@ export default function ConstructionDetails({ control, constructionRows, setCons
     </>
   );
 }
-

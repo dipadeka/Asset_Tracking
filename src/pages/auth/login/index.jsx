@@ -1,9 +1,6 @@
 // src/pages/auth/login/index.jsx
 // ─────────────────────────────────────────────────────────────
-//  NEW FILE — EMRS Portal Login (separate from your existing login.jsx)
-//  Your existing login/login.jsx (SignInPage) is NOT touched.
-//
-//  This file lives at: src/pages/auth/login/index.jsx
+//  EMRS Portal Login page for school and admin users.
 //  Route: /emrs/login
 //
 //  After login:
@@ -58,7 +55,6 @@ const EMRSLoginPage = () => {
       if (result.user.role === "admin") {
         navigate("/dashboard/admin");
       } else {
-        // Schools land on /dashboard/emrs inside DashboardLayout
         navigate("/dashboard/emrs");
       }
     } else {
@@ -78,7 +74,6 @@ const EMRSLoginPage = () => {
         position: "relative",
       }}
     >
-      {/* Back to main site */}
       <Box sx={{ position: "absolute", top: 20, left: 20 }}>
         <Button
           component={Link}
@@ -99,7 +94,6 @@ const EMRSLoginPage = () => {
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <Box
           sx={{
             background: "linear-gradient(135deg, #0d47a1, #1976d2)",
@@ -135,7 +129,6 @@ const EMRSLoginPage = () => {
           </Typography>
         </Box>
 
-        {/* Form */}
         <CardContent sx={{ px: 4, py: 4 }}>
           <Typography
             variant="subtitle1"
@@ -219,9 +212,7 @@ const EMRSLoginPage = () => {
                   boxShadow: "0 6px 20px rgba(25,118,210,0.45)",
                 },
               }}
-              startIcon={
-                loading ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : null
-              }
+              startIcon={loading ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : null}
             >
               {loading ? "Signing in…" : "Sign In"}
             </Button>
