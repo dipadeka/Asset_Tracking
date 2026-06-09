@@ -32,6 +32,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import toast, { Toaster } from "react-hot-toast";
+
 import {
   Box,
   Grid,
@@ -174,8 +175,54 @@ const EMRSForm = ({ addSubmittedForm }) => {
     { name: "", class: "", section: "", category: "" },
   ]);
 
-  const { control, handleSubmit, setValue, watch, register } = useForm({});
+  const { control, handleSubmit, setValue, watch, register } = useForm({
+  defaultValues: {
+    EMRScode: "",
+    EMRSid: "",
+    udaisecode: "",
+    schoolname: "",
+    schooltype: "",
+    Affiliation: "",
+    affiliation: "",
+    principalAvailable: "",
+    NameofthePrincipal: "",
+    contactno: "",
+    emailid: "",
+    state: "Assam",
+    pincode: "",
+    district: "",
+    block: "",
+    gramPanchayat: "",
+    village: "",
+  },
+});
 
+useEffect(() => {
+  if (!user || user.role !== "school") return;
+
+  const loginId = String(user.username || user.loginId || user.id || "")
+    .trim()
+    .toLowerCase();
+
+  const school = SCHOOL_CREDENTIALS.find(
+    (item) => String(item.username).trim().toLowerCase() === loginId
+  );
+
+  if (!school) return;
+
+  setValue("EMRScode", school.schoolCode || "");
+  setValue("schoolname", school.schoolName || "");
+  setValue("state", school.state || "Assam");
+  setValue("pincode", school.pincode || "");
+  setValue("district", school.district || "");
+  setValue("block", school.block || "");
+  setValue("gramPanchayat", school.gramPanchayat || "");
+  setValue("village", school.village || "");
+  setValue("NameofthePrincipal", school.principal || "");
+  setValue("principalAvailable", school.principal ? "Yes" : "");
+  setValue("contactno", school.contact || "");
+  setValue("emailid", school.email || "");
+}, [user, setValue]);
   const labValues = watch([
     "physicsLabFunctional",
     "chemistryLabFunctional",
@@ -666,18 +713,17 @@ const EMRSForm = ({ addSubmittedForm }) => {
     return 0;
   };
 
-  const prepareBasicDetails = (data) => ({
-    EMRScode: Number(data.EMRScode),
-    EMRSid: data.EMRSid?.trim(),
-    udaisecode: Number(data.udaisecode),
-    schoolname: data.schoolname?.trim(),
-    schooltype: data.schooltype?.trim(),
-    affiliation: data.affiliation?.trim(),
-    principalName: data.principalName?.trim(),
-    contactno: data.contactno?.trim(),
-    email: data.email?.trim(),
-  });
-
+const prepareBasicDetails = (data) => ({
+  EMRScode: data.EMRScode?.trim(),
+  EMRSid: data.EMRSid?.trim(),
+  udaisecode: data.udaisecode?.trim(),
+  schoolname: data.schoolname?.trim(),
+  schooltype: data.schooltype?.trim(),
+  affiliation: data.affiliation?.trim() || data.Affiliation?.trim(),
+  principalName: data.principalName?.trim() || data.NameofthePrincipal?.trim(),
+  contactno: data.contactno?.trim(),
+  email: data.email?.trim() || data.emailid?.trim(),
+});
   const prepareLocationDetails = (data) => ({
     state: data.state,
     district: data.district,
@@ -1326,7 +1372,7 @@ const onPincodeChange = async (pincode) => {
           >
             {/* ── STEP 0: School Details ── */}
             {currentStep === 0 && (
-              <SchoolDetails control={control} watch={watch} emrsBasicFields={emrsBasicFields} onPincodeChange={onPincodeChange} />
+              <SchoolDetails control={control} watch={watch}  setValue={setValue} emrsBasicFields={emrsBasicFields} onPincodeChange={onPincodeChange} />
             )}
 
             {/* ── STEP 1: Infrastructure ── */}
