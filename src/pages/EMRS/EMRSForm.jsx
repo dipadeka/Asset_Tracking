@@ -1014,7 +1014,7 @@ const prepareBasicDetails = (data) => {
         }
 
         if (response.ok) {
-          submittedId = result._id;
+          submittedId = result.data?._id || result._id;
         } else {
           console.warn(`Backend returned ${response.status}, saving locally.`);
           submittedId = `local_${Date.now()}`;

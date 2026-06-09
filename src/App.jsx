@@ -6,7 +6,7 @@
 //  4. Kept ALL your existing routes 100% intact
 //  5. Your existing ProtectedRoute (Redux/JWT) still works for non-EMRS pages
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -19,7 +19,7 @@ import AdminSignInPage from "./pages/auth/admin/login";
 // ── Existing layout & pages ──────────────────────────────────
 import DashboardLayout from "./pages/layouts/DashboardLayout";
 import NewApplication from "./pages/NewApplication";
-import AlreadyApplied from "./pages/submitted-application/AlreadyApplied";
+import EMRSApplied from "./pages/submitted-application/EMRSApplied";
 import AssetApplied from "./pages/AssetApplied";
 import AssetForm from "./pages/assetManagementForm/index";
 import HomePage from "./pages/home/homepage";
@@ -87,8 +87,8 @@ function App() {
             <Route path="new" element={<NewApplication />} />
 
             {/* Already applied pages */}
-            <Route path="applied" element={<AlreadyApplied />} />
-            <Route path="applied/emrs" element={<AlreadyApplied />} />
+            <Route path="applied" element={<Navigate to="/dashboard/applied/emrs" replace />} />
+            <Route path="applied/emrs" element={<EMRSApplied />} />
             <Route path="applied/assets" element={<AssetApplied />} />
 
             {/* ── CHANGED: /dashboard/emrs now uses SchoolEMRSWrapper ──
