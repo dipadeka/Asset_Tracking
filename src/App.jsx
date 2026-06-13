@@ -1,73 +1,67 @@
-// src/App.jsx — REVISED
-// Changes made:
-//  1. Wrapped everything in <AuthProvider> (from our new AuthContext)
-//  2. Added /dashboard/admin route → EMRSAdminDashboard
-//  3. Changed /dashboard/emrs route → SchoolEMRSWrapper (instead of raw EMRSForm)
-//  4. Kept ALL your existing routes 100% intact
-//  5. Your existing ProtectedRoute (Redux/JWT) still works for non-EMRS pages
+// src/App.jsx — REVISED FOR CLEAN WORKFLOW
+// Workflow:
+// - Homepage (/)
+//   ├─→ EMRS Portal: /emrs/login → EMRS Dashboard → EMRSForm
+//   └─→ Asset Portal: /asset/login → Asset Dashboard → AssetForm
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// ── Existing auth pages ──────────────────────────────────────
-import SignInPage from "./pages/auth/login/login";
-import SignUpPage from "./pages/auth/signup";
-import ForgotPasswordPage from "./pages/auth/forgotPassword";
-import AdminSignInPage from "./pages/auth/admin/login";
-
-// ── Existing layout & pages ──────────────────────────────────
-import DashboardLayout from "./pages/layouts/DashboardLayout";
-import NewApplication from "./pages/NewApplication";
-import EMRSApplied from "./pages/submitted-application/EMRSApplied";
-import AssetApplied from "./pages/AssetApplied";
-import AssetForm from "./pages/assetManagementForm/index";
+// ── Home ──────────────────────────────────────────────────────
 import HomePage from "./pages/home/homepage";
 
-// ── Existing protected route (keep as-is for non-EMRS routes) ─
-import ProtectedRoute from "./pages/routes/protected-routes";
-import ReduxDevTools from "./components/ReduxDevTools";
-
-// ── NEW: EMRS auth system ─────────────────────────────────────
+// ── EMRS Portal ───────────────────────────────────────────────
 import { AuthProvider } from "./context/AuthContext";
+import EMRSLoginPage from "./pages/auth/login/index";
 import EMRSProtectedRoute from "./components/ProtectedRoute";
+import EMRSDashboard from "./pages/layouts/EMRSDashboardLayout";
 import SchoolEMRSWrapper from "./pages/EMRS/SchoolEMRSWrapper";
 import EMRSAdminDashboard from "./pages/EMRS/EMRSAdminDashboard";
+import EMRSApplied from "./pages/submitted-application/EMRSApplied";
 
-// ── NEW: EMRS login page ─────────────────────────────────────
-// This is the NEW login/index.jsx we created.
-// Your existing login/login.jsx (SignInPage) stays untouched.
-import EMRSLoginPage from "./pages/auth/login/index";
+// ── Asset Portal ──────────────────────────────────────────────
+import AssetLoginPage from "./pages/auth/login/login";
+import AssetProtectedRoute from "./pages/routes/protected-routes";
+import DashboardLayout from "./pages/layouts/DashboardLayout";
+import AssetForm from "./pages/assetManagementForm/index";
+import NewApplication from "./pages/NewApplication";
+import AssetApplied from "./pages/AssetApplied";
+
+import ReduxDevTools from "./components/ReduxDevTools";
 
 function App() {
   return (
-    // Wrap everything in AuthProvider so all components can access
-    // the logged-in school/admin user via useAuth()
     <AuthProvider>
       <ToastContainer position="top-right" autoClose={3000} />
-
       <BrowserRouter>
         <Routes>
-          {/* ── HOME PAGE ──────────────────────────────────── */}
+          {/* ════════════════════════════════════════════════════════════
+              ── HOME PAGE ──
+          ════════════════════════════════════════════════════════════ */}
           <Route path="/" element={<HomePage />} />
 
-          {/* ── EXISTING AUTH PAGES (unchanged) ───────────── */}
-          <Route path="/signin" element={<SignInPage />} />
-          <Route path="/admin/signin" element={<AdminSignInPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
-          {/* ── NEW: EMRS Portal Login ─────────────────────
-              Separate from your main /signin.
-              Schools and admin visit /emrs/login to log in.
-              URL: http://localhost:5173/emrs/login           */}
+          {/* ════════════════════════════════════════════════════════════
+              ── EMRS PORTAL (/emrs/*)
+              Separate login system for schools/EMRS admin
+              Shows ONLY EMRS forms and submissions
+          ════════════════════════════════════════════════════════════ */}
           <Route path="/emrs/login" element={<EMRSLoginPage />} />
-
-          {/* ── NEW: EMRS Admin Dashboard ──────────────────
-              Only accessible after logging in via /emrs/login
-              with role = "admin"                             */}
+          
           <Route
-            path="/dashboard/admin"
+            path="/emrs"
+            element={
+              <EMRSProtectedRoute allowedRoles={["school", "admin"]}>
+                <EMRSDashboard />
+              </EMRSProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<SchoolEMRSWrapper />} />
+            <Route path="submitted" element={<EMRSApplied />} />
+          </Route>
+          
+          <Route
+            path="/emrs/admin"
             element={
               <EMRSProtectedRoute allowedRoles={["admin"]}>
                 <EMRSAdminDashboard />
@@ -75,43 +69,41 @@ function App() {
             }
           />
 
-          {/* ── EXISTING PROTECTED DASHBOARD ──────────────── */}
+          {/* ════════════════════════════════════════════════════════════
+              ── ASSET PORTAL (/asset/*)
+              Separate login system for asset managers
+              Shows ONLY Asset forms and submissions (NO EMRS)
+          ════════════════════════════════════════════════════════════ */}
+          <Route path="/asset/login" element={<AssetLoginPage />} />
+          
           <Route
-            path="/dashboard"
+            path="/asset/dashboard"
             element={
-              <ProtectedRoute>
+              <AssetProtectedRoute>
                 <DashboardLayout />
-              </ProtectedRoute>
+              </AssetProtectedRoute>
             }
           >
             <Route path="new" element={<NewApplication />} />
-
-            {/* Already applied pages */}
-            <Route path="applied" element={<Navigate to="/dashboard/applied/emrs" replace />} />
-            <Route path="applied/emrs" element={<EMRSApplied />} />
+            <Route path="applied" element={<Navigate to="/asset/dashboard/applied/assets" replace />} />
             <Route path="applied/assets" element={<AssetApplied />} />
-
-            {/* ── CHANGED: /dashboard/emrs now uses SchoolEMRSWrapper ──
-                SchoolEMRSWrapper renders your existing EMRSForm BUT:
-                  • Shows school name banner at top
-                  • Pre-fills school identity fields from login
-                  • Saves submissions keyed by school code
-                Schools must first log in at /emrs/login              */}
-            <Route
-              path="emrs"
-              element={
-                <EMRSProtectedRoute allowedRoles={["school"]}>
-                  <SchoolEMRSWrapper />
-                </EMRSProtectedRoute>
-              }
-            />
-
-            <Route path="assets" element={<AssetForm />} />
+            <Route path="form" element={<AssetForm />} />
           </Route>
-        </Routes>
-      </BrowserRouter>
 
-      <ReduxDevTools />
+          {/* ════════════════════════════════════════════════════════════
+              ── LEGACY ROUTES (kept for backwards compatibility)
+          ════════════════════════════════════════════════════════════ */}
+          <Route path="/signin" element={<Navigate to="/asset/login" replace />} />
+          <Route path="/admin/signin" element={<Navigate to="/emrs/login" replace />} />
+
+          {/* ════════════════════════════════════════════════════════════
+              ── CATCH ALL ──
+          ════════════════════════════════════════════════════════════ */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+
+        <ReduxDevTools />
+      </BrowserRouter>
     </AuthProvider>
   );
 }

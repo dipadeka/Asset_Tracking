@@ -34,7 +34,7 @@ const Sidebar = () => {
   const logoutUser = () => {
     dispatch(logout());
     toast.success("Logged out successfully");
-    navigate("/signin", { replace: true });
+    navigate("/asset/login", { replace: true });
   };
 
   const isActive = (path) => location.pathname === path;
@@ -64,8 +64,8 @@ const Sidebar = () => {
         <List>
           {/* New Application */}
           <ListItemButton
-            selected={isActive("/dashboard/new")}
-            onClick={() => navigate("/dashboard/new")}
+            selected={isActive("/asset/dashboard/new")}
+            onClick={() => navigate("/asset/dashboard/new")}
             sx={{
               borderRadius: 2,
               mb: 1,
@@ -81,100 +81,25 @@ const Sidebar = () => {
             <ListItemText primary="New Application" />
           </ListItemButton>
 
-         
-
-          {/* Scheme */}
+          {/* Already Applied */}
           <ListItemButton
-            onClick={() => setOpenScheme(!openScheme)}
+            selected={isActive("/asset/dashboard/applied/assets")}
+            onClick={() => navigate("/asset/dashboard/applied/assets")}
             sx={{
               borderRadius: 2,
-              "&:hover": { background: "rgba(255,255,255,0.08)" },
+              mb: 1,
+              "&.Mui-selected": {
+                background: "#2563eb",
+                "&:hover": { background: "#1d4ed8" },
+              },
             }}
           >
             <ListItemIcon sx={{ color: "#fff" }}>
-              <AccountBalance />
+              <CheckCircle />
             </ListItemIcon>
-
-            <ListItemText primary="Scheme" />
-
-            {openScheme ? <ExpandLess /> : <ExpandMore />}
+            <ListItemText primary="Submitted Applications" />
           </ListItemButton>
-
-          {/* Scheme Children */}
-          <Collapse in={openScheme}>
-            <List component="div" disablePadding>
-              <ListItemButton
-                selected={isActive("/dashboard/emrs")}
-                onClick={() => navigate("/dashboard/emrs")}
-                sx={{
-                  pl: 6,
-                  borderRadius: 2,
-                  "&.Mui-selected": {
-                    background: "#2563eb",
-                  },
-                  "&:hover": { background: "rgba(255,255,255,0.08)" },
-                }}
-              >
-                <ListItemText sx={{ pl: 3 }} primary="EMRS" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-        
- {/* Already Applied */}
-<ListItemButton
-  onClick={() => setOpenApplied(!openApplied)}
-  sx={{
-    borderRadius: 2,
-    "&:hover": { background: "rgba(255,255,255,0.08)" },
-  }}
->
-  <ListItemIcon sx={{ color: "#fff" }}>
-    <CheckCircle />
-  </ListItemIcon>
-
-  <ListItemText primary="Already Applied" />
-
-  {openApplied ? <ExpandLess /> : <ExpandMore />}
-</ListItemButton>
-
-<Collapse in={openApplied}>
-  <List component="div" disablePadding>
-
-    {/* EMRS Applied */}
-    <ListItemButton
-      selected={isActive("/dashboard/applied/emrs")}
-      onClick={() => navigate("/dashboard/applied/emrs")}
-      sx={{
-        pl: 6,
-        borderRadius: 2,
-        "&.Mui-selected": {
-          background: "#2563eb",
-        },
-        "&:hover": { background: "rgba(255,255,255,0.08)" },
-      }}
-    >
-      <ListItemText sx={{ pl: 3 }} primary="EMRS" />
-    </ListItemButton>
-
-    {/* Asset Applied */}
-    <ListItemButton
-      selected={isActive("/dashboard/applied/assets")}
-      onClick={() => navigate("/dashboard/applied/assets")}
-      sx={{
-        pl: 6,
-        borderRadius: 2,
-        "&.Mui-selected": {
-          background: "#2563eb",
-        },
-        "&:hover": { background: "rgba(255,255,255,0.08)" },
-      }}
-    >
-      <ListItemText sx={{ pl: 3 }} primary="Assets" />
-    </ListItemButton>
-
-  </List>
-</Collapse>
-</List>
+        </List>
       </Box>
       {/* LOGOUT */}
       <Button

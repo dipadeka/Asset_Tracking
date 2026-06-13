@@ -9,38 +9,114 @@ import { loginUser } from '../../../redux/slices/authSlice';
 import {
   Box,
   Button,
-  Checkbox,
-  Container,
   Divider,
-  FormControlLabel,
   Link,
   TextField,
   Typography,
-  Paper,
   InputAdornment,
-  IconButton
+  IconButton,
 } from '@mui/material';
 
-import GoogleIcon from '@mui/icons-material/Google';
-import FacebookIcon from '@mui/icons-material/Facebook';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ConstructionIcon from '@mui/icons-material/Construction';
 
-export default function SignInPage() {
+/* ─── keyframes injected once ─── */
+const keyframeStyles = `
+  @keyframes floatA {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%       { transform: translate(18px, -22px) scale(1.04); }
+    66%       { transform: translate(-12px, 14px) scale(0.97); }
+  }
+  @keyframes floatB {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    40%       { transform: translate(-20px, 16px) scale(1.06); }
+    70%       { transform: translate(14px, -10px) scale(0.96); }
+  }
+  @keyframes floatC {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%       { transform: translate(10px, 20px) scale(1.03); }
+  }
+  @keyframes dashMove {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -200; }
+  }
+  @keyframes pulseRing {
+    0%, 100% { opacity: 0.18; transform: scale(1); }
+    50%       { opacity: 0.06; transform: scale(1.18); }
+  }
+  @keyframes shimmerBar {
+    0%   { transform: translateX(-100%) rotate(-25deg); }
+    100% { transform: translateX(320%) rotate(-25deg); }
+  }
+`;
 
+if (typeof document !== 'undefined' && !document.getElementById('asset-login-kf')) {
+  const s = document.createElement('style');
+  s.id = 'asset-login-kf';
+  s.textContent = keyframeStyles;
+  document.head.appendChild(s);
+}
+
+/* ─── SVG mesh lines (static, rendered once) ─── */
+function MeshLines() {
+  return (
+    <Box component="svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"
+      sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
+      <defs>
+        <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(167,243,208,0.22)" />
+          <stop offset="100%" stopColor="rgba(167,243,208,0)" />
+        </linearGradient>
+      </defs>
+      {/* diagonal grid */}
+      {[...Array(9)].map((_, i) => (
+        <line key={`d${i}`}
+          x1={i * 180 - 100} y1="0" x2={i * 180 + 700} y2="900"
+          stroke="rgba(167,243,208,0.07)" strokeWidth="1"
+          strokeDasharray="6 14"
+          style={{ animation: `dashMove ${14 + i * 1.4}s linear infinite` }}
+        />
+      ))}
+      {/* horizontal lines */}
+      {[120, 280, 440, 600, 760].map((y, i) => (
+        <line key={`h${i}`}
+          x1="0" y1={y} x2="1440" y2={y}
+          stroke="rgba(167,243,208,0.05)" strokeWidth="1"
+          strokeDasharray="4 20"
+          style={{ animation: `dashMove ${20 + i * 2}s linear infinite` }}
+        />
+      ))}
+      {/* triangle accent top-left */}
+      <polygon points="0,0 340,0 0,260"
+        fill="rgba(4,120,87,0.28)" />
+      {/* triangle accent bottom-right */}
+      <polygon points="1440,900 1100,900 1440,640"
+        fill="rgba(5,150,105,0.2)" />
+      {/* corner diamond */}
+      <rect x="1320" y="30" width="60" height="60" rx="6"
+        fill="none" stroke="rgba(167,243,208,0.18)" strokeWidth="1.5"
+        transform="rotate(45 1350 60)" />
+      <rect x="60" y="820" width="44" height="44" rx="4"
+        fill="none" stroke="rgba(167,243,208,0.14)" strokeWidth="1"
+        transform="rotate(45 82 842)" />
+    </Box>
+  );
+}
+
+export default function AssetSignInPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isLoading, user} = useSelector((state) => state.auth);
-  console.log("user:", user);
+  const { isLoading } = useSelector((state) => state.auth);
   const [showPassword, setShowPassword] = React.useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm();
 
   const onSubmit = async (data) => {
@@ -48,222 +124,248 @@ export default function SignInPage() {
     const resultAction = await dispatch(loginUser(payload));
     if (loginUser.fulfilled.match(resultAction)) {
       toast.success(resultAction.payload.message);
-      setTimeout(() => navigate("/dashboard/new"), 900);
+      setTimeout(() => navigate('/asset/dashboard/new'), 900);
     } else if (loginUser.rejected.match(resultAction)) {
       toast.error(resultAction.payload);
     }
   };
 
-  const inputSx = {
-    '& .MuiOutlinedInput-root': {
-      color: '#fff',
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      borderRadius: '10px',
-      '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
-      '&:hover fieldset': { borderColor: 'rgba(212,175,55,0.5)' },
-      '&.Mui-focused fieldset': { borderColor: '#d4af37', borderWidth: '1.5px' },
-    },
-    '& .MuiInputLabel-root': { color: '#8a95b0' },
-    '& .MuiInputLabel-root.Mui-focused': { color: '#d4af37' },
-    '& .MuiFormHelperText-root': { color: '#f87171' },
-  };
-
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        background: 'linear-gradient(135deg, #060d1f 0%, #0d1b3e 50%, #0a1628 100%)',
-        position: 'relative',
-        overflow: 'hidden',
+    <Box sx={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      /* rich multi-stop background */
+      background: `
+        linear-gradient(135deg,
+          #022c22 0%,
+          #064e3b 22%,
+          #065f46 45%,
+          #047857 68%,
+          #065f46 82%,
+          #022c22 100%
+        )
+      `,
+      position: 'relative',
+      overflow: 'hidden',
+      p: 2,
+    }}>
+
+      {/* ── floating orbs ── */}
+      {/* orb 1 — large, top-left */}
+      <Box sx={{
+        position: 'absolute', top: '-120px', left: '-80px',
+        width: 520, height: 520, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(16,185,129,0.22) 0%, rgba(6,78,59,0.08) 55%, transparent 70%)',
+        pointerEvents: 'none', zIndex: 1,
+        animation: 'floatA 13s ease-in-out infinite',
+      }} />
+      {/* orb 2 — medium, bottom-right */}
+      <Box sx={{
+        position: 'absolute', bottom: '-100px', right: '-60px',
+        width: 440, height: 440, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(5,150,105,0.2) 0%, transparent 65%)',
+        pointerEvents: 'none', zIndex: 1,
+        animation: 'floatB 17s ease-in-out infinite',
+      }} />
+      {/* orb 3 — small accent, top-right */}
+      <Box sx={{
+        position: 'absolute', top: '8%', right: '6%',
+        width: 200, height: 200, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(167,243,208,0.12) 0%, transparent 70%)',
+        pointerEvents: 'none', zIndex: 1,
+        animation: 'floatC 10s ease-in-out infinite',
+      }} />
+      {/* orb 4 — small accent, bottom-left */}
+      <Box sx={{
+        position: 'absolute', bottom: '10%', left: '5%',
+        width: 160, height: 160, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(52,211,153,0.1) 0%, transparent 70%)',
+        pointerEvents: 'none', zIndex: 1,
+        animation: 'floatA 15s ease-in-out infinite reverse',
+      }} />
+
+      {/* ── pulsing ring behind card ── */}
+      <Box sx={{
+        position: 'absolute',
+        width: 560, height: 560, borderRadius: '50%',
+        border: '1px solid rgba(167,243,208,0.14)',
+        pointerEvents: 'none', zIndex: 1,
+        animation: 'pulseRing 6s ease-in-out infinite',
+      }} />
+      <Box sx={{
+        position: 'absolute',
+        width: 680, height: 680, borderRadius: '50%',
+        border: '1px solid rgba(167,243,208,0.07)',
+        pointerEvents: 'none', zIndex: 1,
+        animation: 'pulseRing 6s ease-in-out infinite 1.5s',
+      }} />
+
+      {/* ── SVG mesh lines ── */}
+      <MeshLines />
+
+      {/* ── dot grid ── */}
+      <Box sx={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }} />
+
+      {/* ── vignette overlay ── */}
+      <Box sx={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+        background: 'radial-gradient(ellipse 85% 85% at 50% 50%, transparent 40%, rgba(2,44,34,0.55) 100%)',
+      }} />
+
+      {/* Back to portal link */}
+      <Box sx={{
+        position: 'absolute', top: 20, left: 24,
+        display: 'flex', alignItems: 'center', gap: 0.8,
+        cursor: 'pointer',
+        color: 'rgba(167,243,208,0.75)',
+        fontSize: '13px', fontWeight: 600,
+        letterSpacing: '0.5px',
+        textDecoration: 'none',
+        transition: 'color 0.2s',
+        '&:hover': { color: '#a7f3d0' },
+        zIndex: 10,
       }}
-    >
-      {/* background elements */}
-      <Box sx={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundImage: `
-          radial-gradient(ellipse at 20% 20%, rgba(212,175,55,0.06) 0%, transparent 50%),
-          radial-gradient(ellipse at 80% 80%, rgba(78,168,255,0.06) 0%, transparent 50%)
-        `,
-        pointerEvents: 'none'
-      }} />
-
-      {/*  grid lines */}
-      <Box sx={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
-        `,
-        backgroundSize: '60px 60px',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Left branding panel - hidden on small screens */}
-      <Box sx={{
-        display: { xs: 'none', md: 'flex' },
-        flex: 1,
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 6,
-        borderRight: '1px solid rgba(212,175,55,0.15)',
-        position: 'relative',
-      }}>
-        <Box sx={{
-          width: 80, height: 80,
-          background: 'linear-gradient(135deg, #d4af37, #f0c040)',
-          borderRadius: '20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          mb: 3,
-          boxShadow: '0 8px 32px rgba(212,175,55,0.3)',
-        }}>
-          <AccountBalanceIcon sx={{ fontSize: 42, color: '#0a1628' }} />
-        </Box>
-
-        <Typography sx={{
-          fontSize: '13px', fontWeight: 700, letterSpacing: '4px',
-          color: '#d4af37', mb: 1, textTransform: 'uppercase'
-        }}>
-          ASSAM EMRS
-        </Typography>
-
-        <Typography sx={{
-          fontSize: '28px', fontWeight: 800, color: '#ffffff',
-          textAlign: 'center', lineHeight: 1.3, mb: 2,
-          fontFamily: '"Georgia", serif',
-        }}>
-          EMRS & Asset<br />Management System
-        </Typography>
-
-        <Typography sx={{
-          color: '#5a6a8a', fontSize: '14px', textAlign: 'center',
-          maxWidth: 300, lineHeight: 1.7
-        }}>
-          A unified digital platform for managing Eklavya Model Residential Schools and Government Assets
-        </Typography>
-
-        <Box sx={{ mt: 5, display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 280 }}>
-          {[
-            { label: 'Directorate of Tribal Affairs', sub: 'Government of Assam' },
-            { label: 'Digital India Initiative', sub: 'Empowering Tribal Education' },
-            { label: 'Secure & Transparent', sub: 'Data-driven Governance' },
-          ].map((item, i) => (
-            <Box key={i} sx={{
-              display: 'flex', alignItems: 'center', gap: 2,
-              background: 'rgba(255,255,255,0.03)', borderRadius: '10px',
-              p: 1.5, border: '1px solid rgba(255,255,255,0.06)'
-            }}>
-              <Box sx={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: '#d4af37', flexShrink: 0,
-                boxShadow: '0 0 8px rgba(212,175,55,0.6)'
-              }} />
-              <Box>
-                <Typography sx={{ color: '#c8d0e0', fontSize: '13px', fontWeight: 600 }}>
-                  {item.label}
-                </Typography>
-                <Typography sx={{ color: '#5a6a8a', fontSize: '11px' }}>
-                  {item.sub}
-                </Typography>
-              </Box>
-            </Box>
-          ))}
-        </Box>
+        component={RouterLink} to="/"
+      >
+        <ArrowBackIcon sx={{ fontSize: 16 }} />
+        BACK TO PORTAL
       </Box>
 
-      {/* Right login panel */}
+      {/* ── Card ── */}
       <Box sx={{
-        flex: { xs: 1, md: '0 0 460px' },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: { xs: 2, sm: 4 },
+        width: '100%',
+        maxWidth: 440,
+        background: 'rgba(255,255,255,0.97)',
+        borderRadius: '20px',
+        boxShadow: `
+          0 32px 80px rgba(0,0,0,0.35),
+          0 0 0 1px rgba(255,255,255,0.12),
+          0 0 60px rgba(16,185,129,0.12)
+        `,
+        overflow: 'hidden',
+        position: 'relative',
+        zIndex: 5,
+        /* subtle shimmer sweep on hover */
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)',
+          animation: 'shimmerBar 4s ease-in-out infinite',
+          pointerEvents: 'none',
+          zIndex: 0,
+        },
       }}>
-        <Box sx={{ width: '100%', maxWidth: 400 }}>
 
-          {/* Mobile logo */}
+        {/* Green header band */}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #022c22 0%, #065f46 45%, #059669 100%)',
+          px: 4, pt: 3.5, pb: 3,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          /* inner highlight strip */
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent, rgba(167,243,208,0.4), transparent)',
+          },
+        }}>
+          {/* Icon circle */}
           <Box sx={{
-            display: { xs: 'flex', md: 'none' },
-            alignItems: 'center', gap: 2, mb: 4
+            width: 72, height: 72, borderRadius: '50%',
+            border: '2px solid rgba(167,243,208,0.4)',
+            background: 'rgba(167,243,208,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            mb: 1.5,
+            boxShadow: '0 0 24px rgba(16,185,129,0.3)',
           }}>
-            <Box sx={{
-              width: 44, height: 44,
-              background: 'linear-gradient(135deg, #d4af37, #f0c040)',
-              borderRadius: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <AccountBalanceIcon sx={{ fontSize: 24, color: '#0a1628' }} />
-            </Box>
-            <Box>
-              <Typography sx={{ color: '#d4af37', fontSize: '10px', fontWeight: 700, letterSpacing: '2px' }}>
-                ASSAM EMRS
-              </Typography>
-              <Typography sx={{ color: '#fff', fontSize: '13px', fontWeight: 600 }}>
-                Asset Management System
-              </Typography>
-            </Box>
+            <ConstructionIcon sx={{ fontSize: 34, color: 'rgba(255,255,255,0.92)' }} />
           </Box>
 
-          {/* Top accent line */}
-          <Box sx={{
-            height: 3,
-            background: 'linear-gradient(90deg, #d4af37, #4ea8ff, transparent)',
-            borderRadius: '2px', mb: 4
-          }} />
-
           <Typography sx={{
-            fontSize: '26px', fontWeight: 800, color: '#ffffff', mb: 0.5,
-            fontFamily: '"Georgia", serif',
+            color: '#ffffff', fontWeight: 800, fontSize: '20px',
+            letterSpacing: '0.5px', fontFamily: '"Georgia", serif',
           }}>
-            Welcome Back
+            Asset Management Portal
           </Typography>
-          <Typography sx={{ color: '#5a6a8a', fontSize: '14px', mb: 4 }}>
-            Sign in to your EMRS account
+          <Typography sx={{ color: 'rgba(167,243,208,0.85)', fontSize: '13px', mt: 0.3, textAlign: 'center' }}>
+            Infrastructure & Asset Tracking — Assam
+          </Typography>
+          <Typography sx={{ color: 'rgba(167,243,208,0.5)', fontSize: '11.5px', mt: 0.3 }}>
+            Directorate of Tribal Affairs
+          </Typography>
+        </Box>
+
+        {/* Form body */}
+        <Box sx={{ px: 4, pt: 3, pb: 3.5, position: 'relative', zIndex: 1 }}>
+          <Typography sx={{
+            textAlign: 'center', fontWeight: 700, fontSize: '15px',
+            color: '#065f46', mb: 2.5,
+          }}>
+            Sign in with your asset account
           </Typography>
 
           <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
 
+            {/* Email */}
             <TextField
               fullWidth
               margin="normal"
-              label="Email Address"
-              placeholder="your@email.com"
+              label="Email"
+              placeholder="name@assam.gov.in"
               variant="outlined"
-              {...register("email", {
-                required: "Email is required",
-                pattern: { value: /^\S+@\S+$/i, message: "Invalid email format" }
+              {...register('email', {
+                required: 'Email is required',
+                pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' },
               })}
               error={!!errors.email}
               helperText={errors.email?.message}
               InputProps={{
-                style: { color: '#fff' },
                 startAdornment: (
                   <InputAdornment position="start">
-                    <EmailOutlinedIcon sx={{ color: '#5a6a8a', fontSize: 20 }} />
+                    <EmailOutlinedIcon sx={{ color: '#6b7280', fontSize: 18 }} />
                   </InputAdornment>
                 ),
               }}
-              sx={inputSx}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '10px',
+                  '& fieldset': { borderColor: '#d1d5db' },
+                  '&:hover fieldset': { borderColor: '#059669' },
+                  '&.Mui-focused fieldset': { borderColor: '#065f46', borderWidth: '2px' },
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#065f46' },
+                '& .MuiFormHelperText-root': { color: '#ef4444' },
+              }}
             />
 
+            {/* Password */}
             <TextField
               fullWidth
               margin="normal"
               label="Password"
               type={showPassword ? 'text' : 'password'}
               variant="outlined"
-              {...register("password", {
-                required: "Password is required",
-                minLength: { value: 5, message: "Minimum 5 characters" }
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 5, message: 'Minimum 5 characters' },
               })}
               error={!!errors.password}
               helperText={errors.password?.message}
               InputProps={{
-                style: { color: '#fff' },
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LockOutlinedIcon sx={{ color: '#5a6a8a', fontSize: 20 }} />
+                    <LockOutlinedIcon sx={{ color: '#6b7280', fontSize: 18 }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -271,39 +373,34 @@ export default function SignInPage() {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
-                      sx={{ color: '#5a6a8a' }}
+                      sx={{ color: '#9ca3af' }}
                     >
                       {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
-              sx={inputSx}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '10px',
+                  '& fieldset': { borderColor: '#d1d5db' },
+                  '&:hover fieldset': { borderColor: '#059669' },
+                  '&.Mui-focused fieldset': { borderColor: '#065f46', borderWidth: '2px' },
+                },
+                '& .MuiInputLabel-root.Mui-focused': { color: '#065f46' },
+                '& .MuiFormHelperText-root': { color: '#ef4444' },
+              }}
             />
 
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1, mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    size="small"
-                    sx={{
-                      color: '#3a4a6a',
-                      '&.Mui-checked': { color: '#d4af37' },
-                    }}
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ color: '#8a95b0', fontSize: '13px' }}>
-                    Remember me
-                  </Typography>
-                }
-              />
+            {/* Forgot password */}
+            <Box sx={{ textAlign: 'right', mt: 0.5, mb: 2 }}>
               <Link component={RouterLink} to="/forgot-password" underline="hover"
-                sx={{ color: '#4ea8ff', fontSize: '13px' }}>
+                sx={{ color: '#059669', fontSize: '12.5px', fontWeight: 500 }}>
                 Forgot password?
               </Link>
             </Box>
 
+            {/* Sign In Button */}
             <Button
               fullWidth
               type="submit"
@@ -311,108 +408,77 @@ export default function SignInPage() {
               disabled={isLoading}
               sx={{
                 py: 1.4,
-                fontWeight: 700,
+                fontWeight: 800,
                 fontSize: '14px',
-                letterSpacing: '1px',
+                letterSpacing: '1.5px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #d4af37, #e8c547)',
-                color: '#0a1628',
-                boxShadow: '0 4px 20px rgba(212,175,55,0.35)',
+                background: 'linear-gradient(135deg, #022c22 0%, #065f46 50%, #059669 100%)',
+                color: '#ffffff',
+                boxShadow: '0 4px 20px rgba(5,150,105,0.45)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #c49e2a, #d4af37)',
-                  boxShadow: '0 6px 28px rgba(212,175,55,0.5)',
+                  background: 'linear-gradient(135deg, #014737, #065f46)',
+                  boxShadow: '0 6px 28px rgba(5,150,105,0.6)',
                   transform: 'translateY(-1px)',
                 },
                 transition: 'all 0.2s ease',
-                mb: 2.5,
+                mb: 0.5,
               }}
             >
               {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
             </Button>
 
-            <Divider sx={{
-              mb: 2.5,
-              '&::before, &::after': { borderColor: 'rgba(255,255,255,0.08)' },
-              color: '#5a6a8a', fontSize: '12px'
+            {/* Login format hint box */}
+            <Box sx={{
+              mt: 2.5,
+              border: '1px solid #d1fae5',
+              borderRadius: '10px',
+              p: '12px 16px',
+              background: '#f0fdf4',
             }}>
-              or continue with
-            </Divider>
-
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GoogleIcon sx={{ fontSize: '18px !important' }} />}
-                sx={{
-                  color: '#c8d0e0', borderColor: 'rgba(255,255,255,0.1)',
-                  borderRadius: '10px', py: 1.1, fontSize: '13px',
-                  backgroundColor: 'rgba(255,255,255,0.03)',
-                  '&:hover': {
-                    borderColor: 'rgba(255,255,255,0.2)',
-                    backgroundColor: 'rgba(255,255,255,0.07)',
-                  },
-                }}
-              >
-                Google
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<FacebookIcon sx={{ fontSize: '18px !important' }} />}
-                sx={{
-                  color: '#c8d0e0', borderColor: 'rgba(255,255,255,0.1)',
-                  borderRadius: '10px', py: 1.1, fontSize: '13px',
-                  backgroundColor: 'rgba(255,255,255,0.03)',
-                  '&:hover': {
-                    borderColor: 'rgba(255,255,255,0.2)',
-                    backgroundColor: 'rgba(255,255,255,0.07)',
-                  },
-                }}
-              >
-                Facebook
-              </Button>
+              <Typography sx={{ color: '#065f46', fontSize: '12.5px', fontWeight: 700, mb: 0.5 }}>
+                💡 Login format
+              </Typography>
+              <Typography sx={{ color: '#047857', fontSize: '12px' }}>
+                Official: <Box component="span" sx={{ fontWeight: 700 }}>name@assam.gov.in</Box>
+              </Typography>
+              <Typography sx={{ color: '#047857', fontSize: '12px' }}>
+                Password: Your assigned credential
+              </Typography>
             </Box>
 
-            <Box sx={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '10px', p: 2, textAlign: 'center'
-            }}>
-              <Typography variant="body2" sx={{ color: '#5a6a8a', fontSize: '13px', mb: 0.5 }}>
+            <Divider sx={{ my: 2.5, borderColor: '#e5e7eb' }} />
+
+            {/* Footer links */}
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography sx={{ color: '#6b7280', fontSize: '12.5px', mb: 0.5 }}>
                 Don't have an account?{' '}
                 <Link component={RouterLink} to="/signup" underline="hover"
-                  sx={{ color: '#4ea8ff', fontWeight: 600 }}>
-                  Sign up
+                  sx={{ color: '#059669', fontWeight: 600 }}>
+                  Request Access
                 </Link>
               </Typography>
-              <Typography variant="body2" sx={{ color: '#5a6a8a', fontSize: '13px' }}>
-                Admin access?{' '}
-                <Link component={RouterLink} to="/admin/signin" underline="hover"
-                  sx={{ color: '#d4af37', fontWeight: 600 }}>
-                  Login here
+              <Typography sx={{ color: '#6b7280', fontSize: '12.5px' }}>
+                EMRS School Login?{' '}
+                <Link component={RouterLink} to="/emrs/login" underline="hover"
+                  sx={{ color: '#2563eb', fontWeight: 600 }}>
+                  Go to EMRS Portal →
                 </Link>
               </Typography>
             </Box>
 
           </Box>
-
-          <Typography sx={{
-            textAlign: 'center', color: '#2a3553', fontSize: '11px', mt: 3
-          }}>
-            Government of Assam · Directorate of Tribal Affairs (Plain)
-          </Typography>
-
-          <Typography sx={{
-            textAlign: 'center', color: '#2a3553', fontSize: '11px', mt: 0.5
-          }}>
-            Designed and Developed by{' '}
-            <Box component="span" sx={{ color: '#3a4a6a', fontWeight: 600 }}>
-              IntelliSight Consulting Private Limited
-            </Box>
-          </Typography>
-
         </Box>
       </Box>
+
+      {/* Bottom attribution */}
+      <Typography sx={{
+        color: 'rgba(167,243,208,0.3)', fontSize: '11px',
+        mt: 3, textAlign: 'center', zIndex: 5, position: 'relative',
+      }}>
+        Government of Assam · Directorate of Tribal Affairs (Plain)<br />
+        Designed & Developed by IntelliSight Consulting Pvt. Ltd.
+      </Typography>
+
     </Box>
   );
 }

@@ -204,7 +204,7 @@ export const SCHOOL_CREDENTIALS = [
     password: "Donka@2024",
     role: "school",
     schoolCode: "EMRS-AS-11",
-    schoolName: "EMRS, Donka, Vill. Taralangso NC", // ← matches EMRS_SCHOOLS value
+    schoolName: "EMRS, Donka, Vill. Taralangso NC", 
     district: "West Karbi Anglong",
     block: "Donka",
     gramPanchayat: "Taralangso NC",
@@ -276,7 +276,7 @@ export const SCHOOL_CREDENTIALS = [
     password: "Boko@2024",
     role: "school",
     schoolCode: "EMRS-AS-15",
-    schoolName: "EMRS, Boko, Vill. Nagopara",    // ← matches EMRS_SCHOOLS value
+    schoolName: "EMRS, Boko, Vill. Nagopara",    
     district: "Kamrup",
     block: "Boko",
     gramPanchayat: "Nagopara",

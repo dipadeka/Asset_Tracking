@@ -1096,7 +1096,7 @@ const prepareBasicDetails = (data) => {
         addSubmittedForm(submittedRecord);
       }
 
-      navigate("/dashboard/applied/emrs");
+      navigate("/emrs/dashboard");
     } catch (error) {
       toast.dismiss(loadingToast);
       toast.error("❌ Submission failed: " + error.message);
