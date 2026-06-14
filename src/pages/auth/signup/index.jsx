@@ -50,8 +50,7 @@ const EMRSLoginPage = () => {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const result = login(form.username.trim(), form.password);
+    const result = await login(form.username.trim(), form.password);
     setLoading(false);
 
     if (result.success) {

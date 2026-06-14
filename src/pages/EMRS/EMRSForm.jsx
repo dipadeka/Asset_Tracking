@@ -69,7 +69,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { useForm, Controller } from "react-hook-form";
 import { useAuth } from "../../context/AuthContext";
-import { SCHOOL_CREDENTIALS } from "./Schoolcredentials";
 import {
   sanitizeConstructionComponents,
   toSafeNumber,
@@ -511,25 +510,18 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
   useEffect(() => {
     if (!user || user.role !== "school") return;
-    const loginId = String(user.username || user.loginId || user.id || "")
-      .trim()
-      .toLowerCase();
-    const school = SCHOOL_CREDENTIALS.find(
-      (item) => String(item.username).trim().toLowerCase() === loginId
-    );
-    if (!school) return;
-    setValue("EMRScode", school.schoolCode || "");
-    setValue("schoolname", school.schoolName || "");
-    setValue("state", school.state || "Assam");
-    setValue("pincode", school.pincode || "");
-    setValue("district", school.district || "");
-    setValue("block", school.block || "");
-    setValue("gramPanchayat", school.gramPanchayat || "");
-    setValue("village", school.village || "");
-    setValue("NameofthePrincipal", school.principal || "");
-    setValue("principalAvailable", school.principal ? "Yes" : "");
-    setValue("contactno", school.contact || "");
-    setValue("emailid", school.email || "");
+    setValue("EMRScode", user.schoolCode || "");
+    setValue("schoolname", user.schoolName || "");
+    setValue("state", user.state || "Assam");
+    setValue("pincode", user.pincode || "");
+    setValue("district", user.district || "");
+    setValue("block", user.block || "");
+    setValue("gramPanchayat", user.gramPanchayat || "");
+    setValue("village", user.village || "");
+    setValue("NameofthePrincipal", user.principal || "");
+    setValue("principalAvailable", user.principal ? "Yes" : "");
+    setValue("contactno", user.contact || "");
+    setValue("emailid", user.email || "");
   }, [user, setValue]);
 
   const physicsLabFunctional = watch("physicsLabFunctional");
@@ -1174,15 +1166,8 @@ const EMRSForm = ({ addSubmittedForm }) => {
   });
 
   const resolveCredential = () => {
-    if (!user) return null;
-    const loginId = String(user.username || user.loginId || user.id || "")
-      .trim()
-      .toLowerCase();
-    return (
-      SCHOOL_CREDENTIALS.find(
-        (c) => String(c.username || "").trim().toLowerCase() === loginId
-      ) || null
-    );
+    if (!user || user.role !== "school") return null;
+    return user;
   };
 
   const onSubmit = async (data) => {

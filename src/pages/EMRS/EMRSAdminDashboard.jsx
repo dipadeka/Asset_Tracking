@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { SCHOOL_CREDENTIALS } from "./Schoolcredentials";
+import { fetchEmrsSchools } from "../../api/emrsAuthApi";
 import {
   Box,
   Button,
@@ -974,9 +974,16 @@ const SchoolListItem = ({ school, index, isSelected, isSubmitted, onClick }) => 
 const EMRSAdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [schools, setSchools] = useState([]);
   const [submittedData, setSubmittedData] = useState([]);
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    fetchEmrsSchools()
+      .then(setSchools)
+      .catch(() => setSchools([]));
+  }, []);
 
   const loadData = useCallback(() => {
     try {
@@ -1007,7 +1014,7 @@ const EMRSAdminDashboard = () => {
         ].map((v) => str(v).toLowerCase()).filter(Boolean);
 
         // Find the matching credential
-        const cred = SCHOOL_CREDENTIALS.find((s) => {
+        const cred = schools.find((s) => {
           const credUser = str(s.username).toLowerCase();
           const credCode = str(s.schoolCode);
           const credCodeNum = String(parseInt(credCode.split("-").pop(), 10));
@@ -1041,7 +1048,7 @@ const EMRSAdminDashboard = () => {
     } catch {
       setSubmittedData([]);
     }
-  }, []);
+  }, [schools]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
@@ -1056,9 +1063,9 @@ const EMRSAdminDashboard = () => {
     [submittedData]
   );
 
-  const submittedCount = SCHOOL_CREDENTIALS.filter((s) => !!getDataForSchool(s)).length;
+  const submittedCount = schools.filter((s) => !!getDataForSchool(s)).length;
 
-  const filteredSchools = SCHOOL_CREDENTIALS.filter((s) =>
+  const filteredSchools = schools.filter((s) =>
     s.schoolName.toLowerCase().includes(search.toLowerCase()) ||
     s.district.toLowerCase().includes(search.toLowerCase()) ||
     s.schoolCode.toLowerCase().includes(search.toLowerCase())
@@ -1108,7 +1115,7 @@ const EMRSAdminDashboard = () => {
         {/* Stats chips */}
         {[
           { label: `${submittedCount} Submitted`, color: "#a5d6a7" },
-          { label: `${SCHOOL_CREDENTIALS.length - submittedCount} Pending`, color: "#ffcc80" },
+          { label: `${schools.length - submittedCount} Pending`, color: "#ffcc80" },
         ].map(({ label, color }) => (
           <Chip key={label} label={label} size="small"
             sx={{ background: "rgba(255,255,255,0.15)", color, fontWeight: 700, fontSize: 11 }} />
@@ -1168,7 +1175,7 @@ const EMRSAdminDashboard = () => {
           {/* Sidebar header */}
           <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid #f0f0f0", background: "#f8fafc" }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: "#546e7a", textTransform: "uppercase", fontSize: 10, letterSpacing: 0.8 }}>
-              All {SCHOOL_CREDENTIALS.length} EMRS Schools
+              All {schools.length} EMRS Schools
             </Typography>
             {/* Search */}
             <TextField
@@ -1207,7 +1214,7 @@ const EMRSAdminDashboard = () => {
                 <SchoolListItem
                   key={school.id}
                   school={school}
-                  index={SCHOOL_CREDENTIALS.indexOf(school)}
+                  index={schools.indexOf(school)}
                   isSelected={selectedSchool?.id === school.id}
                   isSubmitted={!!getDataForSchool(school)}
                   onClick={() => setSelectedSchool(school)}
@@ -1220,11 +1227,11 @@ const EMRSAdminDashboard = () => {
           <Box sx={{ px: 2, py: 1.5, borderTop: "1px solid #f0f0f0", background: "#f8fafc" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
               <Typography variant="caption" sx={{ fontWeight: 700, color: "#546e7a", fontSize: 10 }}>SUBMISSION PROGRESS</Typography>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: "#1976d2", fontSize: 10 }}>{submittedCount}/{SCHOOL_CREDENTIALS.length}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: "#1976d2", fontSize: 10 }}>{submittedCount}/{schools.length}</Typography>
             </Box>
             <LinearProgress
               variant="determinate"
-              value={(submittedCount / SCHOOL_CREDENTIALS.length) * 100}
+              value={schools.length ? (submittedCount / schools.length) * 100 : 0}
               sx={{ height: 6, borderRadius: 3, background: "#e0e0e0", "& .MuiLinearProgress-bar": { background: "linear-gradient(90deg, #1976d2, #42a5f5)" } }}
             />
           </Box>
