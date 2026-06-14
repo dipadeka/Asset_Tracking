@@ -429,12 +429,7 @@ const HomePage = () => {
               {item}
             </button>
           ))}
-          <button onClick={() => navigate("/signin")}
-            style={{ background: "linear-gradient(135deg,#c8a84b,#e8c55b)", color: "#1a1a1a", border: "none", padding: "10px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "all 0.2s" }}
-            onMouseEnter={e => e.target.style.transform = "translateY(-2px)"}
-            onMouseLeave={e => e.target.style.transform = "translateY(0)"}>
-            🔐 Login
-          </button>
+          
         </div>
       </header>
 

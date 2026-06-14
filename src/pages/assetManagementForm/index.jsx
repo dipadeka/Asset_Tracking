@@ -21,16 +21,18 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  FormHelperText,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
-import { useNavigate } from "react-router-dom"; // ← add this if you use React Router
+import { useNavigate } from "react-router-dom";
 
 const AssetForm = () => {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  // Try to get navigate – if React Router isn't set up this is optional
+  const [stepErrors, setStepErrors] = useState({});
+
   let navigate;
   try {
     navigate = useNavigate();
@@ -45,6 +47,20 @@ const AssetForm = () => {
     { label: "Asset Image",            icon: "🖼️" },
   ];
 
+  // Fields belonging to each step — used for per-step validation
+  const STEP_FIELDS = {
+    0: ["assetId", "assetCode", "assetName", "projectName", "implementingAgency"],
+    1: ["pincode", "district", "block", "gramPanchayat", "village", "latitude", "longitude", "areaSize", "fullPostalAddress"],
+    2: [
+      "schemeName", "fundingSource",
+      "projectCost", "actualCost", "contractValue",
+      "workOrderNumber", "workOrderDate",
+      "timeOfCompletion", "constructionStartDate", "constructionEndDate",
+      "pointOfContact", "status", "remarks",
+    ],
+    3: [],
+  };
+
   const [costSubsections, setCostSubsections] = useState([
     { id: 1, category: "Construction Site", amount: "" },
     { id: 2, category: "Building",          amount: "" },
@@ -52,16 +68,7 @@ const AssetForm = () => {
     { id: 4, category: "Painting",          amount: "" },
   ]);
   const [otherPhotos, setOtherPhotos] = useState([]);
-
-  const handleNext = () => {
-    setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleBack = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const [costSubsectionErrors, setCostSubsectionErrors] = useState({});
 
   const addSubsection = () => {
     setCostSubsections(prev => [
@@ -72,15 +79,40 @@ const AssetForm = () => {
 
   const removeSubsection = (id) => {
     setCostSubsections(prev => prev.filter(s => s.id !== id));
+    setCostSubsectionErrors(prev => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
   };
 
   const updateSubsection = (id, field, value) => {
     setCostSubsections(prev =>
       prev.map(s => s.id === id ? { ...s, [field]: value } : s)
     );
+    // Clear error for that field when user types
+    setCostSubsectionErrors(prev => ({
+      ...prev,
+      [id]: { ...prev[id], [field]: "" },
+    }));
   };
 
-  const { control, handleSubmit, setValue, watch } = useForm({
+  const validateCostSubsections = () => {
+    const errors = {};
+    let valid = true;
+    costSubsections.forEach(s => {
+      const rowErrors = {};
+      if (!s.category.trim()) { rowErrors.category = "Category is required"; valid = false; }
+      if (s.amount === "" || s.amount === null) { rowErrors.amount = "Amount is required"; valid = false; }
+      else if (Number(s.amount) < 0) { rowErrors.amount = "Amount must be ≥ 0"; valid = false; }
+      if (Object.keys(rowErrors).length) errors[s.id] = rowErrors;
+    });
+    setCostSubsectionErrors(errors);
+    return valid;
+  };
+
+  const { control, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm({
+    mode: "onChange",
     defaultValues: {
       status: "",
       completionPercentage: "",
@@ -91,11 +123,30 @@ const AssetForm = () => {
   const completionMonths = watch("timeOfCompletion");
   const status           = watch("status");
 
-  // ================= SUBMIT – saves to localStorage =================
+  // ── Validate current step fields then advance ──
+  const handleNext = async () => {
+    const fieldsToValidate = STEP_FIELDS[currentStep];
+    const valid = await trigger(fieldsToValidate);
+    const subsValid = currentStep === 2 ? validateCostSubsections() : true;
+
+    if (valid && subsValid) {
+      setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ── Submit ──
   const onSubmit = async (data) => {
+    const subsValid = validateCostSubsections();
+    if (!subsValid) return;
+
     setLoading(true);
     try {
-      // ── Convert images to base64 so they survive localStorage ──
       const toBase64 = (file) =>
         new Promise((res, rej) => {
           if (!file) return res(null);
@@ -122,7 +173,7 @@ const AssetForm = () => {
       const otherBase64 = await Promise.all(otherPhotos.map(toBase64));
 
       const payload = {
-        id: Date.now(), // unique id for list
+        id: Date.now(),
         submittedAt: new Date().toISOString(),
         assetId:              data.assetId,
         assetName:            data.assetName,
@@ -157,14 +208,11 @@ const AssetForm = () => {
         otherPhotos:          otherBase64,
       };
 
-      // ── Read existing list, append, write back ──
       const existing = JSON.parse(localStorage.getItem("submittedAssets") || "[]");
       existing.push(payload);
       localStorage.setItem("submittedAssets", JSON.stringify(existing));
 
       setSuccessOpen(true);
-
-      // Navigate to the assets list after a short delay
       setTimeout(() => {
         if (navigate) navigate("/asset/dashboard/applied/assets");
       }, 1500);
@@ -177,7 +225,7 @@ const AssetForm = () => {
     }
   };
 
-  // ================= PINCODE AUTO FILL =================
+  // ── Pincode auto-fill ──
   const onPincodeChange = async (e) => {
     const pincode = e.target.value;
     if (pincode.length !== 6) return;
@@ -185,27 +233,29 @@ const AssetForm = () => {
       const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
       const data = await response.json();
       if (data[0].Status === "Success") {
-        const postOffice = data[0].PostOffice[0];
-        setValue("state",            postOffice.State);
-        setValue("district",         postOffice.District);
-        setValue("block",            postOffice.Block);
-        setValue("gram panchayat",   postOffice.gramPanchayat);
-        setValue("village",          postOffice.Village);
+        const po = data[0].PostOffice[0];
+        setValue("state",             po.State,    { shouldValidate: true });
+        setValue("district",          po.District, { shouldValidate: true });
+        setValue("block",             po.Block,    { shouldValidate: true });
+        setValue("gramPanchayat",     po.gramPanchayat || "", { shouldValidate: true });
+        setValue("village",           po.Village,  { shouldValidate: true });
         setValue("fullPostalAddress",
-          `${postOffice.Village}, ${postOffice.Block}, ${postOffice.District}, ${postOffice.State} - ${pincode}`);
+          `${po.Village}, ${po.Block}, ${po.District}, ${po.State} - ${pincode}`,
+          { shouldValidate: true }
+        );
       }
     } catch (error) {
       console.error("Error fetching location data:", error);
     }
   };
 
-  // ================= LIVE LOCATION =================
+  // ── Live location ──
   const getLiveLocation = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setValue("latitude",  coords.latitude);
-        setValue("longitude", coords.longitude);
+        setValue("latitude",  coords.latitude,  { shouldValidate: true });
+        setValue("longitude", coords.longitude, { shouldValidate: true });
       },
       (err) => console.error("Geolocation error:", err),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -217,8 +267,8 @@ const AssetForm = () => {
     try {
       const gpsData = await exifr.gps(file);
       if (gpsData?.latitude && gpsData?.longitude) {
-        setValue("latitude",  gpsData.latitude);
-        setValue("longitude", gpsData.longitude);
+        setValue("latitude",  gpsData.latitude,  { shouldValidate: true });
+        setValue("longitude", gpsData.longitude, { shouldValidate: true });
       }
       setValue("assetImage", file);
     } catch (error) {
@@ -232,23 +282,132 @@ const AssetForm = () => {
     if (startDate && completionMonths) {
       const d = new Date(startDate);
       d.setMonth(d.getMonth() + parseInt(completionMonths));
-      setValue("constructionEndDate", d.toISOString().split("T")[0]);
+      setValue("constructionEndDate", d.toISOString().split("T")[0], { shouldValidate: true });
     }
   }, [startDate, completionMonths, setValue]);
 
   useEffect(() => {
     if (!status) return;
     const pct = status === "Planned" ? 0 : status === "Work In Progress" ? 50 : 100;
-    setValue("completionPercentage", pct);
+    setValue("completionPercentage", pct, { shouldValidate: true });
   }, [status, setValue]);
 
-  // ================= FIELD CONFIGS =================
+  // ── Validation rules ──
+  const RULES = {
+    assetId: {
+      required: "Asset ID is required",
+      maxLength: { value: 50, message: "Asset ID must be ≤ 50 characters" },
+    },
+    assetCode: {
+      required: "Asset Code is required",
+      pattern: { value: /^\d+$/, message: "Asset Code must be a positive integer" },
+    },
+    assetName: {
+      required: "Asset Name is required",
+      minLength: { value: 3, message: "Asset Name must be at least 3 characters" },
+      maxLength: { value: 100, message: "Asset Name must be ≤ 100 characters" },
+    },
+    projectName: {
+      required: "Project Name is required",
+      minLength: { value: 3, message: "Project Name must be at least 3 characters" },
+    },
+    implementingAgency: {
+      required: "Implementing Agency is required",
+      minLength: { value: 2, message: "Implementing Agency must be at least 2 characters" },
+    },
+    pincode: {
+      required: "Pincode is required",
+      pattern: { value: /^\d{6}$/, message: "Pincode must be exactly 6 digits" },
+    },
+    district: { required: "District is required" },
+    block: { required: "Block is required" },
+    gramPanchayat: { required: "Gram Panchayat is required" },
+    village: { required: "Village is required" },
+    latitude: {
+      required: "Latitude is required",
+      min: { value: -90,  message: "Latitude must be between -90 and 90" },
+      max: { value: 90,   message: "Latitude must be between -90 and 90" },
+    },
+    longitude: {
+      required: "Longitude is required",
+      min: { value: -180, message: "Longitude must be between -180 and 180" },
+      max: { value: 180,  message: "Longitude must be between -180 and 180" },
+    },
+    areaSize: {
+      required: "Area / Size is required",
+      min: { value: 0.01, message: "Area must be greater than 0" },
+    },
+    fullPostalAddress: {
+      required: "Full Postal Address is required",
+      minLength: { value: 10, message: "Please enter a complete postal address" },
+    },
+    schemeName: {
+      required: "Scheme Name is required",
+      minLength: { value: 3, message: "Scheme Name must be at least 3 characters" },
+    },
+    fundingSource: { required: "Funding Source is required" },
+    projectCost: {
+      required: "Project Cost is required",
+      min: { value: 0.01, message: "Project Cost must be greater than 0" },
+    },
+    actualCost: {
+      required: "Actual Cost is required",
+      min: { value: 0, message: "Actual Cost must be ≥ 0" },
+    },
+    contractValue: {
+      required: "Contract Value is required",
+      min: { value: 0.01, message: "Contract Value must be greater than 0" },
+    },
+    workOrderNumber: {
+      required: "Work Order Number is required",
+      pattern: { value: /^[A-Za-z0-9\-\/]+$/, message: "Only alphanumeric characters, hyphens, and slashes are allowed" },
+    },
+    workOrderDate: {
+      required: "Work Order Date is required",
+      validate: (v) => {
+        const d = new Date(v);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        return d <= today || "Work Order Date cannot be in the future";
+      },
+    },
+    timeOfCompletion: {
+      required: "Time of Completion is required",
+      min: { value: 1,   message: "Completion time must be at least 1 month" },
+      max: { value: 240, message: "Completion time cannot exceed 240 months (20 years)" },
+      pattern: { value: /^\d+$/, message: "Must be a whole number" },
+    },
+    constructionStartDate: {
+      required: "Construction Start Date is required",
+    },
+    constructionEndDate: {
+      required: "Construction End Date is required",
+      validate: (v, formValues) => {
+        if (!formValues.constructionStartDate) return true;
+        return new Date(v) > new Date(formValues.constructionStartDate) ||
+          "End Date must be after Start Date";
+      },
+    },
+    pointOfContact: {
+      required: "Point of Contact is required",
+      minLength: { value: 2, message: "Must be at least 2 characters" },
+      maxLength: { value: 100, message: "Must be ≤ 100 characters" },
+    },
+    status: { required: "Status is required" },
+    remarks: {
+      required: "Remarks are required",
+      minLength: { value: 5, message: "Remarks must be at least 5 characters" },
+      maxLength: { value: 500, message: "Remarks must be ≤ 500 characters" },
+    },
+  };
+
+  // ── Field configs ──
   const fields = [
-    { name: "assetId",             label: "Asset Id" },
-    { name: "assetCode",           label: "Asset Code" },
-    { name: "assetName",           label: "Asset Name" },
-    { name: "projectName",         label: "Project Name" },
-    { name: "implementingAgency",  label: "Implementing Agency" },
+    { name: "assetId",            label: "Asset ID" },
+    { name: "assetCode",          label: "Asset Code" },
+    { name: "assetName",          label: "Asset Name" },
+    { name: "projectName",        label: "Project Name" },
+    { name: "implementingAgency", label: "Implementing Agency" },
   ];
 
   const addressFields = [
@@ -260,6 +419,17 @@ const AssetForm = () => {
     { name: "longitude",     label: "Longitude", readOnly: true },
     { name: "areaSize",      label: "Area / Size (sq. m / acres)" },
   ];
+
+  // ── Shared section header style ──
+  const sectionLabelSx = {
+    fontSize: 12, fontWeight: 700, color: "#64748b",
+    mb: 1.5, textTransform: "uppercase", letterSpacing: 1,
+  };
+
+  const sectionBoxSx = {
+    border: "1px solid #e2e8f0", borderRadius: 2,
+    p: 2, mb: 3, background: "#fff",
+  };
 
   return (
     <Container sx={{ pb: 4, backgroundColor: "#f1f5f9", padding: 0, borderRadius: 3 }}>
@@ -275,7 +445,7 @@ const AssetForm = () => {
         </Alert>
       </Snackbar>
 
-      {/* ===== Header ===== */}
+      {/* Header */}
       <Typography variant="h4" fontWeight="bold" gutterBottom pt={4}>
         Asset Management
       </Typography>
@@ -283,7 +453,7 @@ const AssetForm = () => {
         Create and manage asset details
       </Typography>
 
-      {/* ===== STEPPER ===== */}
+      {/* Stepper */}
       <Box sx={{ overflowX: "auto", pb: 1, mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", minWidth: 400 }}>
           {STEPS.map((step, i) => (
@@ -359,11 +529,19 @@ const AssetForm = () => {
                   {fields.map((fieldItem) => (
                     <Grid item xs={12} sm={6} md={4} key={fieldItem.name}>
                       <Controller
-                        name={fieldItem.name} control={control} defaultValue=""
-                        rules={{ required: `${fieldItem.label} is required` }}
+                        name={fieldItem.name}
+                        control={control}
+                        defaultValue=""
+                        rules={RULES[fieldItem.name]}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label={fieldItem.label} fullWidth size="small"
-                            error={!!error} helperText={error ? error.message : ""} />
+                          <TextField
+                            {...field}
+                            label={fieldItem.label}
+                            fullWidth
+                            size="small"
+                            error={!!error}
+                            helperText={error ? error.message : ""}
+                          />
                         )}
                       />
                     </Grid>
@@ -388,36 +566,72 @@ const AssetForm = () => {
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
                     <Controller
-                      name="pincode" control={control} defaultValue=""
-                      rules={{ required: "Pincode is required" }}
+                      name="pincode"
+                      control={control}
+                      defaultValue=""
+                      rules={RULES.pincode}
                       render={({ field, fieldState: { error } }) => (
-                        <TextField {...field} label="Pincode"
+                        <TextField
+                          {...field}
+                          label="Pincode"
                           onChange={(e) => { field.onChange(e); onPincodeChange(e); }}
-                          fullWidth size="small" error={!!error} helperText={error ? error.message : ""} />
+                          fullWidth
+                          size="small"
+                          error={!!error}
+                          helperText={error ? error.message : "Enter 6-digit pincode to auto-fill address"}
+                          inputProps={{ maxLength: 6 }}
+                        />
                       )}
                     />
                   </Grid>
+
                   {addressFields.map((addressItem) => (
                     <Grid item xs={12} sm={6} md={3} key={addressItem.name}>
                       <Controller
-                        name={addressItem.name} control={control} defaultValue=""
-                        rules={{ required: `${addressItem.label} is required` }}
+                        name={addressItem.name}
+                        control={control}
+                        defaultValue=""
+                        rules={RULES[addressItem.name]}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label={addressItem.label} fullWidth size="small"
+                          <TextField
+                            {...field}
+                            label={addressItem.label}
+                            fullWidth
+                            size="small"
                             disabled={addressItem?.readOnly}
                             InputProps={{ readOnly: addressItem?.readOnly }}
-                            error={!!error} helperText={error ? error.message : ""} />
+                            error={!!error}
+                            helperText={error ? error.message : ""}
+                            type={["latitude", "longitude", "areaSize"].includes(addressItem.name) ? "number" : "text"}
+                            inputProps={
+                              addressItem.name === "latitude"  ? { min: -90,  max: 90,  step: "any" } :
+                              addressItem.name === "longitude" ? { min: -180, max: 180, step: "any" } :
+                              addressItem.name === "areaSize"  ? { min: 0,               step: "any" } :
+                              {}
+                            }
+                          />
                         )}
                       />
                     </Grid>
                   ))}
+
                   <Grid item xs={12}>
                     <Controller
-                      name="fullPostalAddress" control={control} defaultValue=""
-                      rules={{ required: "Full Postal Address is required" }}
+                      name="fullPostalAddress"
+                      control={control}
+                      defaultValue=""
+                      rules={RULES.fullPostalAddress}
                       render={({ field, fieldState: { error } }) => (
-                        <TextField {...field} label="Full Postal Address" multiline rows={3}
-                          fullWidth size="small" error={!!error} helperText={error ? error.message : ""} />
+                        <TextField
+                          {...field}
+                          label="Full Postal Address"
+                          multiline
+                          rows={3}
+                          fullWidth
+                          size="small"
+                          error={!!error}
+                          helperText={error ? error.message : ""}
+                        />
                       )}
                     />
                   </Grid>
@@ -440,32 +654,42 @@ const AssetForm = () => {
                 </Grid>
 
                 {/* Scheme & Funding */}
-                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 3, background: "#fff" }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#64748b", mb: 1.5, textTransform: "uppercase", letterSpacing: 1 }}>
-                    Scheme & Funding
-                  </Typography>
+                <Box sx={sectionBoxSx}>
+                  <Typography sx={sectionLabelSx}>Scheme & Funding</Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <Controller name="schemeName" control={control} defaultValue=""
-                        rules={{ required: "Name of the Scheme is required" }}
+                      <Controller
+                        name="schemeName"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.schemeName}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Name of the Scheme" fullWidth size="small"
-                            error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Name of the Scheme"
+                            fullWidth
+                            size="small"
+                            error={!!error}
+                            helperText={error?.message}
+                          />
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Controller name="fundingSource" control={control} defaultValue=""
-                        rules={{ required: "Funding Source is required" }}
+                      <Controller
+                        name="fundingSource"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.fundingSource}
                         render={({ field, fieldState: { error } }) => (
                           <FormControl fullWidth size="small" error={!!error}>
                             <InputLabel>Funding Source</InputLabel>
                             <Select {...field} label="Funding Source">
-                              {["Article 275 Grant","Central Sector Scheme","Centrally Sponsored Scheme","State Fund"].map(opt => (
+                              {["Article 275 Grant", "Central Sector Scheme", "Centrally Sponsored Scheme", "State Fund"].map(opt => (
                                 <MenuItem key={opt} value={opt}>{opt}</MenuItem>
                               ))}
                             </Select>
-                            <Typography variant="caption" color="error">{error?.message}</Typography>
+                            {error && <FormHelperText>{error.message}</FormHelperText>}
                           </FormControl>
                         )}
                       />
@@ -474,10 +698,8 @@ const AssetForm = () => {
                 </Box>
 
                 {/* Cost Details */}
-                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 3, background: "#fff" }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#64748b", mb: 1.5, textTransform: "uppercase", letterSpacing: 1 }}>
-                    Cost Details
-                  </Typography>
+                <Box sx={sectionBoxSx}>
+                  <Typography sx={sectionLabelSx}>Cost Details</Typography>
                   <Grid container spacing={2} mb={2}>
                     {[
                       { name: "projectCost",   label: "Project Cost (In Lakhs)" },
@@ -485,14 +707,24 @@ const AssetForm = () => {
                       { name: "contractValue", label: "Contract Value (In Lakhs)" },
                     ].map(({ name, label }) => (
                       <Grid item xs={12} sm={6} md={4} key={name}>
-                        <Controller name={name} control={control} defaultValue=""
-                          rules={{ required: `${label} is required` }}
+                        <Controller
+                          name={name}
+                          control={control}
+                          defaultValue=""
+                          rules={RULES[name]}
                           render={({ field, fieldState: { error } }) => (
-                            <TextField {...field} label={label} type="number" fullWidth size="small"
-                              error={!!error} helperText={error?.message}
-                              inputProps={{ min: 0 }}
+                            <TextField
+                              {...field}
+                              label={label}
+                              type="number"
+                              fullWidth
+                              size="small"
+                              error={!!error}
+                              helperText={error?.message}
+                              inputProps={{ min: 0, step: "any" }}
                               onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                              onChange={(e) => { if (Number(e.target.value) >= 0) field.onChange(e); }} />
+                              onChange={(e) => { if (Number(e.target.value) >= 0) field.onChange(e); }}
+                            />
                           )}
                         />
                       </Grid>
@@ -505,8 +737,12 @@ const AssetForm = () => {
                       <Typography sx={{ fontWeight: 700, color: "#1976d2", fontSize: 13 }}>
                         📦 Project Cost Breakdown
                       </Typography>
-                      <Button size="small" variant="contained" onClick={addSubsection}
-                        sx={{ background: "linear-gradient(to right,#1976d2,#42a5f5)", fontSize: 12 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={addSubsection}
+                        sx={{ background: "linear-gradient(to right,#1976d2,#42a5f5)", fontSize: 12 }}
+                      >
                         + Add Category
                       </Button>
                     </Box>
@@ -514,15 +750,37 @@ const AssetForm = () => {
                       {costSubsections.map((section) => (
                         <Grid item xs={12} sm={6} md={3} key={section.id}>
                           <Box sx={{ background: "#fff", borderRadius: 2, p: 1.5, border: "1px solid #e2e8f0" }}>
-                            <TextField label="Category" value={section.category}
+                            <TextField
+                              label="Category"
+                              value={section.category}
                               onChange={(e) => updateSubsection(section.id, "category", e.target.value)}
-                              fullWidth size="small" sx={{ mb: 1 }} />
-                            <TextField label="Amount (In Lakhs)" type="number" value={section.amount}
-                              onChange={(e) => { if (Number(e.target.value) >= 0) updateSubsection(section.id, "amount", e.target.value); }}
-                              fullWidth size="small" inputProps={{ min: 0 }}
-                              onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }} />
+                              fullWidth
+                              size="small"
+                              sx={{ mb: 1 }}
+                              error={!!costSubsectionErrors[section.id]?.category}
+                              helperText={costSubsectionErrors[section.id]?.category || ""}
+                            />
+                            <TextField
+                              label="Amount (In Lakhs)"
+                              type="number"
+                              value={section.amount}
+                              onChange={(e) => {
+                                if (Number(e.target.value) >= 0) updateSubsection(section.id, "amount", e.target.value);
+                              }}
+                              fullWidth
+                              size="small"
+                              inputProps={{ min: 0, step: "any" }}
+                              onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+                              error={!!costSubsectionErrors[section.id]?.amount}
+                              helperText={costSubsectionErrors[section.id]?.amount || ""}
+                            />
                             <Box display="flex" justifyContent="flex-end" mt={0.5}>
-                              <Button size="small" color="error" onClick={() => removeSubsection(section.id)} sx={{ fontSize: 11 }}>
+                              <Button
+                                size="small"
+                                color="error"
+                                onClick={() => removeSubsection(section.id)}
+                                sx={{ fontSize: 11 }}
+                              >
                                 ✕ Remove
                               </Button>
                             </Box>
@@ -534,26 +792,45 @@ const AssetForm = () => {
                 </Box>
 
                 {/* Work Order */}
-                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 3, background: "#fff" }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#64748b", mb: 1.5, textTransform: "uppercase", letterSpacing: 1 }}>
-                    Work Order
-                  </Typography>
+                <Box sx={sectionBoxSx}>
+                  <Typography sx={sectionLabelSx}>Work Order</Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <Controller name="workOrderNumber" control={control} defaultValue=""
-                        rules={{ required: "Work Order Number is required" }}
+                      <Controller
+                        name="workOrderNumber"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.workOrderNumber}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Work Order Number" fullWidth size="small"
-                            error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Work Order Number"
+                            fullWidth
+                            size="small"
+                            error={!!error}
+                            helperText={error?.message}
+                          />
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Controller name="workOrderDate" control={control} defaultValue=""
-                        rules={{ required: "Work Order Date is required" }}
+                      <Controller
+                        name="workOrderDate"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.workOrderDate}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Work Order Date" type="date" fullWidth size="small"
-                            InputLabelProps={{ shrink: true }} error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Work Order Date"
+                            type="date"
+                            fullWidth
+                            size="small"
+                            InputLabelProps={{ shrink: true }}
+                            inputProps={{ max: new Date().toISOString().split("T")[0] }}
+                            error={!!error}
+                            helperText={error?.message}
+                          />
                         )}
                       />
                     </Grid>
@@ -561,37 +838,67 @@ const AssetForm = () => {
                 </Box>
 
                 {/* Timeline */}
-                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 3, background: "#fff" }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#64748b", mb: 1.5, textTransform: "uppercase", letterSpacing: 1 }}>
-                    Timeline
-                  </Typography>
+                <Box sx={sectionBoxSx}>
+                  <Typography sx={sectionLabelSx}>Timeline</Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={4}>
-                      <Controller name="timeOfCompletion" control={control} defaultValue=""
-                        rules={{ required: "Time of Completion is required" }}
+                      <Controller
+                        name="timeOfCompletion"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.timeOfCompletion}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Time of Completion (In Months)" type="number"
-                            fullWidth size="small" error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Time of Completion (In Months)"
+                            type="number"
+                            fullWidth
+                            size="small"
+                            inputProps={{ min: 1, max: 240 }}
+                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === ".") e.preventDefault(); }}
+                            error={!!error}
+                            helperText={error?.message}
+                          />
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                      <Controller name="constructionStartDate" control={control} defaultValue=""
-                        rules={{ required: "Construction Start Date is required" }}
+                      <Controller
+                        name="constructionStartDate"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.constructionStartDate}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Construction Start Date" type="date"
-                            fullWidth size="small" InputLabelProps={{ shrink: true }}
-                            error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Construction Start Date"
+                            type="date"
+                            fullWidth
+                            size="small"
+                            InputLabelProps={{ shrink: true }}
+                            error={!!error}
+                            helperText={error?.message}
+                          />
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                      <Controller name="constructionEndDate" control={control} defaultValue=""
-                        rules={{ required: "Construction End Date is required" }}
+                      <Controller
+                        name="constructionEndDate"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.constructionEndDate}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Construction End Date" type="date"
-                            fullWidth size="small" InputLabelProps={{ shrink: true }}
-                            error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Construction End Date"
+                            type="date"
+                            fullWidth
+                            size="small"
+                            InputLabelProps={{ shrink: true }}
+                            error={!!error}
+                            helperText={error?.message || "Auto-calculated from Start Date + Completion Months"}
+                          />
                         )}
                       />
                     </Grid>
@@ -599,53 +906,90 @@ const AssetForm = () => {
                 </Box>
 
                 {/* Status & Contact */}
-                <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 2, p: 2, mb: 3, background: "#fff" }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#64748b", mb: 1.5, textTransform: "uppercase", letterSpacing: 1 }}>
-                    Status & Contact
-                  </Typography>
+                <Box sx={sectionBoxSx}>
+                  <Typography sx={sectionLabelSx}>Status & Contact</Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6} md={3}>
-                      <Controller name="pointOfContact" control={control} defaultValue=""
-                        rules={{ required: "Point of Contact is required" }}
+                      <Controller
+                        name="pointOfContact"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.pointOfContact}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Point of Contact" fullWidth size="small"
-                            error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Point of Contact"
+                            fullWidth
+                            size="small"
+                            error={!!error}
+                            helperText={error?.message}
+                          />
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                      <Controller name="status" control={control} defaultValue=""
-                        rules={{ required: "Status is required" }}
+                      <Controller
+                        name="status"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.status}
                         render={({ field, fieldState: { error } }) => (
                           <FormControl fullWidth size="small" error={!!error}>
                             <InputLabel>Status</InputLabel>
-                            <Select {...field} label="Status" sx={{
-                              background: field.value === "Completed" ? "#dcfce7" : field.value === "Work In Progress" ? "#fef3c7" : "#f1f5f9",
-                              fontWeight: 600,
-                              color: field.value === "Completed" ? "#16a34a" : field.value === "Work In Progress" ? "#d97706" : "#64748b",
-                            }}>
+                            <Select
+                              {...field}
+                              label="Status"
+                              sx={{
+                                background:
+                                  field.value === "Completed" ? "#dcfce7" :
+                                  field.value === "Work In Progress" ? "#fef3c7" : "#f1f5f9",
+                                fontWeight: 600,
+                                color:
+                                  field.value === "Completed" ? "#16a34a" :
+                                  field.value === "Work In Progress" ? "#d97706" : "#64748b",
+                              }}
+                            >
                               <MenuItem value="Planned">⏳ Planned</MenuItem>
                               <MenuItem value="Work In Progress">🔄 Work In Progress</MenuItem>
                               <MenuItem value="Completed">✅ Completed</MenuItem>
                             </Select>
-                            <Typography variant="caption" color="error">{error?.message}</Typography>
+                            {error && <FormHelperText>{error.message}</FormHelperText>}
                           </FormControl>
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                      <Controller name="completionPercentage" control={control} defaultValue=""
-                        render={({ field }) => (
+                      <Controller
+                        name="completionPercentage"
+                        control={control}
+                        defaultValue=""
+                        rules={{
+                          required: "Completion % is required",
+                          min: { value: 0,   message: "Must be between 0 and 100" },
+                          max: { value: 100, message: "Must be between 0 and 100" },
+                        }}
+                        render={({ field, fieldState: { error } }) => (
                           <Box>
-                            <TextField {...field} label="Completion %" fullWidth size="small" type="number"
+                            <TextField
+                              {...field}
+                              label="Completion %"
+                              fullWidth
+                              size="small"
+                              type="number"
                               inputProps={{ min: 0, max: 100 }}
+                              error={!!error}
+                              helperText={error?.message}
                               sx={{
                                 "& .MuiOutlinedInput-root": {
-                                  background: Number(field.value) === 100 ? "#dcfce7" : Number(field.value) >= 50 ? "#fef3c7" : "#f8fafc",
+                                  background:
+                                    Number(field.value) === 100 ? "#dcfce7" :
+                                    Number(field.value) >= 50  ? "#fef3c7" : "#f8fafc",
                                 },
                                 "& input": {
                                   fontWeight: 800,
-                                  color: Number(field.value) === 100 ? "#16a34a" : Number(field.value) >= 50 ? "#d97706" : "#64748b",
+                                  color:
+                                    Number(field.value) === 100 ? "#16a34a" :
+                                    Number(field.value) >= 50  ? "#d97706" : "#64748b",
                                 },
                               }}
                             />
@@ -655,18 +999,21 @@ const AssetForm = () => {
                                   <Box sx={{
                                     height: "100%", width: `${field.value || 0}%`, borderRadius: 5,
                                     transition: "width 0.5s ease",
-                                    background: Number(field.value) === 100
-                                      ? "linear-gradient(90deg,#22c55e,#16a34a)"
-                                      : Number(field.value) >= 50
-                                      ? "linear-gradient(90deg,#fbbf24,#d97706)"
-                                      : "#cbd5e1",
+                                    background:
+                                      Number(field.value) === 100 ? "linear-gradient(90deg,#22c55e,#16a34a)" :
+                                      Number(field.value) >= 50  ? "linear-gradient(90deg,#fbbf24,#d97706)" :
+                                      "#cbd5e1",
                                   }} />
                                 </Box>
                                 <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
                                   <Typography sx={{
                                     fontSize: 11, fontWeight: 700, px: 1.5, py: 0.3, borderRadius: 10,
-                                    background: status === "Completed" ? "#dcfce7" : status === "Work In Progress" ? "#fef3c7" : "#f1f5f9",
-                                    color: status === "Completed" ? "#16a34a" : status === "Work In Progress" ? "#d97706" : "#64748b",
+                                    background:
+                                      status === "Completed"       ? "#dcfce7" :
+                                      status === "Work In Progress" ? "#fef3c7" : "#f1f5f9",
+                                    color:
+                                      status === "Completed"       ? "#16a34a" :
+                                      status === "Work In Progress" ? "#d97706" : "#64748b",
                                   }}>
                                     {status === "Completed" ? "✅ Completed" : status === "Work In Progress" ? "🔄 In Progress" : "⏳ Planned"}
                                   </Typography>
@@ -681,11 +1028,23 @@ const AssetForm = () => {
                       />
                     </Grid>
                     <Grid item xs={12} md={3}>
-                      <Controller name="remarks" control={control} defaultValue=""
-                        rules={{ required: "Remarks is required" }}
+                      <Controller
+                        name="remarks"
+                        control={control}
+                        defaultValue=""
+                        rules={RULES.remarks}
                         render={({ field, fieldState: { error } }) => (
-                          <TextField {...field} label="Remarks" multiline rows={2}
-                            fullWidth size="small" error={!!error} helperText={error?.message} />
+                          <TextField
+                            {...field}
+                            label="Remarks"
+                            multiline
+                            rows={2}
+                            fullWidth
+                            size="small"
+                            error={!!error}
+                            helperText={error?.message || `${(field.value || "").length}/500`}
+                            inputProps={{ maxLength: 500 }}
+                          />
                         )}
                       />
                     </Grid>
@@ -708,6 +1067,10 @@ const AssetForm = () => {
                   </Grid>
                 </Grid>
 
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Photos are optional but recommended. Accepted formats: JPG, PNG, WEBP. Max 10 MB per file.
+                </Alert>
+
                 <Grid container spacing={3}>
                   {[
                     { key: "photoConstructionSite",  label: "Photo 1 – Construction Site" },
@@ -719,6 +1082,15 @@ const AssetForm = () => {
                     { key: "photoOthers", label: "Photo 7 – Others", multiple: true },
                   ].map(({ key, label, multiple }) => {
                     const file = watch(key);
+
+                    const validateFile = (f) => {
+                      if (!f) return true; // optional
+                      const validTypes = ["image/jpeg", "image/png", "image/webp"];
+                      if (!validTypes.includes(f.type)) return "Only JPG, PNG, or WEBP images are allowed";
+                      if (f.size > 10 * 1024 * 1024) return "File size must be ≤ 10 MB";
+                      return true;
+                    };
+
                     return (
                       <Grid item xs={12} sm={6} md={4} key={key}>
                         <Box sx={{
@@ -737,8 +1109,11 @@ const AssetForm = () => {
                                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1, justifyContent: "center" }}>
                                   {otherPhotos.map((f, idx) => (
                                     <Box key={idx} sx={{ position: "relative" }}>
-                                      <img src={URL.createObjectURL(f)} alt={`other-${idx}`}
-                                        style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 6 }} />
+                                      <img
+                                        src={URL.createObjectURL(f)}
+                                        alt={`other-${idx}`}
+                                        style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 6 }}
+                                      />
                                       <Box
                                         onClick={() => setOtherPhotos(prev => prev.filter((_, i) => i !== idx))}
                                         sx={{
@@ -758,13 +1133,28 @@ const AssetForm = () => {
                                 <Button size="small" variant="contained" component="label"
                                   sx={{ fontSize: 11, background: "linear-gradient(to right,#1976d2,#42a5f5)" }}>
                                   + Capture
-                                  <input type="file" hidden accept="image/*" capture="environment"
-                                    onChange={(e) => { if (e.target.files[0]) setOtherPhotos(prev => [...prev, e.target.files[0]]); }} />
+                                  <input
+                                    type="file" hidden accept="image/jpeg,image/png,image/webp" capture="environment"
+                                    onChange={(e) => {
+                                      const f = e.target.files[0];
+                                      if (!f) return;
+                                      const err = validateFile(f);
+                                      if (err !== true) { alert(err); return; }
+                                      setOtherPhotos(prev => [...prev, f]);
+                                    }}
+                                  />
                                 </Button>
                                 <Button size="small" variant="outlined" component="label" sx={{ fontSize: 11 }}>
                                   + Upload
-                                  <input type="file" hidden accept="image/*" multiple
-                                    onChange={(e) => setOtherPhotos(prev => [...prev, ...Array.from(e.target.files)])} />
+                                  <input
+                                    type="file" hidden accept="image/jpeg,image/png,image/webp" multiple
+                                    onChange={(e) => {
+                                      const files = Array.from(e.target.files);
+                                      const invalid = files.find(f => validateFile(f) !== true);
+                                      if (invalid) { alert(validateFile(invalid)); return; }
+                                      setOtherPhotos(prev => [...prev, ...files]);
+                                    }}
+                                  />
                                 </Button>
                               </Box>
                               {otherPhotos.length > 0 && (
@@ -774,42 +1164,85 @@ const AssetForm = () => {
                               )}
                             </>
                           ) : (
-                            <>
-                              {file ? (
+                            <Controller
+                              name={key}
+                              control={control}
+                              defaultValue={null}
+                              rules={{ validate: validateFile }}
+                              render={({ field, fieldState: { error } }) => (
                                 <>
-                                  <img src={URL.createObjectURL(file)} alt={label}
-                                    style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8, marginBottom: 6 }} />
-                                  <Box display="flex" gap={1}>
-                                    <Button size="small" variant="outlined" component="label" sx={{ fontSize: 11 }}>
-                                      Change
-                                      <input type="file" hidden accept="image/*"
-                                        onChange={(e) => { if (e.target.files[0]) setValue(key, e.target.files[0]); }} />
-                                    </Button>
-                                    <Button size="small" variant="outlined" color="error" sx={{ fontSize: 11 }}
-                                      onClick={() => setValue(key, null)}>
-                                      Remove
-                                    </Button>
-                                  </Box>
-                                </>
-                              ) : (
-                                <>
-                                  <Typography sx={{ fontSize: 28 }}>📷</Typography>
-                                  <Box display="flex" gap={1} flexWrap="wrap" justifyContent="center">
-                                    <Button size="small" variant="contained" component="label"
-                                      sx={{ fontSize: 11, background: "linear-gradient(to right,#1976d2,#42a5f5)" }}>
-                                      Capture
-                                      <input type="file" hidden accept="image/*" capture="environment"
-                                        onChange={(e) => { if (e.target.files[0]) setValue(key, e.target.files[0]); }} />
-                                    </Button>
-                                    <Button size="small" variant="outlined" component="label" sx={{ fontSize: 11 }}>
-                                      Upload
-                                      <input type="file" hidden accept="image/*"
-                                        onChange={(e) => { if (e.target.files[0]) setValue(key, e.target.files[0]); }} />
-                                    </Button>
-                                  </Box>
+                                  {field.value ? (
+                                    <>
+                                      <img
+                                        src={URL.createObjectURL(field.value)}
+                                        alt={label}
+                                        style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8, marginBottom: 6 }}
+                                      />
+                                      <Typography sx={{ fontSize: 11, color: "#64748b" }}>
+                                        {field.value.name} ({(field.value.size / 1024 / 1024).toFixed(2)} MB)
+                                      </Typography>
+                                      <Box display="flex" gap={1} mt={0.5}>
+                                        <Button size="small" variant="outlined" component="label" sx={{ fontSize: 11 }}>
+                                          Change
+                                          <input
+                                            type="file" hidden accept="image/jpeg,image/png,image/webp"
+                                            onChange={(e) => {
+                                              const f = e.target.files[0];
+                                              if (!f) return;
+                                              const err = validateFile(f);
+                                              if (err !== true) { alert(err); return; }
+                                              setValue(key, f, { shouldValidate: true });
+                                            }}
+                                          />
+                                        </Button>
+                                        <Button size="small" variant="outlined" color="error" sx={{ fontSize: 11 }}
+                                          onClick={() => setValue(key, null, { shouldValidate: true })}>
+                                          Remove
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Typography sx={{ fontSize: 28 }}>📷</Typography>
+                                      <Box display="flex" gap={1} flexWrap="wrap" justifyContent="center">
+                                        <Button size="small" variant="contained" component="label"
+                                          sx={{ fontSize: 11, background: "linear-gradient(to right,#1976d2,#42a5f5)" }}>
+                                          Capture
+                                          <input
+                                            type="file" hidden accept="image/jpeg,image/png,image/webp" capture="environment"
+                                            onChange={(e) => {
+                                              const f = e.target.files[0];
+                                              if (!f) return;
+                                              const err = validateFile(f);
+                                              if (err !== true) { alert(err); return; }
+                                              setValue(key, f, { shouldValidate: true });
+                                            }}
+                                          />
+                                        </Button>
+                                        <Button size="small" variant="outlined" component="label" sx={{ fontSize: 11 }}>
+                                          Upload
+                                          <input
+                                            type="file" hidden accept="image/jpeg,image/png,image/webp"
+                                            onChange={(e) => {
+                                              const f = e.target.files[0];
+                                              if (!f) return;
+                                              const err = validateFile(f);
+                                              if (err !== true) { alert(err); return; }
+                                              setValue(key, f, { shouldValidate: true });
+                                            }}
+                                          />
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  )}
+                                  {error && (
+                                    <Typography sx={{ fontSize: 11, color: "#ef4444", mt: 0.5 }}>
+                                      {error.message}
+                                    </Typography>
+                                  )}
                                 </>
                               )}
-                            </>
+                            />
                           )}
                         </Box>
                       </Grid>
@@ -817,7 +1250,7 @@ const AssetForm = () => {
                   })}
                 </Grid>
 
-                {/* Submit button */}
+                {/* Submit */}
                 <Grid item xs={12} mt={3}>
                   <Box display="flex" justifyContent="flex-end">
                     <Button
@@ -834,20 +1267,32 @@ const AssetForm = () => {
               </>
             )}
 
-            {/* ========== NAVIGATION BUTTONS ========== */}
+            {/* Navigation Buttons */}
             <Box
-              display="flex" justifyContent="space-between" alignItems="center"
-              mt={4} pt={3} sx={{ borderTop: "1px solid #e2e8f0" }}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mt={4}
+              pt={3}
+              sx={{ borderTop: "1px solid #e2e8f0" }}
             >
-              <Button variant="outlined" onClick={handleBack} disabled={currentStep === 0} sx={{ minWidth: 120 }}>
+              <Button
+                variant="outlined"
+                onClick={handleBack}
+                disabled={currentStep === 0}
+                sx={{ minWidth: 120 }}
+              >
                 ← Back
               </Button>
               <Typography sx={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
                 Step {currentStep + 1} of {STEPS.length}
               </Typography>
               {currentStep < STEPS.length - 1 && (
-                <Button variant="contained" onClick={handleNext}
-                  sx={{ minWidth: 150, background: "linear-gradient(to right, #1976d2, #42a5f5)" }}>
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  sx={{ minWidth: 150, background: "linear-gradient(to right, #1976d2, #42a5f5)" }}
+                >
                   Save & Next →
                 </Button>
               )}
@@ -856,19 +1301,23 @@ const AssetForm = () => {
         </CardContent>
       </Card>
 
-      {/* Image dialog (kept for compatibility) */}
+      {/* Image dialog */}
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
         <DialogTitle>Select Image Option</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
           <Button variant="outlined" component="label">
             📷 Capture Photo
-            <input type="file" hidden accept="image/*" capture="environment"
-              onChange={(e) => { handleImageUpload(e.target.files[0]); setOpenImageDialog(false); }} />
+            <input
+              type="file" hidden accept="image/jpeg,image/png,image/webp" capture="environment"
+              onChange={(e) => { handleImageUpload(e.target.files[0]); setOpenImageDialog(false); }}
+            />
           </Button>
           <Button variant="outlined" component="label">
             🖼 Upload From Device
-            <input type="file" hidden accept="image/*"
-              onChange={(e) => { handleImageUpload(e.target.files[0]); setOpenImageDialog(false); }} />
+            <input
+              type="file" hidden accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => { handleImageUpload(e.target.files[0]); setOpenImageDialog(false); }}
+            />
           </Button>
         </DialogContent>
         <DialogActions>
