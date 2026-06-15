@@ -1695,7 +1695,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
           ))}
         </Box>
       </Box>
-
       <Card>
         <Box sx={{ background: "linear-gradient(to right, #1976d2, #42a5f5)", padding: 2, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
           <Typography variant="h6" sx={{ color: "#fff", fontWeight: 600, letterSpacing: 0.5 }}>EMRS Details Form</Typography>
