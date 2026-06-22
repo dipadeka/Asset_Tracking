@@ -9,6 +9,14 @@ import {
 } from "@mui/material";
 import { Controller } from "react-hook-form";
 
+const NCC_WINGS = ["Army Wing", "Naval Wing", "Air Force Wing"];
+
+const SCOUT_GUIDE_WINGS = [
+  "Cub Scout / Bulbul (Primary)",
+  "Scout / Guide (Secondary)",
+  "Rover Scout / Ranger Guide (Senior)",
+];
+
 const ExtraCurricular = ({
   extraCurricularRows,
   setExtraCurricularRows,
@@ -64,17 +72,8 @@ const ExtraCurricular = ({
                   setExtraCurricularRows(u);
                 }}
               >
-                {[
-                  "2024-2025",
-                  "2025-2026",
-                  "2026-2027",
-                  "2027-2028",
-                  "2028-2029",
-                  "2029-2030",
-                ].map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
+                {["2024-2025","2025-2026","2026-2027","2027-2028","2028-2029","2029-2030"].map((y) => (
+                  <MenuItem key={y} value={y}>{y}</MenuItem>
                 ))}
               </TextField>
             </Grid>
@@ -94,10 +93,8 @@ const ExtraCurricular = ({
                   setExtraCurricularRows(u);
                 }}
               >
-                {["6", "7", "8", "9", "10", "11", "12"].map((c) => (
-                  <MenuItem key={c} value={c}>
-                    {c}
-                  </MenuItem>
+                {["6","7","8","9","10","11","12"].map((c) => (
+                  <MenuItem key={c} value={c}>{c}</MenuItem>
                 ))}
               </TextField>
             </Grid>
@@ -117,10 +114,8 @@ const ExtraCurricular = ({
                   setExtraCurricularRows(u);
                 }}
               >
-                {["A", "B", "C"].map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
+                {["A","B","C"].map((s) => (
+                  <MenuItem key={s} value={s}>{s}</MenuItem>
                 ))}
               </TextField>
             </Grid>
@@ -140,28 +135,10 @@ const ExtraCurricular = ({
               />
             </Grid>
 
-            {/* Collaborating Partner */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Collaborating Partner"
-                fullWidth
-                size="small"
-                value={row.collaboratingPartner}
-                onChange={(e) => {
-                  const u = [...extraCurricularRows];
-                  u[index].collaboratingPartner = e.target.value;
-                  setExtraCurricularRows(u);
-                }}
-              />
-            </Grid>
-
             {/* Areas of Development */}
             <Grid item xs={12} sm={6} md={6}>
               <Grid container spacing={1}>
-                <Grid
-                  item
-                  xs={row.areasOfDevelopment === "Others" ? 6 : 12}
-                >
+                <Grid item xs={row.areasOfDevelopment === "Others" ? 6 : 12}>
                   <TextField
                     select
                     label="Areas of Development"
@@ -173,36 +150,21 @@ const ExtraCurricular = ({
                       const value = e.target.value;
                       const u = [...extraCurricularRows];
                       u[index].areasOfDevelopment = value;
-                      if (value !== "Others")
-                        u[index].otherAreaOfDevelopment = "";
+                      if (value !== "Others") u[index].otherAreaOfDevelopment = "";
                       setExtraCurricularRows(u);
                     }}
                   >
                     {[
-                      "Sports",
-                      "Culture",
-                      "Health & Wellness",
-                      "Value Education",
-                      "Kaushalya Skill Internship",
-                      "Computer Skills",
-                      "Personality Development",
-                      "Excursions",
-                      "Career Guidance",
-                      "Exposure",
-                      "Competitive Exam Training",
-                      "Enhancing Learning Skills",
-                      "Adventure Activities",
-                      "STEM Learning",
-                      "Innovation",
-                      "Others",
+                      "Sports","Culture","Health & Wellness","Value Education",
+                      "Kaushalya Skill Internship","Computer Skills","Personality Development",
+                      "Excursions","Career Guidance","Exposure","Competitive Exam Training",
+                      "Enhancing Learning Skills","Adventure Activities","STEM Learning",
+                      "Innovation","Others",
                     ].map((area) => (
-                      <MenuItem key={area} value={area}>
-                        {area}
-                      </MenuItem>
+                      <MenuItem key={area} value={area}>{area}</MenuItem>
                     ))}
                   </TextField>
                 </Grid>
-
                 {row.areasOfDevelopment === "Others" && (
                   <Grid item xs={6}>
                     <TextField
@@ -252,10 +214,8 @@ const ExtraCurricular = ({
                   setExtraCurricularRows(u);
                 }}
               >
-                {["Active", "In Progress", "Completed", "Planned"].map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
+                {["Active","In Progress","Completed","Planned"].map((s) => (
+                  <MenuItem key={s} value={s}>{s}</MenuItem>
                 ))}
               </TextField>
             </Grid>
@@ -266,137 +226,53 @@ const ExtraCurricular = ({
       {/* ── 2. National Cultural Meet ── */}
       <Grid container spacing={2} mb={2}>
         <Grid item xs={12}>
-          <Box
-            sx={{ border: "1.5px solid #1a56a0", borderRadius: 0, overflow: "hidden" }}
-          >
+          <Box sx={{ border: "1.5px solid #1a56a0", borderRadius: 0, overflow: "hidden" }}>
             <Box sx={{ background: "#1a56a0", px: 2, py: 0.9 }}>
-              <Typography
-                sx={{
-                  color: "#fff",
-                  fontSize: "0.72rem",
-                  fontWeight: 500,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
+              <Typography sx={{ color: "#fff", fontSize: "0.72rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 2. Student Participation in National Level Cultural Meet (5 Marks)
               </Typography>
             </Box>
-            <Box
-              sx={{
-                p: 2,
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 2,
-                background: "#fff",
-              }}
-            >
-              {/* Participated */}
+            <Box sx={{ p: 2, display: "flex", flexWrap: "wrap", gap: 2, background: "#fff" }}>
               <Box sx={{ flex: "1 1 220px" }}>
-                <Controller
-                  name="studentsParticipatedCulturalMeet"
-                  control={control}
-                  defaultValue=""
+                <Controller name="studentsParticipatedCulturalMeet" control={control} defaultValue=""
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      size="small"
-                      label="Students Participated (Yes/No)"
-                    >
+                    <TextField {...field} select fullWidth size="small" label="Students Participated (Yes/No)">
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
                   )}
                 />
               </Box>
-
               {watch("studentsParticipatedCulturalMeet") === "Yes" && (
                 <Box sx={{ flex: "1 1 160px" }}>
-                  <Controller
-                    name="studentsParticipatedCount"
-                    control={control}
-                    defaultValue=""
+                  <Controller name="studentsParticipatedCount" control={control} defaultValue=""
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="No. of Students"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
+                      <TextField {...field} label="No. of Students" type="number" fullWidth size="small" inputProps={{ min: 0 }} />
                     )}
                   />
                 </Box>
               )}
-
-              {/* Got Medal */}
               <Box sx={{ flex: "1 1 220px" }}>
-                <Controller
-                  name="studentsGotMedalCulturalMeet"
-                  control={control}
-                  defaultValue=""
+                <Controller name="studentsGotMedalCulturalMeet" control={control} defaultValue=""
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      size="small"
-                      label="Students Got Rank/Medal (Yes/No)"
-                    >
+                    <TextField {...field} select fullWidth size="small" label="Students Got Rank/Medal (Yes/No)">
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
                   )}
                 />
               </Box>
-
               {watch("studentsGotMedalCulturalMeet") === "Yes" && (
                 <Box sx={{ flex: "1 1 160px" }}>
-                  <Controller
-                    name="studentsRankCount"
-                    control={control}
-                    defaultValue=""
+                  <Controller name="studentsRankCount" control={control} defaultValue=""
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="No. of Students"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
+                      <TextField {...field} label="No. of Students" type="number" fullWidth size="small" inputProps={{ min: 0 }} />
                     )}
                   />
                 </Box>
               )}
-
-              {/* Marks */}
-              <Box
-                sx={{
-                  flex: "1 1 160px",
-                  display: "flex",
-                  alignItems: "center",
-                  background: "#f7faff",
-                  border: "1px solid #c8d4e8",
-                  borderRadius: 1,
-                  px: 2,
-                  py: 1,
-                  gap: 2,
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: "0.72rem",
-                    color: "#5a6a85",
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+              <Box sx={{ flex: "1 1 160px", display: "flex", alignItems: "center", background: "#f7faff", border: "1px solid #c8d4e8", borderRadius: 1, px: 2, py: 1, gap: 2 }}>
+                <Typography sx={{ fontSize: "0.72rem", color: "#5a6a85", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px", whiteSpace: "nowrap" }}>
                   Marks Obtained*
                 </Typography>
                 {(() => {
@@ -404,19 +280,7 @@ const ExtraCurricular = ({
                   const m = watch("studentsGotMedalCulturalMeet");
                   const val = p !== "Yes" ? 0 : m === "Yes" ? 5 : 3;
                   return (
-                    <Typography
-                      sx={{
-                        fontSize: "1.2rem",
-                        fontWeight: 500,
-                        ml: "auto",
-                        color:
-                          val === 5
-                            ? "#155724"
-                            : val === 3
-                            ? "#856404"
-                            : "#721c24",
-                      }}
-                    >
+                    <Typography sx={{ fontSize: "1.2rem", fontWeight: 500, ml: "auto", color: val === 5 ? "#155724" : val === 3 ? "#856404" : "#721c24" }}>
                       {val}
                     </Typography>
                   );
@@ -430,45 +294,19 @@ const ExtraCurricular = ({
       {/* ── 3. NCC & Scout Guide ── */}
       <Grid container spacing={2} mb={2}>
         <Grid item xs={12}>
-          <Box
-            sx={{ border: "1.5px solid #1a56a0", borderRadius: 0, overflow: "hidden" }}
-          >
+          <Box sx={{ border: "1.5px solid #1a56a0", borderRadius: 0, overflow: "hidden" }}>
             <Box sx={{ background: "#1a56a0", px: 2, py: 0.9 }}>
-              <Typography
-                sx={{
-                  color: "#fff",
-                  fontSize: "0.72rem",
-                  fontWeight: 500,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
+              <Typography sx={{ color: "#fff", fontSize: "0.72rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 3. NCC and Scout Guide in EMRS (5 Marks)
               </Typography>
             </Box>
-            <Box
-              sx={{
-                p: 2,
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 2,
-                background: "#fff",
-              }}
-            >
-              {/* NCC */}
+            <Box sx={{ p: 2, display: "flex", flexWrap: "wrap", gap: 2, background: "#fff" }}>
+
+              {/* ── NCC ── */}
               <Box sx={{ flex: "1 1 220px" }}>
-                <Controller
-                  name="nccUnitRunning"
-                  control={control}
-                  defaultValue=""
+                <Controller name="nccUnitRunning" control={control} defaultValue=""
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      size="small"
-                      label="NCC Unit Running (Yes/No)"
-                    >
+                    <TextField {...field} select fullWidth size="small" label="NCC Unit Running (Yes/No)">
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -477,39 +315,35 @@ const ExtraCurricular = ({
               </Box>
 
               {watch("nccUnitRunning") === "Yes" && (
-                <Box sx={{ flex: "1 1 160px" }}>
-                  <Controller
-                    name="nccStudentsCount"
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="No. of NCC Students"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
-                    )}
-                  />
-                </Box>
+                <>
+                  {/* NCC Wing */}
+                  <Box sx={{ flex: "1 1 220px" }}>
+                    <Controller name="nccWing" control={control} defaultValue=""
+                      render={({ field }) => (
+                        <TextField {...field} select fullWidth size="small" label="NCC Wing">
+                          {NCC_WINGS.map((w) => (
+                            <MenuItem key={w} value={w}>{w}</MenuItem>
+                          ))}
+                        </TextField>
+                      )}
+                    />
+                  </Box>
+                  {/* NCC Student Count */}
+                  <Box sx={{ flex: "1 1 160px" }}>
+                    <Controller name="nccStudentsCount" control={control} defaultValue=""
+                      render={({ field }) => (
+                        <TextField {...field} label="No. of NCC Students" type="number" fullWidth size="small" inputProps={{ min: 0 }} />
+                      )}
+                    />
+                  </Box>
+                </>
               )}
 
-              {/* Scout & Guide */}
+              {/* ── Scout & Guide ── */}
               <Box sx={{ flex: "1 1 220px" }}>
-                <Controller
-                  name="scoutGuideRunning"
-                  control={control}
-                  defaultValue=""
+                <Controller name="scoutGuideRunning" control={control} defaultValue=""
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      size="small"
-                      label="Scout and Guide Running (Yes/No)"
-                    >
+                    <TextField {...field} select fullWidth size="small" label="Scout and Guide Running (Yes/No)">
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -518,71 +352,40 @@ const ExtraCurricular = ({
               </Box>
 
               {watch("scoutGuideRunning") === "Yes" && (
-                <Box sx={{ flex: "1 1 160px" }}>
-                  <Controller
-                    name="scoutGuideStudentsCount"
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="No. of Students"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
-                    )}
-                  />
-                </Box>
+                <>
+                  {/* Scout/Guide Wing */}
+                  <Box sx={{ flex: "1 1 220px" }}>
+                    <Controller name="scoutGuideWing" control={control} defaultValue=""
+                      render={({ field }) => (
+                        <TextField {...field} select fullWidth size="small" label="Scout / Guide Wing">
+                          {SCOUT_GUIDE_WINGS.map((w) => (
+                            <MenuItem key={w} value={w}>{w}</MenuItem>
+                          ))}
+                        </TextField>
+                      )}
+                    />
+                  </Box>
+                  {/* Scout Student Count */}
+                  <Box sx={{ flex: "1 1 160px" }}>
+                    <Controller name="scoutGuideStudentsCount" control={control} defaultValue=""
+                      render={({ field }) => (
+                        <TextField {...field} label="No. of Students" type="number" fullWidth size="small" inputProps={{ min: 0 }} />
+                      )}
+                    />
+                  </Box>
+                </>
               )}
 
               {/* Marks */}
-              <Box
-                sx={{
-                  flex: "1 1 160px",
-                  display: "flex",
-                  alignItems: "center",
-                  background: "#f7faff",
-                  border: "1px solid #c8d4e8",
-                  borderRadius: 1,
-                  px: 2,
-                  py: 1,
-                  gap: 2,
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: "0.72rem",
-                    color: "#5a6a85",
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+              <Box sx={{ flex: "1 1 160px", display: "flex", alignItems: "center", background: "#f7faff", border: "1px solid #c8d4e8", borderRadius: 1, px: 2, py: 1, gap: 2 }}>
+                <Typography sx={{ fontSize: "0.72rem", color: "#5a6a85", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px", whiteSpace: "nowrap" }}>
                   Marks Obtained*
                 </Typography>
                 {(() => {
-                  const yesCount = [
-                    watch("nccUnitRunning"),
-                    watch("scoutGuideRunning"),
-                  ].filter((v) => v === "Yes").length;
+                  const yesCount = [watch("nccUnitRunning"), watch("scoutGuideRunning")].filter((v) => v === "Yes").length;
                   const val = yesCount === 2 ? 5 : yesCount === 1 ? 3 : 0;
                   return (
-                    <Typography
-                      sx={{
-                        fontSize: "1.2rem",
-                        fontWeight: 500,
-                        ml: "auto",
-                        color:
-                          val === 5
-                            ? "#155724"
-                            : val === 3
-                            ? "#856404"
-                            : "#721c24",
-                      }}
-                    >
+                    <Typography sx={{ fontSize: "1.2rem", fontWeight: 500, ml: "auto", color: val === 5 ? "#155724" : val === 3 ? "#856404" : "#721c24" }}>
                       {val}
                     </Typography>
                   );
@@ -596,159 +399,60 @@ const ExtraCurricular = ({
       {/* ── 4. RBVP / INSPIRE MANAK ── */}
       <Grid container spacing={2} mb={2}>
         <Grid item xs={12}>
-          <Box
-            sx={{ border: "1.5px solid #1a56a0", borderRadius: 0, overflow: "hidden" }}
-          >
+          <Box sx={{ border: "1.5px solid #1a56a0", borderRadius: 0, overflow: "hidden" }}>
             <Box sx={{ background: "#1a56a0", px: 2, py: 0.9 }}>
-              <Typography
-                sx={{
-                  color: "#fff",
-                  fontSize: "0.72rem",
-                  fontWeight: 500,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                4. Selection in RBVP / INSPIRE MANAK Award (5 Marks)
+              <Typography sx={{ color: "#fff", fontSize: "0.72rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                4. Selection in Rashtriya Bal Vaigyanik Pradarshani / INSPIRE MANAK Award (5 Marks)
               </Typography>
             </Box>
-            <Box
-              sx={{
-                p: 2,
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 2,
-                background: "#fff",
-              }}
-            >
-              {/* RBVP */}
+            <Box sx={{ p: 2, display: "flex", flexWrap: "wrap", gap: 2, background: "#fff" }}>
               <Box sx={{ flex: "1 1 220px" }}>
-                <Controller
-                  name="studentsSelectedRBVP"
-                  control={control}
-                  defaultValue=""
+                <Controller name="studentsSelectedRBVP" control={control} defaultValue=""
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      size="small"
-                      label="Students Selected for RBVP (Yes/No)"
-                    >
+                    <TextField {...field} select fullWidth size="small" label="Students Selected for RBVP (Yes/No)">
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
                   )}
                 />
               </Box>
-
               {watch("studentsSelectedRBVP") === "Yes" && (
                 <Box sx={{ flex: "1 1 160px" }}>
-                  <Controller
-                    name="rbvpStudentsCount"
-                    control={control}
-                    defaultValue=""
+                  <Controller name="rbvpStudentsCount" control={control} defaultValue=""
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="No. of Students"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
+                      <TextField {...field} label="No. of Students" type="number" fullWidth size="small" inputProps={{ min: 0 }} />
                     )}
                   />
                 </Box>
               )}
-
-              {/* INSPIRE MANAK */}
               <Box sx={{ flex: "1 1 220px" }}>
-                <Controller
-                  name="studentsSelectedInspireManak"
-                  control={control}
-                  defaultValue=""
+                <Controller name="studentsSelectedInspireManak" control={control} defaultValue=""
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      size="small"
-                      label="Students Selected for Inspire MANAK Award (Yes/No)"
-                    >
+                    <TextField {...field} select fullWidth size="small" label="Students Selected for Inspire MANAK Award (Yes/No)">
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
                   )}
                 />
               </Box>
-
               {watch("studentsSelectedInspireManak") === "Yes" && (
                 <Box sx={{ flex: "1 1 160px" }}>
-                  <Controller
-                    name="inspireStudentsCount"
-                    control={control}
-                    defaultValue=""
+                  <Controller name="inspireStudentsCount" control={control} defaultValue=""
                     render={({ field }) => (
-                      <TextField
-                        {...field}
-                        label="No. of Students"
-                        type="number"
-                        fullWidth
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
+                      <TextField {...field} label="No. of Students" type="number" fullWidth size="small" inputProps={{ min: 0 }} />
                     )}
                   />
                 </Box>
               )}
-
-              {/* Marks */}
-              <Box
-                sx={{
-                  flex: "1 1 160px",
-                  display: "flex",
-                  alignItems: "center",
-                  background: "#f7faff",
-                  border: "1px solid #c8d4e8",
-                  borderRadius: 1,
-                  px: 2,
-                  py: 1,
-                  gap: 2,
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: "0.72rem",
-                    color: "#5a6a85",
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.4px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+              <Box sx={{ flex: "1 1 160px", display: "flex", alignItems: "center", background: "#f7faff", border: "1px solid #c8d4e8", borderRadius: 1, px: 2, py: 1, gap: 2 }}>
+                <Typography sx={{ fontSize: "0.72rem", color: "#5a6a85", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px", whiteSpace: "nowrap" }}>
                   Marks Obtained*
                 </Typography>
                 {(() => {
-                  const yesCount = [
-                    watch("studentsSelectedRBVP"),
-                    watch("studentsSelectedInspireManak"),
-                  ].filter((v) => v === "Yes").length;
+                  const yesCount = [watch("studentsSelectedRBVP"), watch("studentsSelectedInspireManak")].filter((v) => v === "Yes").length;
                   const val = yesCount === 2 ? 5 : yesCount === 1 ? 3 : 0;
                   return (
-                    <Typography
-                      sx={{
-                        fontSize: "1.2rem",
-                        fontWeight: 500,
-                        ml: "auto",
-                        color:
-                          val === 5
-                            ? "#155724"
-                            : val === 3
-                            ? "#856404"
-                            : "#721c24",
-                      }}
-                    >
+                    <Typography sx={{ fontSize: "1.2rem", fontWeight: 500, ml: "auto", color: val === 5 ? "#155724" : val === 3 ? "#856404" : "#721c24" }}>
                       {val}
                     </Typography>
                   );
@@ -766,15 +470,7 @@ const ExtraCurricular = ({
           onClick={() =>
             setExtraCurricularRows([
               ...extraCurricularRows,
-              {
-                academicYear: "",
-                initiativeName: "",
-                collaboratingPartner: "",
-                areasOfDevelopment: "",
-                description: "",
-                targetStudents: "",
-                status: "",
-              },
+              { academicYear: "", initiativeName: "", collaboratingPartner: "", areasOfDevelopment: "", description: "", targetStudents: "", status: "" },
             ])
           }
         >

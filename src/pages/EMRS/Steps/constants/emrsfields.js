@@ -5,14 +5,14 @@ export const emrsBasicFields = [
     {
       name: "schooltype",
       label: "School Type",
-      type: "select",
-      options: ["Girls", "Boys", "Co-Ed"],
+       value: "Co-Ed",     
+      readOnly: true,
     },
     {
-      name: "Affiliation",
+     name: "Affiliation",
       label: "Affiliation",
-      type: "select",
-      options: ["SEBA", "CBSE", "ICSC"],
+      value: "CBSE",         
+      readOnly: true,
     },
     {
       name: "principalAvailable",
@@ -48,8 +48,6 @@ export const emrsInfrastructureFields = [
   { name: "Auditorium", label: "Auditorium", options: ["Yes", "No"] },
   { name: "auditoriumCapacity", label: "Auditorium Capacity", type: "number" },
   { name: "Medical Room", label: "Medical Room", options: ["Yes", "No"] },
-  { name: "totalFireExtinguishers", label: "Total Fire Extinguishers Installed", type: "number" },
-  { name: "functionalFireExtinguishers", label: "Functional Fire Extinguishers", type: "number" },
   { name: "electricalSafetyInspection", label: "Electrical Safety Inspection Conducted", options: ["Yes", "No"] },
   { name: "fireSafetyDrill", label: "Fire Safety Drill Conducted", options: ["Yes", "No"] },
 ];
@@ -258,10 +256,8 @@ export const CONSTRUCTION_STATUS_STYLE = {
     "CLAT",
 
     // Other Competitive Exams
-    "NTSE",
-    "KVPY",
+    "National Talent Search Examination",
     "INSPIRE Scholarship",
-    "National Talent Exam",
 
     // Sports / Cultural
     "National Sports Championship",
@@ -271,6 +267,12 @@ export const CONSTRUCTION_STATUS_STYLE = {
 
   // ================= TEACHING STAFF =================
   export const teachingStaffSummaryFields = [
+    {
+      name: "employmentType",
+      label: "Employment Type",
+      type: "select",
+      options: ["Permanent", "Contractual"],
+    },
     {
       name: "total",
       label: "Total Teaching Staff",
@@ -303,14 +305,19 @@ export const CONSTRUCTION_STATUS_STYLE = {
     },
 
     { name: "name", label: "Name" },
-    { name: "dob", label: "Date of Birth", type: "date" },
-    { name: "doj", label: "Date of Joining", type: "date" },
+        { name: "doj", label: "Date of Joining", type: "date" },
     { name: "email", label: "Email" },
     { name: "contact", label: "Contact Number" },
   ];
   // ================= NON TEACHING STAFF DETAILS =================
  export const nonTeachingStaffDetailFields = [
-    {
+  {
+    name: "employmentType",
+    label: "Employment Type",
+    type: "select",
+    options: ["Permanent", "Contractual"],
+  },
+  {
       name: "post",
       label: "Post",
       type: "select",
@@ -332,7 +339,6 @@ export const CONSTRUCTION_STATUS_STYLE = {
     },
 
     { name: "name", label: "Name" },
-    { name: "dob", label: "Date of Birth", type: "date" },
     { name: "doj", label: "Date of Joining", type: "date" },
     { name: "email", label: "Email" },
     { name: "contact", label: "Contact Number" },
@@ -421,10 +427,8 @@ export const CONSTRUCTION_STATUS_STYLE = {
   ];
 
  export const tetQualificationOptions = [
-    "CTET Paper I",
-    "CTET Paper II",
-    "STET Paper I",
-    "STET Paper II",
+    "CTET",
+    "STET" ,
     "Other",
   ];
 

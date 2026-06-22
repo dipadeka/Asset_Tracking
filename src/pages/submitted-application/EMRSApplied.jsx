@@ -10,6 +10,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import { useAuth } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
 import {
   buildSections,
@@ -49,8 +50,29 @@ const SectionTable = ({ title, rows }) => (
     </TableContainer>
   </Box>
 );
+/* Schools only ever see their own submissions; any non-"school" role (admin) sees all. */
+const filterFormsForUser = (forms, currentUser) => {
+  if (!currentUser) return [];               // not logged in → show nothing
+  if (currentUser.role !== "school") return forms; // admin / other roles → see everything
+
+  const userCode = String(currentUser.schoolCode || "").trim().toLowerCase();
+  const userId = String(currentUser.username || currentUser.loginId || currentUser.id || "")
+    .trim()
+    .toLowerCase();
+
+  return forms.filter((f) => {
+    const formCode = String(f.EMRScode || f.schoolCode || "").trim().toLowerCase();
+    if (userCode && formCode && formCode === userCode) return true;
+
+    const formUserId = String(f.username || f.loginId || "").trim().toLowerCase();
+    if (userId && formUserId && formUserId === userId) return true;
+
+    return false;
+  });
+};
 
 const EMRSApplied = () => {
+  const { user } = useAuth();  
   const [submittedForms, setSubmittedForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingCache, setUsingCache] = useState(false);
@@ -58,27 +80,28 @@ const EMRSApplied = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   const [deleting, setDeleting] = useState(false);
+const loadForms = useCallback(async () => {
+  setLoading(true);
+  setError(null);
+  setUsingCache(false);
 
-  const loadForms = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setUsingCache(false);
+  try {
+    const fromApi = await fetchEmrsFromBackend();
+    const allForms = deduplicate(fromApi);
 
-    try {
-      const fromApi = await fetchEmrsFromBackend();
-      const allForms = deduplicate(fromApi);
-      setSubmittedForms(allForms);
-      writeLS(allForms);
-    } catch (apiError) {
-      const cached = deduplicate(readLS());
-      setSubmittedForms(cached);
-      setUsingCache(true);
-      setError(apiError.message || "Could not reach the server. Showing cached submissions.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+    writeLS(allForms);                              // cache EVERYTHING
+    const visibleForms = filterFormsForUser(allForms, user);
+    setSubmittedForms(visibleForms);                 // but only DISPLAY this user's own forms
+  } catch (apiError) {
+    const cached = deduplicate(readLS());
+    const visibleCached = filterFormsForUser(cached, user);
+    setSubmittedForms(visibleCached);
+    setUsingCache(true);
+    setError(apiError.message || "Could not reach the server. Showing cached submissions.");
+  } finally {
+    setLoading(false);
+  }
+}, [user]);   // 👈 add user as a dependency
   useEffect(() => {
     loadForms();
     window.addEventListener("emrs-form-submitted", loadForms);
@@ -167,14 +190,16 @@ const EMRSApplied = () => {
       )}
 
       {submittedForms.length === 0 ? (
-        <Box sx={{ textAlign: "center", p: 6, border: "2px dashed #e2e8f0", borderRadius: 3, background: "#f8fafc" }}>
-          <Typography fontSize={48}>📋</Typography>
-          <Typography fontWeight={600} mt={1}>No EMRS forms submitted yet</Typography>
-          <Typography color="text.secondary" fontSize={14}>
-            Complete and submit the EMRS form to see your application here.
-          </Typography>
-        </Box>
-      ) : (
+  <Box sx={{ textAlign: "center", p: 6, border: "2px dashed #e2e8f0", borderRadius: 3, background: "#f8fafc" }}>
+    <Typography fontSize={48}>📋</Typography>
+    <Typography fontWeight={600} mt={1}>No EMRS forms submitted yet</Typography>
+    <Typography color="text.secondary" fontSize={14}>
+      {user?.role === "school"
+        ? "You haven't submitted an EMRS form for your school yet."
+        : "Complete and submit the EMRS form to see your application here."}
+    </Typography>
+  </Box>
+) : (
         submittedForms.map((form, index) => (
           <Accordion
             key={getFormId(form) || index}

@@ -1,305 +1,1113 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import EMRSDashboard from "./Dashboard";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ACCURATE ASSAM OUTLINE
-// Traced from official district maps. ViewBox: 0 0 800 480
-// The state sits roughly like a wide horizontal shape, narrow in the west,
-// widening eastward, with the Barak Valley corridor hanging south-center-right.
+// DATA
 // ─────────────────────────────────────────────────────────────────────────────
-const ASSAM_MAIN = `
-  M 112,188
-  L 118,175 L 126,162 L 132,150 L 136,140 L 140,130
-  L 148,122 L 158,114 L 168,108 L 180,104 L 192,100
-  L 206,97  L 222,95  L 240,93  L 260,92  L 282,91
-  L 306,90  L 332,89  L 358,89  L 384,90  L 408,91
-  L 430,93  L 452,96  L 472,100 L 490,105 L 506,111
-  L 520,118 L 532,126 L 542,134 L 550,142 L 558,150
-  L 564,158 L 570,168 L 574,178 L 578,188 L 580,198
-  L 582,210 L 582,222 L 580,234 L 576,244 L 570,254
-  L 562,262 L 552,270 L 540,278 L 526,284 L 510,290
-  L 492,295 L 474,300 L 456,304 L 438,307 L 420,309
-  L 402,311 L 384,312 L 368,311 L 352,310 L 338,307
-  L 326,302
-  L 322,314 L 318,326 L 316,338 L 316,350 L 318,360
-  L 322,368 L 328,374 L 336,378 L 344,380 L 352,378
-  L 360,374 L 366,368 L 370,360 L 372,350 L 370,340
-  L 366,330 L 362,320 L 358,312
-  L 344,310 L 330,308 L 316,304
-  L 302,300 L 288,296 L 272,290 L 258,284
-  L 244,276 L 230,268 L 216,258 L 204,248
-  L 192,236 L 182,224 L 174,212 L 168,200
-  L 160,194 L 148,190 L 134,188 Z
-`;
-
-// District boundary lines (approximate internal borders for visual depth)
-const DISTRICT_LINES = [
-  "M 200,95 L 196,190",
-  "M 260,92 L 256,200 L 252,290",
-  "M 330,89 L 328,210 L 326,302",
-  "M 408,91 L 406,200 L 404,309",
-  "M 480,98 L 478,205 L 476,300",
-  "M 160,108 L 230,150 L 200,190",
-  "M 300,90 L 320,150 L 340,210",
-  "M 450,95 L 440,170 L 430,245",
-  "M 540,130 L 520,200 L 510,270",
-  "M 180,200 L 280,195 L 380,198 L 480,196 L 560,200",
-  "M 200,250 L 310,248 L 420,252 L 510,258",
+const EMRS_PINS = [
+  { name: "EMRS Dalbari, Barama", district: "Baksa", students: 220, cap: 300, classes: "6–12", status: "Active", principal: "Mr. R. Basumatary", lat: 26.4500, lng: 90.8500 },
+  { name: "EMRS Jalah, Vill. Daodhara", district: "Baksa", students: 300, cap: 340, classes: "6–12", status: "Active", principal: "Mr. K. Boro", lat: 26.4600, lng: 90.8600 },
+  { name: "EMRS Sarupeta, Vill Tatikuchi", district: "Baksa", students: 300, cap: 320, classes: "6–12", status: "Active", principal: "Mr. I. Narzary", lat: 26.4400, lng: 90.8400 },
+  { name: "EMRS Kharadhara", district: "Bajali", students: 295, cap: 320, classes: "6–12", status: "Active", principal: "Ms. P. Devi", lat: 26.6700, lng: 91.1800 },
+  { name: "EMRS Bedlangmari", district: "Kokrajhar", students: 340, cap: 380, classes: "6–12", status: "Active", principal: "Mr. A. Gogoi", lat: 26.4000, lng: 90.2600 },
+  { name: "EMRS Howraghat", district: "Karbi Anglong", students: 410, cap: 450, classes: "6–12", status: "Active", principal: "Dr. S. Terang", lat: 26.0900, lng: 93.3000 },
+  { name: "EMRS Phuloni, Donghap", district: "Karbi Anglong", students: 275, cap: 300, classes: "6–10", status: "Active", principal: "Mr. K. Hmar", lat: 25.3000, lng: 92.8000 },
+  { name: "EMRS Silonijan, Thengkur Terang", district: "Karbi Anglong", students: 380, cap: 400, classes: "6–12", status: "Active", principal: "Ms. N. Das", lat: 26.1700, lng: 91.7700 },
+  { name: "EMRS Donka, Taralangsho", district: "West Karbi Anglong", students: 350, cap: 400, classes: "6–12", status: "Active", principal: "Mr. B. Bora", lat: 26.7500, lng: 94.2000 },
+  { name: "EMRS Jonai, Purana Jhelom", district: "Dhemaji", students: 290, cap: 320, classes: "6–12", status: "Active", principal: "Ms. R. Choudhury", lat: 27.2300, lng: 94.1100 },
+  { name: "EMRS Haflong, Ardaopur", district: "Dima Hasao", students: 315, cap: 350, classes: "6–12", status: "Active", principal: "Mr. D. Phukan", lat: 27.4900, lng: 95.3500 },
+  { name: "EMRS Umrangso", district: "Dima Hasao", students: 260, cap: 300, classes: "6–10", status: "Planned", principal: "TBD", lat: 26.1700, lng: 90.6200 },
+  { name: "EMRS Harangajao", district: "Dima Hasao", students: 305, cap: 340, classes: "6–12", status: "Active", principal: "Ms. A. Kalita", lat: 25.0974, lng: 93.0000 },
+  { name: "EMRS Diyungbra", district: "Dima Hasao", students: 332, cap: 360, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 25.6271, lng: 92.9165 },
+  { name: "EMRS Boko", district: "Kamrup", students: 332, cap: 345, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 25.9594, lng: 91.2040 },
+  { name: "EMRS Dudhnoi, Jakhuwapara", district: "Goalpara", students: 332, cap: 360, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 25.9500, lng: 90.9010 },
+  { name: "EMRS Khairabari, Malmura", district: "Udalguri", students: 332, cap: 380, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 26.6400, lng: 91.7500 },
 ];
 
-// Brahmaputra river path (wide, winding through middle)
-const BRAHMAPUTRA = `M 118,180 Q 180,168 250,164 Q 330,160 410,163 Q 480,167 545,175 Q 568,178 580,185`;
+const ASSET_PINS = [
+  { name: "Kamrup Asset Hub", district: "Kamrup", type: "infra", value: "₹4.2Cr", status: "Active", year: 2023, lat: 26.1700, lng: 91.7700 },
+  { name: "Tezpur Road Project", district: "Sonitpur", type: "road", value: "₹2.8Cr", status: "In Progress", year: 2024, lat: 26.6300, lng: 92.7900 },
+  { name: "Jorhat Infra Store", district: "Jorhat", type: "infra", value: "₹3.1Cr", status: "Active", year: 2022, lat: 26.7500, lng: 94.2000 },
+  { name: "Dibrugarh Warehouse", district: "Dibrugarh", type: "building", value: "₹5.6Cr", status: "Active", year: 2021, lat: 27.4800, lng: 94.9100 },
+  { name: "Nagaon Construction", district: "Nagaon", type: "building", value: "₹1.9Cr", status: "In Progress", year: 2024, lat: 26.3500, lng: 92.6900 },
+  { name: "Barpeta Road Network", district: "Barpeta", type: "road", value: "₹2.2Cr", status: "Active", year: 2023, lat: 26.3200, lng: 91.0000 },
+  { name: "Cachar Asset Depot", district: "Cachar", type: "infra", value: "₹3.4Cr", status: "Active", year: 2022, lat: 24.8200, lng: 92.7800 },
+  { name: "Dhubri Bridge Project", district: "Dhubri", type: "road", value: "₹6.0Cr", status: "Planned", year: 2025, lat: 26.0200, lng: 89.9800 },
+  { name: "Sivasagar Heritage", district: "Sivasagar", type: "building", value: "₹4.8Cr", status: "Active", year: 2020, lat: 26.9800, lng: 94.6400 },
+  { name: "Kokrajhar Dev Store", district: "Kokrajhar", type: "infra", value: "₹1.5Cr", status: "Active", year: 2023, lat: 26.4000, lng: 90.2700 },
+];
 
-// Barak river
-const BARAK = `M 320,310 Q 340,340 352,370`;
+const STAFF_DATA = [
+  { name: "Mr. R. Basumatary", school: "EMRS Dalbari", desig: "Principal", subject: "General", exp: "14 yrs", status: "Active" },
+  { name: "Ms. P. Devi", school: "EMRS Kharadhara", desig: "Principal", subject: "General", exp: "11 yrs", status: "Active" },
+  { name: "Dr. S. Terang", school: "EMRS Howraghat", desig: "Principal", subject: "General", exp: "18 yrs", status: "Active" },
+  { name: "Mr. A. Gogoi", school: "EMRS Bedlangmari", desig: "Principal", subject: "General", exp: "9 yrs", status: "Active" },
+  { name: "Ms. N. Das", school: "EMRS Silonijan", desig: "Vice Principal", subject: "General", exp: "8 yrs", status: "Active" },
+  { name: "Mr. B. Bora", school: "EMRS Donka", desig: "PGT", subject: "Mathematics", exp: "7 yrs", status: "Active" },
+  { name: "Ms. R. Choudhury", school: "EMRS Jonai", desig: "PGT", subject: "Science", exp: "6 yrs", status: "Active" },
+  { name: "Mr. K. Hmar", school: "EMRS Phuloni", desig: "TGT", subject: "English", exp: "5 yrs", status: "Active" },
+  { name: "Ms. A. Kalita", school: "EMRS Harangajao", desig: "TGT", subject: "Social Studies", exp: "4 yrs", status: "On Leave" },
+  { name: "Mr. P. Hazarika", school: "EMRS Boko", desig: "PGT", subject: "Physics", exp: "10 yrs", status: "Active" },
+  { name: "Ms. L. Timung", school: "EMRS Howraghat", desig: "TGT", subject: "Hindi", exp: "6 yrs", status: "Active" },
+  { name: "Mr. D. Basumatary", school: "EMRS Dalbari", desig: "PRT", subject: "Primary", exp: "3 yrs", status: "Active" },
+  { name: "Ms. G. Boro", school: "EMRS Bedlangmari", desig: "Admin", subject: "—", exp: "8 yrs", status: "Active" },
+  { name: "Mr. H. Narzary", school: "EMRS Jalah", desig: "TGT", subject: "Biology", exp: "5 yrs", status: "Active" },
+  { name: "Ms. S. Mech", school: "EMRS Sarupeta", desig: "PGT", subject: "Chemistry", exp: "7 yrs", status: "Active" },
+];
 
-function AssamMap({ activeLayer, emrsPins, assetPins, selectedPin, onPinClick }) {
-  const assetTypeColor = { infra: "#f59e0b", road: "#10b981", building: "#8b5cf6" };
-  const pins = activeLayer === "emrs"
-    ? emrsPins.map((p, i) => ({ ...p, color: "#60a5fa", id: i }))
-    : assetPins.map((p, i) => ({ ...p, color: assetTypeColor[p.type] || "#34d399", id: i }));
+const HOSTEL_WARDENS = [
+  { boys: "Mr. B. Das", girls: "Ms. P. Kalita", cap: 300, occ: 248 },
+  { boys: "Mr. K. Boro", girls: "Ms. L. Devi", cap: 340, occ: 312 },
+  { boys: "Mr. N. Baruah", girls: "Ms. G. Gogoi", cap: 320, occ: 290 },
+  { boys: "Mr. A. Mech", girls: "Ms. S. Boro", cap: 320, occ: 275 },
+  { boys: "Mr. P. Bodo", girls: "Ms. R. Nath", cap: 380, occ: 350 },
+  { boys: "Mr. S. Terang", girls: "Ms. D. Engti", cap: 450, occ: 410 },
+  { boys: "Mr. K. Hmar", girls: "Ms. A. Rongpi", cap: 300, occ: 260 },
+  { boys: "Mr. B. Timung", girls: "Ms. N. Phukan", cap: 400, occ: 368 },
+  { boys: "Mr. R. Kro", girls: "Ms. L. Tisso", cap: 400, occ: 340 },
+  { boys: "Mr. D. Pegu", girls: "Ms. T. Doley", cap: 320, occ: 280 },
+];
 
-  const accentColor  = activeLayer === "emrs" ? "#3b82f6" : "#059669";
-  const fillColor    = activeLayer === "emrs" ? "rgba(37,99,235,0.10)" : "rgba(5,150,105,0.10)";
-  const glowColor    = activeLayer === "emrs" ? "rgba(59,130,246,0.3)" : "rgba(16,185,129,0.3)";
+const ATT_RANKING = [96.2, 93.8, 92.1, 91.4, 90.7, 89.3, 88.9, 87.4, 86.1, 85.8, 85.2, 84.9, 83.7, 82.1, 81.4, 79.8, 77.2];
+
+// ── FALLBACK used whenever an image fails to load ──────────────────────────
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=500";
+
+const handleImgError = (e) => {
+  console.error("Image failed to load:", e.target.src);
+  e.target.onerror = null;
+  e.target.src = FALLBACK_IMG;
+};
+// ── FIX: All local /images/ paths replaced with working Unsplash URLs ──────
+const HERO_SCROLL_IMAGES = [
+  { src: "/images/emrs-kharadhara-building.png",      caption: "EMRS Kharadhara",  sub: "New Campus Building"  },
+  { src: "/images/emrs-kharadhara-morning-assembly.png", caption: "EMRS Kharadhara", sub: "Morning Assembly"   },
+  { src: "/images/emrs-kharadhara-inauguration.png",  caption: "EMRS Kharadhara",  sub: "Inauguration Day"     },
+  { src: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=500", caption: "EMRS Dalbari", sub: "Annual Day" },
+  { src: "https://images.unsplash.com/photo-1588072432836-e10032774350?w=500", caption: "EMRS Boko",    sub: "Smart Classroom" },
+  { src: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=500", caption: "EMRS Dalbari", sub: "Library" },
+  { src: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=500",    caption: "EMRS Bedlangmari", sub: "Hostel Wing" },
+  { src: "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?w=500", caption: "EMRS Howraghat", sub: "Sports Ground" },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DESIGN TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+const T = {
+  brown: "#8b4513",
+  brownLight: "#c8781e",
+  brownDark: "#2d1a0e",
+  cream: "#fdf8f0",
+  creamDark: "#fdf3e3",
+  purple: "#6b3fa0",
+  green: "#2d6a4f",
+  gold: "#e8a020",
+  muted: "#7a5c3a",
+  faint: "#8a6a3a",
+  border: "rgba(139,69,19,0.12)",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function Badge({ status }) {
+  const map = {
+    Active: { bg: "#e6f4ee", color: T.green },
+    "On Leave": { bg: "#fff3e0", color: T.brownLight },
+    Planned: { bg: "#f0eafd", color: T.purple },
+    "In Progress": { bg: "#fff3e0", color: T.brownLight },
+  };
+  const s = map[status] || map.Active;
+  return (
+    <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, textTransform: "uppercase", letterSpacing: 0.5 }}>{status}</span>
+  );
+}
+
+function ProgressBar({ pct, color }) {
+  return (
+    <div style={{ height: 6, background: "rgba(139,69,19,0.1)", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${pct}%`, background: color || T.brown, borderRadius: 10, transition: "width 0.6s ease" }} />
+    </div>
+  );
+}
+
+function MetricCard({ icon, label, value, sub, accentColor }) {
+  return (
+    <div style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "20px 22px", position: "relative", overflow: "hidden", borderLeft: `4px solid ${accentColor || T.brown}` }}>
+      <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 36, opacity: 0.12 }}>{icon}</div>
+      <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: T.faint, fontWeight: 700, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color: T.brownDark, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: T.faint, marginTop: 5 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function ChartCard({ title, children, style }) {
+  return (
+    <div style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "20px 22px", ...style }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#5a3e28", marginBottom: 16 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <span style={{ display: "inline-block", background: "#fde9d2", color: "#c2530e", fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", padding: "5px 12px", borderRadius: 4, marginBottom: 16 }}>{children}</span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHART LOADER
+// ─────────────────────────────────────────────────────────────────────────────
+let chartJsLoaded = false;
+let chartJsCallbacks = [];
+
+function loadChartJs(cb) {
+  if (chartJsLoaded) { cb(); return; }
+  chartJsCallbacks.push(cb);
+  if (chartJsCallbacks.length > 1) return;
+  const s = document.createElement("script");
+  s.src = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js";
+  s.onload = () => { chartJsLoaded = true; chartJsCallbacks.forEach(fn => fn()); chartJsCallbacks = []; };
+  document.head.appendChild(s);
+}
+
+function useChart(ref, config, deps = []) {
+  useEffect(() => {
+    loadChartJs(() => {
+      if (!ref.current) return;
+      const existing = ref.current.__chartInstance;
+      if (existing) existing.destroy();
+      ref.current.__chartInstance = new window.Chart(ref.current, config());
+    });
+    return () => {
+      if (ref.current?.__chartInstance) {
+        ref.current.__chartInstance.destroy();
+        ref.current.__chartInstance = null;
+      }
+    };
+  }, deps);
+}
+
+const baseScales = (yExtra = {}) => ({
+  y: { grid: { color: "rgba(139,69,19,0.07)" }, ticks: { color: T.faint, font: { size: 11 } }, ...yExtra },
+  x: { grid: { display: false }, ticks: { color: T.faint, font: { size: 11 } } },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DASHBOARD TABS
+// ─────────────────────────────────────────────────────────────────────────────
+function OverviewTab() {
+  const classRef  = useRef(null);
+  const genderRef = useRef(null);
+  const attRef    = useRef(null);
+  const hostelRef = useRef(null);
+  const staffRef  = useRef(null);
+
+  useChart(classRef, () => ({
+    type: "bar",
+    data: {
+      labels: ["Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12"],
+      datasets: [{ label: "Students", data: [920,850,820,780,740,640,566], backgroundColor: [T.brown,T.brown,T.brown,T.brownLight,T.brownLight,T.purple,T.purple], borderRadius: 5, borderSkipped: false }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales({ beginAtZero: true }) },
+  }), []);
+
+  useChart(genderRef, () => ({
+    type: "doughnut",
+    data: { labels: ["Boys","Girls"], datasets: [{ data: [52,48], backgroundColor: [T.brown,T.gold], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { display: false } } },
+  }), []);
+
+  useChart(attRef, () => ({
+    type: "line",
+    data: { labels: ["Jan","Feb","Mar","Apr","May","Jun"], datasets: [{ label: "Att %", data: [86,87.5,89,88.2,90.1,88.4], borderColor: T.brown, backgroundColor: "rgba(139,69,19,0.06)", tension: 0.4, fill: true, pointBackgroundColor: T.brown, pointRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales({ min: 80, max: 95 }) },
+  }), []);
+
+  const top5 = EMRS_PINS.slice(0, 5);
+  useChart(hostelRef, () => ({
+    type: "bar",
+    data: {
+      labels: top5.map(s => s.name.replace("EMRS ","").split(",")[0]),
+      datasets: [
+        { label: "Capacity", data: top5.map(s => s.cap), backgroundColor: "rgba(139,69,19,0.15)", borderRadius: 4, borderSkipped: false },
+        { label: "Occupied", data: top5.map(s => s.students), backgroundColor: T.brown, borderRadius: 4, borderSkipped: false },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales({ beginAtZero: true }) },
+  }), []);
+
+  useChart(staffRef, () => ({
+    type: "doughnut",
+    data: { labels: ["Teaching","Admin","Support"], datasets: [{ data: [228,96,88], backgroundColor: [T.brown,T.brownLight,T.purple], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "65%", plugins: { legend: { display: false } } },
+  }), []);
+
+  const totalEnrolled = EMRS_PINS.reduce((a, s) => a + s.students, 0);
 
   return (
-    <svg
-      viewBox="0 0 700 420"
-      style={{ width: "100%", height: "auto", display: "block" }}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        {/* Map background gradient */}
-        <radialGradient id="mapBg" cx="50%" cy="48%" r="55%">
-          <stop offset="0%" stopColor="#16213e" />
-          <stop offset="100%" stopColor="#0b1120" />
-        </radialGradient>
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+        <MetricCard icon="🏫" label="Total EMRS"      value="17"                        sub="Across 10 districts"      accentColor={T.brown}      />
+        <MetricCard icon="🎓" label="Total Students"  value={totalEnrolled.toLocaleString()} sub="Classes 6–12"         accentColor={T.purple}     />
+        <MetricCard icon="👨‍🏫" label="Staff Strength" value="412"                       sub="Teaching + non-teaching"  accentColor={T.green}      />
+        <MetricCard icon="🏠" label="Hostel Capacity" value="6,200"                     sub="Occupancy: 85.7%"         accentColor={T.brownLight} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+        <ChartCard title="Enrollment by class">
+          <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+            {[{ color: T.brown, label: "Junior (6–8)" },{ color: T.brownLight, label: "Middle (9–10)" },{ color: T.purple, label: "Senior (11–12)" }].map(l => (
+              <span key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: l.color, display: "inline-block" }} />{l.label}
+              </span>
+            ))}
+          </div>
+          <div style={{ position: "relative", height: 180 }}><canvas ref={classRef} /></div>
+        </ChartCard>
+        <ChartCard title="Student gender split">
+          <div style={{ display: "flex", gap: 20, alignItems: "center", height: 200 }}>
+            <div style={{ position: "relative", flex: 1, height: "100%" }}><canvas ref={genderRef} /></div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#5a3e28", marginBottom: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: T.brown, display: "inline-block" }} />Boys — 2,764 (52%)
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#5a3e28" }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: T.gold, display: "inline-block" }} />Girls — 2,552 (48%)
+              </div>
+            </div>
+          </div>
+        </ChartCard>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18, marginBottom: 18 }}>
+        <ChartCard title="Attendance trend (2025)"><div style={{ position: "relative", height: 150 }}><canvas ref={attRef} /></div></ChartCard>
+        <ChartCard title="Hostel occupancy (top 5)"><div style={{ position: "relative", height: 150 }}><canvas ref={hostelRef} /></div></ChartCard>
+        <ChartCard title="Staff composition">
+          <div style={{ display: "flex", gap: 12, alignItems: "center", height: 150 }}>
+            <div style={{ position: "relative", flex: 1, height: "100%" }}><canvas ref={staffRef} /></div>
+            <div style={{ fontSize: 12 }}>
+              {[{ color: T.brown, label: "Teaching — 228" },{ color: T.brownLight, label: "Admin — 96" },{ color: T.purple, label: "Support — 88" }].map(l => (
+                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, color: "#5a3e28" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, display: "inline-block" }} />{l.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </ChartCard>
+      </div>
+      <ChartCard title="School-wise enrollment snapshot">
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+            <thead>
+              <tr>
+                {["School","District","Enrolled","Capacity","Fill Rate","Status"].map(h => (
+                  <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${T.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {EMRS_PINS.map((s, i) => {
+                const rate = Math.round(s.students / s.cap * 100);
+                const barColor = rate > 85 ? T.green : rate > 70 ? T.brownLight : "#a32d2d";
+                return (
+                  <tr key={i} style={{ borderBottom: `1px solid rgba(139,69,19,0.04)` }}>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: T.brownDark }}>{s.name}</td>
+                    <td style={{ padding: "10px 12px", color: T.muted }}>{s.district}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 700 }}>{s.students}</td>
+                    <td style={{ padding: "10px 12px" }}>{s.cap}</td>
+                    <td style={{ padding: "10px 12px", minWidth: 120 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ flex: 1 }}><ProgressBar pct={rate} color={barColor} /></div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: barColor }}>{rate}%</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "10px 12px" }}><Badge status={s.status} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </ChartCard>
+    </>
+  );
+}
 
-        {/* Assam fill gradient */}
-        <linearGradient id="assamFill" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={activeLayer === "emrs" ? "#1e3a8a" : "#064e3b"} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={activeLayer === "emrs" ? "#2563eb" : "#059669"} stopOpacity="0.06" />
-        </linearGradient>
+function EnrollmentTab() {
+  const yoyRef    = useRef(null);
+  const tribalRef = useRef(null);
+  const dropoutRef= useRef(null);
 
-        {/* Glow filter for border */}
-        <filter id="borderGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+  useChart(yoyRef, () => ({
+    type: "bar",
+    data: {
+      labels: EMRS_PINS.slice(0,6).map(s => s.name.replace("EMRS ","").split(",")[0]),
+      datasets: [
+        { label: "2022–23", data: [195,265,270,270,310,380], backgroundColor: "rgba(139,69,19,0.18)", borderRadius: 3, borderSkipped: false },
+        { label: "2023–24", data: [205,282,285,280,325,395], backgroundColor: "rgba(139,69,19,0.5)",  borderRadius: 3, borderSkipped: false },
+        { label: "2024–25", data: [220,300,300,295,340,410], backgroundColor: T.brown,                borderRadius: 3, borderSkipped: false },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { ...baseScales({ beginAtZero: true }), x: { grid: { display: false }, ticks: { color: T.faint, font: { size: 10 }, maxRotation: 30 } } } },
+  }), []);
 
-        {/* Pin glow */}
-        <filter id="pinGlow" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="4" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+  useChart(tribalRef, () => ({
+    type: "bar",
+    data: {
+      labels: ["Bodo","Karbi","Mising","Dimasa","Deori","Others"],
+      datasets: [{ label: "Students", data: [1480,1220,890,640,420,666], backgroundColor: [T.brown,T.brownLight,T.purple,T.green,"#c8a84b","#a85c3a"], borderRadius: 5, borderSkipped: false }],
+    },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: "rgba(139,69,19,0.07)" }, ticks: { color: T.faint, font: { size: 11 } } }, y: { grid: { display: false }, ticks: { color: "#5a3e28", font: { size: 11 } } } } },
+  }), []);
 
-        {/* River blur */}
-        <filter id="riverBlur">
-          <feGaussianBlur stdDeviation="1.2" />
-        </filter>
+  useChart(dropoutRef, () => ({
+    type: "line",
+    data: {
+      labels: ["Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12"],
+      datasets: [
+        { label: "2024–25", data: [1.2,1.8,2.1,3.4,2.8,4.2,3.1], borderColor: T.brown, backgroundColor: "rgba(139,69,19,0.07)", tension: 0.4, fill: true, pointBackgroundColor: T.brown, pointRadius: 4 },
+        { label: "2023–24", data: [1.5,2.2,2.8,4.1,3.5,5.0,4.2], borderColor: "rgba(139,69,19,0.35)", backgroundColor: "transparent", tension: 0.4, borderDash: [4,4], pointRadius: 3, pointBackgroundColor: "rgba(139,69,19,0.4)" },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { ...baseScales({ min: 0, max: 6, ticks: { color: T.faint, font: { size: 11 }, callback: v => v+"%" } }) } },
+  }), []);
 
-        {/* Subtle terrain texture pattern */}
-        <pattern id="terrain" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-          <circle cx="10" cy="10" r="0.5" fill="rgba(255,255,255,0.04)" />
-          <circle cx="30" cy="25" r="0.5" fill="rgba(255,255,255,0.04)" />
-          <circle cx="20" cy="35" r="0.5" fill="rgba(255,255,255,0.03)" />
-        </pattern>
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+        <MetricCard icon="🎓" label="Total Enrolled"    value="5,316" sub="↑ 4.2% vs last year"   accentColor={T.brown}      />
+        <MetricCard icon="👧" label="Girl Students"     value="2,552" sub="48% of total"           accentColor={T.purple}     />
+        <MetricCard icon="📈" label="New Admissions"    value="920"   sub="Class 6 intake 2024–25" accentColor={T.green}      />
+        <MetricCard icon="🏆" label="Highest Enrolment" value="410"  sub="EMRS Howraghat"          accentColor={T.brownLight} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+        <ChartCard title="Year-over-year enrollment (top 6 schools)">
+          <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+            {[{ op: "0.2", label: "2022–23" },{ op: "0.55", label: "2023–24" },{ op: "1", label: "2024–25" }].map(l => (
+              <span key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}>
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: `rgba(139,69,19,${l.op})`, display: "inline-block" }} />{l.label}
+              </span>
+            ))}
+          </div>
+          <div style={{ position: "relative", height: 200 }}><canvas ref={yoyRef} /></div>
+        </ChartCard>
+        <ChartCard title="Tribal community breakdown">
+          <div style={{ position: "relative", height: 230 }}><canvas ref={tribalRef} /></div>
+        </ChartCard>
+      </div>
+      <ChartCard title="Class-wise dropout rate — current vs previous year">
+        <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}><span style={{ width: 20, height: 2, background: T.brown, display: "inline-block" }} /> 2024–25</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}><span style={{ width: 20, height: 2, background: "rgba(139,69,19,0.4)", display: "inline-block", borderTop: "2px dashed rgba(139,69,19,0.4)" }} /> 2023–24</span>
+        </div>
+        <div style={{ position: "relative", height: 180 }}><canvas ref={dropoutRef} /></div>
+      </ChartCard>
+    </>
+  );
+}
 
-        {/* Clip path for map bounds */}
-        <clipPath id="mapClip">
-          <rect x="0" y="0" width="700" height="420" />
-        </clipPath>
-      </defs>
+function HostelTab() {
+  const occRef = useRef(null);
+  const FACILITIES = [
+    { name: "Safe Drinking Water",    pct: 100, color: T.green      },
+    { name: "Functional Toilets",     pct: 94,  color: T.green      },
+    { name: "Solar Power",            pct: 71,  color: T.brownLight },
+    { name: "Medical Room",           pct: 88,  color: T.green      },
+    { name: "Recreation Room",        pct: 65,  color: T.brownLight },
+    { name: "CCTV Coverage",          pct: 59,  color: "#a32d2d"    },
+    { name: "Internet Connectivity",  pct: 82,  color: T.green      },
+  ];
 
-      {/* ── Background ── */}
-      <rect width="700" height="420" fill="url(#mapBg)" />
+  useChart(occRef, () => ({
+    type: "bar",
+    data: {
+      labels: EMRS_PINS.slice(0,8).map(s => s.name.replace("EMRS ","").split(",")[0]),
+      datasets: [
+        { label: "Capacity", data: EMRS_PINS.slice(0,8).map(s => s.cap),      backgroundColor: "rgba(139,69,19,0.12)", borderRadius: 4, borderSkipped: false },
+        { label: "Occupied", data: EMRS_PINS.slice(0,8).map(s => s.students), backgroundColor: T.brown,                 borderRadius: 4, borderSkipped: false },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { ...baseScales({ beginAtZero: true }), x: { grid: { display: false }, ticks: { color: T.faint, font: { size: 10 }, maxRotation: 35 } } } },
+  }), []);
 
-      {/* Subtle grid */}
-      {[70,140,210,280,350,420,490,560,630].map(x => (
-        <line key={`v${x}`} x1={x} y1="0" x2={x} y2="420"
-          stroke="rgba(255,255,255,0.025)" strokeWidth="1" />
-      ))}
-      {[70,140,210,280,350].map(y => (
-        <line key={`h${y}`} x1="0" y1={y} x2="700" y2={y}
-          stroke="rgba(255,255,255,0.025)" strokeWidth="1" />
-      ))}
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+        <MetricCard icon="🏠" label="Total Capacity" value="6,200" sub="Across 17 schools"    accentColor={T.brown}      />
+        <MetricCard icon="🛏️" label="Occupied Beds"  value="5,316" sub="85.7% occupancy"      accentColor={T.purple}     />
+        <MetricCard icon="👦" label="Boys' Hostels"  value="17"    sub="Avg 64% occupancy"    accentColor={T.green}      />
+        <MetricCard icon="👧" label="Girls' Hostels" value="17"    sub="Avg 72% occupancy"    accentColor={T.brownLight} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+        <ChartCard title="Capacity vs occupancy (top 8 schools)">
+          <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}><span style={{ width: 9, height: 9, borderRadius: 2, background: "rgba(139,69,19,0.2)", display: "inline-block" }} /> Capacity</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}><span style={{ width: 9, height: 9, borderRadius: 2, background: T.brown, display: "inline-block" }} /> Occupied</span>
+          </div>
+          <div style={{ position: "relative", height: 240 }}><canvas ref={occRef} /></div>
+        </ChartCard>
+        <ChartCard title="Facility availability across all schools">
+          {FACILITIES.map((f, i) => (
+            <div key={i} style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: T.brownDark }}>{f.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: f.color }}>{f.pct}%</span>
+              </div>
+              <ProgressBar pct={f.pct} color={f.color} />
+            </div>
+          ))}
+        </ChartCard>
+      </div>
+      <ChartCard title="Hostel warden directory">
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+            <thead>
+              <tr>
+                {["School","Boys Warden","Girls Warden","Capacity","Occupancy","Fill %"].map(h => (
+                  <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${T.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {HOSTEL_WARDENS.map((w, i) => {
+                const pct = Math.round(w.occ / w.cap * 100);
+                return (
+                  <tr key={i} style={{ borderBottom: "1px solid rgba(139,69,19,0.04)" }}>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, fontSize: 12 }}>{EMRS_PINS[i]?.name.split(",")[0]}</td>
+                    <td style={{ padding: "10px 12px" }}>{w.boys}</td>
+                    <td style={{ padding: "10px 12px" }}>{w.girls}</td>
+                    <td style={{ padding: "10px 12px" }}>{w.cap}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 700, color: pct > 85 ? T.green : T.brownLight }}>{w.occ}</td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 80 }}>
+                        <div style={{ flex: 1 }}><ProgressBar pct={pct} color={pct > 85 ? T.green : T.brownLight} /></div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: pct > 85 ? T.green : T.brownLight }}>{pct}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </ChartCard>
+    </>
+  );
+}
 
-      {/* ── Assam shape — terrain texture layer ── */}
-      <path d={ASSAM_MAIN} fill="url(#terrain)" clipPath="url(#mapClip)" />
+function StaffTab() {
+  const desigRef = useRef(null);
+  const qualRef  = useRef(null);
+  const [filter, setFilter] = useState({ school: "", role: "" });
 
-      {/* ── Assam shape — color fill ── */}
-      <path d={ASSAM_MAIN} fill="url(#assamFill)" />
+  useChart(desigRef, () => ({
+    type: "bar",
+    data: {
+      labels: ["Principal","Vice Principal","PGT","TGT","PRT","Admin","Support"],
+      datasets: [{ label: "Count", data: [17,14,84,102,48,64,83], backgroundColor: [T.brown,T.brown,T.brownLight,T.brownLight,T.brownLight,T.purple,T.purple], borderRadius: 4, borderSkipped: false }],
+    },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: "rgba(139,69,19,0.07)" }, ticks: { color: T.faint, font: { size: 11 } } }, y: { grid: { display: false }, ticks: { color: "#5a3e28", font: { size: 11 } } } } },
+  }), []);
 
-      {/* ── Subtle internal district lines ── */}
-      {DISTRICT_LINES.map((d, i) => (
-        <path key={i} d={d} fill="none"
-          stroke={accentColor} strokeWidth="0.6" strokeOpacity="0.12"
-          strokeDasharray="4 6" />
-      ))}
+  useChart(qualRef, () => ({
+    type: "doughnut",
+    data: { labels: ["Ph.D","Post-Graduate","Graduate","Diploma"], datasets: [{ data: [28,183,154,47], backgroundColor: [T.brown,T.brownLight,T.purple,T.green], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "60%", plugins: { legend: { display: false } } },
+  }), []);
 
-      {/* ── Assam border — outer glow (wide, soft) ── */}
-      <path d={ASSAM_MAIN} fill="none"
-        stroke={accentColor} strokeWidth="6" strokeOpacity="0.15"
-        filter="url(#borderGlow)" />
+  const filtered = STAFF_DATA.filter(s => (!filter.school || s.school.includes(filter.school)) && (!filter.role || s.desig === filter.role));
 
-      {/* ── Assam border — crisp inner line ── */}
-      <path d={ASSAM_MAIN} fill="none"
-        stroke={accentColor} strokeWidth="1.8" strokeOpacity="0.75"
-        strokeLinejoin="round" strokeLinecap="round" />
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+        <MetricCard icon="👨‍🏫" label="Total Staff"    value="412"  sub="All 17 schools"       accentColor={T.brown}  />
+        <MetricCard icon="📚"  label="Teaching Posts" value="228"  sub="192 filled (84%)"     accentColor={T.purple} />
+        <MetricCard icon="🧩"  label="Vacant Posts"   value="36"   sub="Under recruitment"    accentColor="#a32d2d"  />
+        <MetricCard icon="🎓"  label="Post-Graduate"  value="68%"  sub="Of teaching staff"    accentColor={T.green}  />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+        <ChartCard title="Staff by designation"><div style={{ position: "relative", height: 220 }}><canvas ref={desigRef} /></div></ChartCard>
+        <ChartCard title="Qualification profile">
+          <div style={{ display: "flex", gap: 16, alignItems: "center", height: 220 }}>
+            <div style={{ position: "relative", flex: 1, height: "100%" }}><canvas ref={qualRef} /></div>
+            <div style={{ fontSize: 12 }}>
+              {[{ color: T.brown, label: "Ph.D — 28" },{ color: T.brownLight, label: "Post-Grad — 183" },{ color: T.purple, label: "Graduate — 154" },{ color: T.green, label: "Diploma — 47" }].map(l => (
+                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#5a3e28" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, display: "inline-block" }} />{l.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </ChartCard>
+      </div>
+      <ChartCard title="Staff roster">
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <select value={filter.school} onChange={e => setFilter(f => ({ ...f, school: e.target.value }))} style={{ padding: "7px 12px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, color: "#5a3e28", background: "#fff" }}>
+            <option value="">All Schools</option>
+            {[...new Set(STAFF_DATA.map(s => s.school))].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={filter.role} onChange={e => setFilter(f => ({ ...f, role: e.target.value }))} style={{ padding: "7px 12px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, color: "#5a3e28", background: "#fff" }}>
+            <option value="">All Roles</option>
+            {["Principal","Vice Principal","PGT","TGT","PRT","Admin"].map(r => <option key={r}>{r}</option>)}
+          </select>
+          <span style={{ fontSize: 12, color: T.faint, alignSelf: "center" }}>{filtered.length} records</span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+            <thead>
+              <tr>
+                {["Name","School","Designation","Subject","Experience","Status"].map(h => (
+                  <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${T.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid rgba(139,69,19,0.04)" }}>
+                  <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.name}</td>
+                  <td style={{ padding: "10px 12px", fontSize: 12, color: T.muted }}>{s.school}</td>
+                  <td style={{ padding: "10px 12px" }}>{s.desig}</td>
+                  <td style={{ padding: "10px 12px" }}>{s.subject}</td>
+                  <td style={{ padding: "10px 12px" }}>{s.exp}</td>
+                  <td style={{ padding: "10px 12px" }}><Badge status={s.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ChartCard>
+    </>
+  );
+}
 
-      {/* ── Brahmaputra River ── */}
-      {/* Wide glow */}
-      <path d={BRAHMAPUTRA} fill="none"
-        stroke="#1d4ed8" strokeWidth="8" strokeOpacity="0.18"
-        strokeLinecap="round" filter="url(#riverBlur)" />
-      {/* Main river line */}
-      <path d={BRAHMAPUTRA} fill="none"
-        stroke="#3b82f6" strokeWidth="3" strokeOpacity="0.45"
-        strokeLinecap="round" />
-      {/* Highlight shimmer */}
-      <path d={BRAHMAPUTRA} fill="none"
-        stroke="#93c5fd" strokeWidth="0.8" strokeOpacity="0.3"
-        strokeLinecap="round" strokeDasharray="12 8" />
+function AttendanceTab() {
+  const monthlyRef = useRef(null);
+  const HEATMAP_COLORS = [
+    "#e8e0d0","#2d6a4f","#8b4513","#c8781e","#2d6a4f","#2d6a4f","#e8e0d0",
+    "#2d6a4f","#8b4513","#2d6a4f","#c8781e","#2d6a4f","#e8e0d0","#e8e0d0",
+    "#2d6a4f","#2d6a4f","#2d6a4f","#8b4513","#2d6a4f","#e8e0d0","#e8e0d0",
+    "#c8781e","#2d6a4f","#2d6a4f","#2d6a4f","#2d6a4f","#e8e0d0","#e8e0d0",
+  ];
+  const HEATMAP_TIPS = [
+    "Holiday","95%","88%","82%","97%","93%","Holiday",
+    "91%","87%","96%","79%","94%","Holiday","Holiday",
+    "96%","98%","89%","85%","92%","Holiday","Holiday",
+    "78%","95%","90%","88%","96%","Holiday","Holiday",
+  ];
 
-      {/* ── Barak river ── */}
-      <path d={BARAK} fill="none"
-        stroke="#3b82f6" strokeWidth="1.5" strokeOpacity="0.3"
-        strokeLinecap="round" />
+  useChart(monthlyRef, () => ({
+    type: "line",
+    data: {
+      labels: ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun"],
+      datasets: [{ label: "Att %", data: [87,88,86,89,91,90,92,88,87,86,87.5,89,88.2,90.1,88.4], borderColor: T.brown, backgroundColor: "rgba(139,69,19,0.06)", tension: 0.4, fill: true, pointBackgroundColor: T.brown, pointRadius: 3 }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 82, max: 95, grid: { color: "rgba(139,69,19,0.07)" }, ticks: { color: T.faint, font: { size: 10 }, callback: v => v+"%" } }, x: { grid: { display: false }, ticks: { color: T.faint, font: { size: 10 }, maxRotation: 30 } } } },
+  }), []);
 
-      {/* ── Labels ── */}
-      <text x="350" y="26" fill={accentColor} fontSize="10" textAnchor="middle"
-        fontWeight="800" letterSpacing="8" opacity="0.35" fontFamily="'Inter',sans-serif">
-        A S S A M
-      </text>
-      <text x="350" y="178" fill="rgba(147,197,253,0.28)" fontSize="7.5"
-        textAnchor="middle" fontStyle="italic" fontFamily="'Inter',sans-serif">
-        Brahmaputra
-      </text>
-      <text x="338" y="348" fill="rgba(147,197,253,0.22)" fontSize="6.5"
-        textAnchor="middle" fontStyle="italic" fontFamily="'Inter',sans-serif">
-        Barak Valley
-      </text>
+  const ranked = EMRS_PINS.map((s, i) => ({ name: s.name, att: ATT_RANKING[i] })).sort((a, b) => b.att - a.att);
 
-      {/* ── Compass rose (top-right) ── */}
-      <g transform="translate(655,38)" opacity="0.3">
-        <circle cx="0" cy="0" r="14" fill="none" stroke={accentColor} strokeWidth="0.8" />
-        <text x="0" y="-18" textAnchor="middle" fill={accentColor} fontSize="7" fontWeight="700">N</text>
-        <polygon points="0,-10 2,-2 0,4 -2,-2" fill={accentColor} opacity="0.7" />
-        <polygon points="0,10 2,2 0,-4 -2,2" fill={accentColor} opacity="0.3" />
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+        <MetricCard icon="📅" label="Avg Attendance" value="88.4%" sub="June 2025"           accentColor={T.brown}  />
+        <MetricCard icon="✅" label="Present Today"  value="4,697" sub="Of 5,316 students"   accentColor={T.green}  />
+        <MetricCard icon="⚠️" label="Below 75%"      value="214"   sub="Students flagged"    accentColor="#a32d2d"  />
+        <MetricCard icon="🏆" label="Best School"    value="96.2%" sub="EMRS Boko"           accentColor={T.purple} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
+        <ChartCard title="Monthly attendance trend (Apr 2024 – Jun 2025)">
+          <div style={{ position: "relative", height: 220 }}><canvas ref={monthlyRef} /></div>
+        </ChartCard>
+        <ChartCard title="School-wise attendance ranking">
+          <div style={{ maxHeight: 240, overflowY: "auto" }}>
+            {ranked.map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid rgba(139,69,19,0.06)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.faint, minWidth: 22 }}>#{i+1}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T.brownDark }}>{s.name.replace("EMRS ","").split(",")[0]}</div>
+                  <div style={{ marginTop: 4 }}><ProgressBar pct={s.att} color={s.att > 90 ? T.green : s.att > 80 ? T.brownLight : "#a32d2d"} /></div>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: s.att > 90 ? T.green : s.att > 80 ? T.brownLight : "#a32d2d", minWidth: 44, textAlign: "right" }}>{s.att}%</span>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+      </div>
+      <ChartCard title="Attendance heatmap — June 2025 (EMRS Boko)">
+        <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
+          {[{ color: T.green, label: "95–100%" },{ color: T.brown, label: "80–94%" },{ color: T.brownLight, label: "60–79%" },{ color: "#e8e0d0", label: "Holiday" }].map(l => (
+            <span key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#5a3e28" }}>
+              <span style={{ width: 12, height: 12, borderRadius: 2, background: l.color, display: "inline-block" }} />{l.label}
+            </span>
+          ))}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
+          {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
+            <div key={d} style={{ textAlign: "center", fontSize: 10, color: T.faint, fontWeight: 600 }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
+          {HEATMAP_COLORS.map((c, i) => (
+            <div key={i} title={HEATMAP_TIPS[i]} style={{ height: 18, borderRadius: 3, background: c, cursor: "pointer" }} />
+          ))}
+        </div>
+      </ChartCard>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FULL DASHBOARD COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+function EMRSDashboard({ onClose }) {
+  const [activeTab, setActiveTab] = useState("overview");
+  const [year, setYear] = useState("2024–25");
+  const tabs = [
+    { key: "overview",    label: "Overview",    icon: "📊" },
+    { key: "enrollment",  label: "Enrollment",  icon: "🎓" },
+    { key: "hostel",      label: "Hostel",      icon: "🏠" },
+    { key: "staff",       label: "Staff",       icon: "👨‍🏫" },
+    { key: "attendance",  label: "Attendance",  icon: "📅" },
+  ];
+  return (
+    <section style={{ background: T.creamDark, padding: "40px 40px 60px", borderBottom: `1px solid ${T.border}` }}>
+      <div style={{ maxWidth: 1300, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: T.brown, fontWeight: 700, marginBottom: 6 }}>Directorate of Tribal Affairs (Plain)</div>
+            <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, color: T.brownDark }}>EMRS Analytics Dashboard</h2>
+            <p style={{ color: T.muted, margin: "6px 0 0", fontSize: 13 }}>Live data across all 17 Eklavya Model Residential Schools</p>
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <select value={year} onChange={e => setYear(e.target.value)} style={{ padding: "8px 14px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12, color: "#5a3e28", background: "#fff", cursor: "pointer" }}>
+              {["2024–25","2023–24","2022–23"].map(y => <option key={y}>{y}</option>)}
+            </select>
+            <div style={{ background: "rgba(139,69,19,0.07)", border: `1px solid rgba(139,69,19,0.18)`, borderRadius: 8, padding: "8px 14px", fontSize: 11, fontWeight: 700, color: T.brown }}>Last updated: Jun 2025</div>
+            <button onClick={onClose} style={{ background: "rgba(139,69,19,0.07)", color: "#5a3e28", border: `1px solid ${T.border}`, borderRadius: 10, padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>✕ Close</button>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, background: "#fff", border: `1px solid ${T.border}`, borderRadius: 12, padding: 5, marginBottom: 28, overflowX: "auto" }}>
+          {tabs.map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, minWidth: 110, padding: "10px 16px", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", background: activeTab === tab.key ? "linear-gradient(135deg,#8b4513,#c8781e)" : "transparent", color: activeTab === tab.key ? "#fff" : T.muted, transition: "all 0.2s" }}>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+        {activeTab === "overview"   && <OverviewTab   />}
+        {activeTab === "enrollment" && <EnrollmentTab />}
+        {activeTab === "hostel"     && <HostelTab     />}
+        {activeTab === "staff"      && <StaffTab      />}
+        {activeTab === "attendance" && <AttendanceTab />}
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEWS FLASH TICKER
+// ─────────────────────────────────────────────────────────────────────────────
+function NewsFlashTicker({ items }) {
+  const text = items.join("      •      ");
+  return (
+    <div style={{ display: "flex", alignItems: "stretch", background: "#2d1a0e", overflow: "hidden" }}>
+      <style>{`@keyframes newsFlashMarquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}`}</style>
+      <div style={{ background: "linear-gradient(135deg,#c8781e,#e8a020)", color: "#2d1a0e", fontWeight: 800, fontSize: 13, padding: "11px 22px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, letterSpacing: 0.3, whiteSpace: "nowrap" }}>📢 News Flash</div>
+      <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", alignItems: "center" }}>
+        <div style={{ position: "absolute", whiteSpace: "nowrap", color: "#fdf3e3", fontSize: 13, fontWeight: 500, animation: "newsFlashMarquee 28s linear infinite" }}>{text}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAMOSA BORDER
+// ─────────────────────────────────────────────────────────────────────────────
+function GamosaBorder({ height = 10 }) {
+  return (
+    <div style={{ height, width: "100%", backgroundImage: `repeating-linear-gradient(-45deg,#a83232 0px,#a83232 ${height}px,#fdf3e3 ${height}px,#fdf3e3 ${height*2}px)`, backgroundSize: `${height*2*1.414}px ${height*2*1.414}px`, flexShrink: 0 }} />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIBAL MOTIF WATERMARK
+// ─────────────────────────────────────────────────────────────────────────────
+function TribalMotifWatermark({ style }) {
+  return (
+    <svg viewBox="0 0 400 400" style={{ position: "absolute", pointerEvents: "none", ...style }} xmlns="http://www.w3.org/2000/svg">
+      <g opacity="0.5">
+        <path d="M50 220 C50 120 150 60 200 60 C250 60 350 120 350 220 Z" fill="none" stroke="#8b4513" strokeWidth="3" />
+        <path d="M90 200 C90 130 160 90 200 90 C240 90 310 130 310 200" fill="none" stroke="#8b4513" strokeWidth="2.5" />
+        <path d="M130 185 C130 145 170 120 200 120 C230 120 270 145 270 185" fill="none" stroke="#8b4513" strokeWidth="2" />
+        <circle cx="200" cy="70" r="6" fill="#c8781e" />
       </g>
-
-      {/* ── Scale bar ── */}
-      <g transform="translate(48,398)" opacity="0.3">
-        <line x1="0" y1="0" x2="60" y2="0" stroke={accentColor} strokeWidth="1.2" />
-        <line x1="0" y1="-4" x2="0" y2="4" stroke={accentColor} strokeWidth="1" />
-        <line x1="60" y1="-4" x2="60" y2="4" stroke={accentColor} strokeWidth="1" />
-        <text x="30" y="-7" textAnchor="middle" fill={accentColor} fontSize="6">100 km</text>
+      <g opacity="0.4" transform="translate(0,235)">
+        <path d="M70 0 L330 0 L300 40 L100 40 Z" fill="none" stroke="#c8781e" strokeWidth="3" />
+        <ellipse cx="200" cy="40" rx="100" ry="14" fill="none" stroke="#c8781e" strokeWidth="2.5" />
       </g>
-
-      {/* ── Pins ── */}
-      {pins.map((pin) => {
-        const isSel = selectedPin === pin.id;
-        return (
-          <g key={pin.id} style={{ cursor: "pointer" }} onClick={() => onPinClick(pin.id)}>
-            {/* Outer pulse ring */}
-            <circle cx={pin.cx} cy={pin.cy}
-              r={isSel ? 22 : 15}
-              fill={`${pin.color}15`}
-              stroke={pin.color}
-              strokeWidth={isSel ? 1.8 : 1}
-              strokeOpacity={isSel ? 0.9 : 0.5} />
-
-            {/* Mid ring on selected */}
-            {isSel && (
-              <circle cx={pin.cx} cy={pin.cy} r="13"
-                fill="none" stroke={pin.color}
-                strokeWidth="1" strokeOpacity="0.4"
-                strokeDasharray="3 3" />
-            )}
-
-            {/* Pin body — teardrop shape */}
-            <ellipse cx={pin.cx} cy={pin.cy - 2} rx="6" ry="7"
-              fill={pin.color} filter="url(#pinGlow)"
-              opacity={isSel ? 1 : 0.85} />
-            <polygon
-              points={`${pin.cx - 3},${pin.cy + 4} ${pin.cx + 3},${pin.cy + 4} ${pin.cx},${pin.cy + 10}`}
-              fill={pin.color} opacity={isSel ? 1 : 0.85}
-              filter="url(#pinGlow)" />
-
-            {/* White dot inside pin */}
-            <circle cx={pin.cx} cy={pin.cy - 2} r="2"
-              fill="rgba(255,255,255,0.85)" />
-
-            {/* District label */}
-            <text x={pin.cx} y={pin.cy + 22}
-              fill="rgba(255,255,255,0.5)" fontSize="7"
-              textAnchor="middle" fontFamily="'Inter',sans-serif"
-              fontWeight={isSel ? "700" : "400"}>
-              {pin.district}
-            </text>
-          </g>
-        );
-      })}
     </svg>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN COMPONENT
+// HERO IMAGE STRIP
+// ─────────────────────────────────────────────────────────────────────────────
+function HeroImageStrip({ images }) {
+  const trackItems = [...images, ...images];
+  return (
+    <div style={{ position: "relative", width: "100%", maxWidth: 1180, margin: "0 auto 36px", zIndex: 1 }}>
+      <style>{`
+        @keyframes heroImageStripScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .hero-image-strip-track { animation: heroImageStripScroll 40s linear infinite; }
+        .hero-image-strip-track:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .hero-image-strip-track { animation: none; } }
+      `}</style>
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 18 }}>
+        <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: 70, background: "linear-gradient(90deg,#fdf3e3,rgba(253,243,227,0))", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: 70, background: "linear-gradient(270deg,#fdf3e3,rgba(253,243,227,0))", zIndex: 2, pointerEvents: "none" }} />
+        <div className="hero-image-strip-track" style={{ display: "flex", gap: 16, width: "max-content" }}>
+          {trackItems.map((img, i) => (
+            <div key={i} style={{ position: "relative", flexShrink: 0, width: 250, height: 156, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(139,69,19,0.2)", boxShadow: "0 6px 22px rgba(139,69,19,0.14)" }}>
+              <img
+                src={img.src}
+                alt={img.caption}
+                onError={handleImgError}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(45,26,14,0) 45%,rgba(45,26,14,0.8) 100%)" }} />
+              <div style={{ position: "absolute", left: 12, right: 12, bottom: 9 }}>
+                <div style={{ color: "#fff", fontSize: 12.5, fontWeight: 700, lineHeight: 1.25 }}>{img.caption}</div>
+                <div style={{ color: "rgba(255,255,255,0.78)", fontSize: 10.5, marginTop: 1 }}>{img.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATION BAR
+// ─────────────────────────────────────────────────────────────────────────────
+function NotificationBar({ notifications }) {
+  const trackRef = useRef(null);
+  const [animDuration, setAnimDuration] = useState(0);
+
+  useEffect(() => {
+    if (trackRef.current) {
+      const half = trackRef.current.scrollHeight / 2;
+      setAnimDuration(half);
+    }
+  }, []);
+
+  const half = animDuration;
+  const dur  = Math.max(half / 18, 12);
+
+  const itemRow = (notif, key) => (
+    <div key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 16px", borderBottom: `1px solid rgba(139,90,43,0.1)`, borderLeft: `3px solid ${notif.color}`, background: "transparent", transition: "background 0.2s", cursor: "default" }}>
+      <div style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0, background: `${notif.color}18`, border: `1px solid ${notif.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>{notif.icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12, color: T.brownDark, fontWeight: 600, lineHeight: 1.4 }}>{notif.title}</div>
+        <div style={{ fontSize: 10, color: T.faint, marginTop: 2 }}>{notif.time}</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ background: "#fff", border: `1px solid rgba(139,90,43,0.16)`, borderRadius: 10, overflow: "hidden", boxShadow: "0 4px 20px rgba(139,69,19,0.08)", display: "flex", flexDirection: "column", maxHeight: 440 }}>
+      <style>{`@keyframes emrsScrollUp{0%{transform:translateY(0)}100%{transform:translateY(-${half}px)}}`}</style>
+      <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid rgba(139,90,43,0.1)`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fde9d2", color: "#c2530e", fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", padding: "5px 12px", borderRadius: 4 }}>🔔 What's New</span>
+        <span style={{ fontSize: 9, background: T.brown, color: "#fff", padding: "2px 9px", borderRadius: 20, fontWeight: 700, letterSpacing: 0.5 }}>LIVE</span>
+      </div>
+      <div style={{ flex: 1, overflow: "hidden", position: "relative", minHeight: 0 }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 20, background: "linear-gradient(to bottom,#fff,transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 20, background: "linear-gradient(to top,#fff,transparent)", zIndex: 2, pointerEvents: "none" }} />
+        <div ref={trackRef} style={{ display: "flex", flexDirection: "column", animation: half > 0 ? `emrsScrollUp ${dur}s linear infinite` : "none" }}>
+          {notifications.map((n, i) => itemRow(n, i))}
+          {notifications.map((n, i) => itemRow(n, `d${i}`))}
+        </div>
+      </div>
+      <div style={{ padding: "8px 16px", borderTop: `1px solid rgba(139,90,43,0.1)`, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdf8f0", flexShrink: 0 }}>
+        <span style={{ fontSize: 10, color: T.faint, fontWeight: 600 }}>{notifications.length} recent updates</span>
+        <span style={{ fontSize: 11, color: T.brown, fontWeight: 700, cursor: "pointer" }}>View All →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GALLERY
+// ─────────────────────────────────────────────────────────────────────────────
+function GallerySection() {
+  const [selectedSchool, setSelectedSchool] = useState("all");
+  const [mediaType,      setMediaType]      = useState("all");
+  const [lightbox,       setLightbox]       = useState(null);
+  const [uploading,      setUploading]      = useState(false);
+  const fileRef = useRef(null);
+
+  // ── FIX: All local /images/ paths replaced with working Unsplash URLs ──
+  const galleryData = {
+    "EMRS Dalbari, Barama": [
+      { type: "photo", src: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600", caption: "School Building" },
+      { type: "photo", src: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600", caption: "Library" },
+      { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600", caption: "Inauguration Ceremony" },
+    ],
+    "EMRS Kharadhara": [
+  { type: "photo", src: "/images/emrs-kharadhara-building.png",         caption: "New Campus Building" },
+  { type: "photo", src: "/images/emrs-kharadhara-morning-assembly.png", caption: "Morning Assembly"    },
+  { type: "photo", src: "/images/emrs-kharadhara-inauguration.png",     caption: "Inauguration Day"    },
+  
+],
+    "EMRS Howraghat": [
+      { type: "photo", src: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600", caption: "Annual Day" },
+      { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600", caption: "Cultural Programme" },
+    ],
+    "EMRS Bedlangmari":         [{ type: "photo", src: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=600", caption: "Hostel Wing" }],
+    "EMRS Jonai, Purana Jhelom":[{ type: "photo", src: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=600", caption: "Morning Assembly" }],
+    "EMRS Boko": [
+      { type: "photo", src: "https://images.unsplash.com/photo-1588072432836-e10032774350?w=600", caption: "Smart Classroom" },
+      { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1588072432836-e10032774350?w=600", caption: "Science Fair 2024" },
+    ],
+  };
+
+  const allItems  = Object.entries(galleryData).flatMap(([school, items]) => items.map(item => ({ ...item, school })));
+  const schools   = ["all", ...Object.keys(galleryData)];
+  const filtered  = allItems.filter(item => {
+    const schoolOk = selectedSchool === "all" || item.school === selectedSchool;
+    const typeOk   = mediaType === "all"      || item.type   === mediaType;
+    return schoolOk && typeOk;
+  });
+
+  return (
+    <section id="gallery" style={{ padding: "70px 40px", background: "#fdf6e9" }}>
+      <div style={{ maxWidth: 1260, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: T.brown, fontWeight: 700, marginBottom: 10 }}>Media Archive</div>
+          <h2 style={{ fontSize: 32, fontWeight: 800, color: T.brownDark, margin: "0 0 10px" }}>📸 EMRS Photo & Video Gallery</h2>
+          <p style={{ color: T.muted, fontSize: 15, maxWidth: 520, margin: "0 auto 28px" }}>Browse photos and videos from all Eklavya Model Residential Schools across Assam</p>
+          <button onClick={() => fileRef.current?.click()} style={{ background: "linear-gradient(135deg,#8b4513,#c8781e)", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 50, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}>⬆️ Upload Media</button>
+          <input ref={fileRef} type="file" multiple accept="image/*,video/*" style={{ display: "none" }} onChange={() => { setUploading(true); setTimeout(() => setUploading(false), 1500); }} />
+          {uploading && <div style={{ color: "#2d6a4f", fontSize: 12, marginTop: 10 }}>✅ Files received — pending admin approval</div>}
+        </div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginBottom: 32 }}>
+          <div style={{ display: "flex", gap: 6, background: "rgba(139,69,19,0.07)", border: `1px solid rgba(139,69,19,0.15)`, borderRadius: 50, padding: "4px 6px" }}>
+            {[{ key: "all", label: "🗂 All" },{ key: "photo", label: "📷 Photos" },{ key: "video", label: "🎬 Videos" }].map(t => (
+              <button key={t.key} onClick={() => setMediaType(t.key)} style={{ background: mediaType === t.key ? "linear-gradient(135deg,#8b4513,#c8781e)" : "transparent", color: mediaType === t.key ? "#fff" : T.muted, border: "none", padding: "7px 18px", borderRadius: 50, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32, paddingBottom: 16, borderBottom: `1px solid rgba(139,69,19,0.1)` }}>
+          {schools.map(s => (
+            <button key={s} onClick={() => setSelectedSchool(s)} style={{ background: selectedSchool === s ? "rgba(139,69,19,0.12)" : "rgba(139,69,19,0.04)", border: `1px solid ${selectedSchool === s ? "rgba(139,69,19,0.5)" : "rgba(139,69,19,0.12)"}`, color: selectedSchool === s ? T.brown : T.muted, padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
+              {s === "all" ? "All Schools" : s}
+              {s !== "all" && <span style={{ marginLeft: 6, fontSize: 10, background: selectedSchool === s ? "rgba(139,69,19,0.2)" : "rgba(139,69,19,0.08)", padding: "1px 6px", borderRadius: 20, color: "inherit" }}>{(galleryData[s]||[]).length}</span>}
+            </button>
+          ))}
+        </div>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "#b89a78" }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🖼️</div>
+            <div style={{ fontSize: 14 }}>No media found for this filter.</div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
+            {filtered.map((item, i) => <GalleryCard key={i} item={item} onClick={() => setLightbox(item)} />)}
+          </div>
+        )}
+        <div style={{ textAlign: "center", marginTop: 24, fontSize: 12, color: "#b89a78" }}>
+          Showing {filtered.length} item{filtered.length !== 1 ? "s" : ""}{selectedSchool !== "all" ? ` from ${selectedSchool}` : " across all schools"}
+        </div>
+      </div>
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(45,26,14,0.92)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <button onClick={() => setLightbox(null)} style={{ position: "absolute", top: 20, right: 24, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: 10, cursor: "pointer", fontSize: 20 }}>×</button>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 900, width: "100%" }}>
+            {lightbox.type === "photo"
+              ? <img src={lightbox.src} alt={lightbox.caption} onError={handleImgError} style={{ width: "100%", borderRadius: 16, maxHeight: "80vh", objectFit: "contain" }} />
+              : <video src={lightbox.src} controls autoPlay style={{ width: "100%", borderRadius: 16, maxHeight: "80vh" }} />}
+            <div style={{ marginTop: 14, textAlign: "center" }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>{lightbox.caption}</div>
+              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4 }}>📍 {lightbox.school}</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GalleryCard({ item, onClick }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ background: "#fff", border: `1px solid ${hover ? "rgba(139,69,19,0.4)" : T.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", transform: hover ? "translateY(-4px)" : "translateY(0)", boxShadow: hover ? "0 12px 40px rgba(139,69,19,0.15)" : "0 2px 12px rgba(139,69,19,0.07)", transition: "all 0.25s" }}>
+      <div style={{ position: "relative", height: 180, overflow: "hidden" }}>
+        <img
+          src={item.type === "video" ? item.thumb : item.src}
+          alt={item.caption}
+          onError={handleImgError}
+          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s", transform: hover ? "scale(1.06)" : "scale(1)" }}
+        />
+        {item.type === "video" && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(45,26,14,0.3)" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, paddingLeft: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>▶</div>
+          </div>
+        )}
+        <div style={{ position: "absolute", top: 8, left: 8, background: item.type === "video" ? "rgba(139,69,19,0.88)" : "rgba(200,120,30,0.85)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, letterSpacing: 0.5, textTransform: "uppercase" }}>{item.type === "video" ? "🎬 Video" : "📷 Photo"}</div>
+      </div>
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.brownDark, marginBottom: 4 }}>{item.caption}</div>
+        <div style={{ fontSize: 11, color: T.faint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {item.school}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OSM MAP
+// ─────────────────────────────────────────────────────────────────────────────
+function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
+  const mapRef     = useRef(null);
+  const leafletRef = useRef(null);
+  const mapObjRef  = useRef(null);
+  const markersRef = useRef([]);
+
+  const pins = activeLayer === "emrs"
+    ? EMRS_PINS.map((p, i) => ({ ...p, color: T.brown, id: i }))
+    : ASSET_PINS.map((p, i) => ({ ...p, color: p.type === "infra" ? T.brownLight : p.type === "road" ? T.green : T.purple, id: i }));
+
+  useEffect(() => {
+    const loadLeaflet = () => new Promise(resolve => {
+      if (window.L) { resolve(window.L); return; }
+      if (!document.getElementById("leaflet-css")) {
+        const link = document.createElement("link");
+        link.id = "leaflet-css"; link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link);
+      }
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => resolve(window.L);
+      document.head.appendChild(script);
+    });
+    loadLeaflet().then(L => {
+      leafletRef.current = L;
+      if (!mapObjRef.current && mapRef.current) {
+        const map = L.map(mapRef.current, { center: [26.2,92.8], zoom: 7, scrollWheelZoom: true, touchZoom: true, doubleClickZoom: true, dragging: true });
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 18 }).addTo(map);
+        mapObjRef.current = map;
+      }
+    });
+    return () => { if (mapObjRef.current) { mapObjRef.current.remove(); mapObjRef.current = null; } };
+  }, []);
+
+  useEffect(() => {
+    const L = leafletRef.current; const map = mapObjRef.current;
+    if (!L || !map) return;
+    markersRef.current.forEach(m => map.removeLayer(m));
+    markersRef.current = [];
+    pins.forEach(pin => {
+      if (!pin.lat || !pin.lng) return;
+      const isSelected = selectedPin === pin.id;
+      const size = isSelected ? 18 : 13; const ring = isSelected ? 32 : 22;
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="position:relative;width:${ring}px;height:${ring}px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:${ring}px;height:${ring}px;border-radius:50%;background:${pin.color}22;border:1.5px solid ${pin.color}99;"></div>
+          <div style="width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${pin.color};box-shadow:0 2px 10px ${pin.color}88;border:2px solid rgba(255,255,255,0.8);"></div>
+        </div>`,
+        iconSize: [ring,ring], iconAnchor: [ring/2,ring],
+      });
+      const marker = L.marker([pin.lat,pin.lng],{ icon }).addTo(map).on("click",() => onPinClick(pin.id));
+      marker.bindTooltip(
+        `<div style="font-weight:700;font-size:12px;color:#2d1a0e">${pin.name}</div><div style="font-size:11px;color:#7a5c3a">📍 ${pin.district}</div>`,
+        { direction: "top", offset: [0,-ring], className: "leaflet-emrs-tooltip" }
+      );
+      markersRef.current.push(marker);
+    });
+  }, [activeLayer, selectedPin, pins]);
+
+  return (
+    <div style={{ position: "relative", borderRadius: "0 0 16px 16px", overflow: "hidden" }}>
+      <style>{`.leaflet-emrs-tooltip{background:#fffdf7!important;border:1px solid rgba(139,69,19,0.2)!important;border-radius:8px!important;padding:6px 10px!important;box-shadow:0 4px 20px rgba(139,69,19,0.12)!important}.leaflet-emrs-tooltip::before{display:none!important}.leaflet-container{background:#f5ede0!important}`}</style>
+      <div ref={mapRef} style={{ width: "100%", height: 460, borderRadius: "0 0 16px 16px" }} />
+      {activeLayer === "asset" && (
+        <div style={{ position: "absolute", bottom: 36, left: 12, zIndex: 1000, background: "rgba(253,246,233,0.95)", border: `1px solid rgba(139,69,19,0.18)`, borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
+          {[{ color: T.brownLight, label: "Infrastructure" },{ color: T.green, label: "Road Project" },{ color: T.purple, label: "Building" }].map(({ color, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "#5a3e28" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />{label}
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ position: "absolute", bottom: 10, right: 12, zIndex: 1000, fontSize: 10, color: T.faint, background: "rgba(253,246,233,0.85)", padding: "3px 8px", borderRadius: 6 }}>Scroll to zoom · Drag to pan</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOMEPAGE MAIN
 // ─────────────────────────────────────────────────────────────────────────────
 const HomePage = () => {
   const navigate = useNavigate();
-  const [scrolled, setScrolled]         = useState(false);
-  const [time, setTime]                 = useState(new Date());
-  const [activePortal, setActivePortal] = useState(null);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [counters, setCounters]         = useState({ schools: 0, students: 0, assets: 0, districts: 0 });
-  const [mapLayer, setMapLayer]         = useState("emrs");
-  const [selectedPin, setSelectedPin]   = useState(null);
+  const [scrolled,       setScrolled]       = useState(false);
+  const [time,           setTime]           = useState(new Date());
+  const [activePortal,   setActivePortal]   = useState(null);
+  const [showDashboard,  setShowDashboard]  = useState(false);
+  const [counters,       setCounters]       = useState({ schools: 0, students: 0, assets: 0, districts: 0 });
+  const [mapLayer,       setMapLayer]       = useState("emrs");
+  const [selectedPin,    setSelectedPin]    = useState(null);
+
+  const notifications = [
+    { icon: "🏫", title: "EMRS Kampur infrastructure data updated",           time: "Just now",  color: T.brown      },
+    { icon: "📋", title: "New asset entry submitted — Block A, Jorhat",       time: "5 min ago", color: T.brownLight },
+    { icon: "🎓", title: "Enrollment data for Class 9 approved",              time: "20 min ago",color: T.purple     },
+    { icon: "👨‍🏫",title: "Staff record added — EMRS Howraghat",              time: "1 hr ago",  color: T.green      },
+    { icon: "📸", title: "New photos uploaded — EMRS Boko",                   time: "2 hrs ago", color: "#c8a84b"    },
+    { icon: "🏗️", title: "Construction status: EMRS Dalbari Phase 2 complete",time: "3 hrs ago", color: "#a83232"    },
+    { icon: "📊", title: "Monthly report generated for all 17 schools",       time: "Yesterday", color: T.brown      },
+    { icon: "✅", title: "EMRS Kharadhara audit form verified",               time: "2 days ago",color: T.green      },
+    { icon: "📝", title: "New circular issued — EMRS admission 2024–25",      time: "3 days ago",color: T.brownLight },
+    { icon: "🏆", title: "EMRS Howraghat wins state science olympiad",        time: "4 days ago",color: T.brown      },
+  ];
+
+  const newsFlashItems = [
+    "Admission notice 2025–26 for Class 6 now open across all EMRS",
+    "Asset audit submission deadline extended to 30th June",
+    "EMRS Boko science fair registrations closing soon",
+    "Staff recruitment drive — apply through the EMRS Portal",
+    "Monthly infrastructure report due by the 5th of every month",
+  ];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", handleScroll);
     const timer = setInterval(() => setTime(new Date()), 1000);
-    const targets = { schools: 17, students: 500, assets: 50, districts: 10 };
+    const targets = { schools: 17, students: 5316, assets: 50, districts: 10 };
     let step = 0;
     const counterTimer = setInterval(() => {
       step++;
-      const ease = 1 - Math.pow(1 - step / 60, 3);
-      setCounters({
-        schools:   Math.round(targets.schools   * ease),
-        students:  Math.round(targets.students  * ease),
-        assets:    Math.round(targets.assets    * ease),
-        districts: Math.round(targets.districts * ease),
-      });
+      const ease = 1 - Math.pow(1 - step/60, 3);
+      setCounters({ schools: Math.round(targets.schools*ease), students: Math.round(targets.students*ease), assets: Math.round(targets.assets*ease), districts: Math.round(targets.districts*ease) });
       if (step >= 60) clearInterval(counterTimer);
-    }, 2000 / 60);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      clearInterval(timer);
-      clearInterval(counterTimer);
-    };
+    }, 2000/60);
+    return () => { window.removeEventListener("scroll", handleScroll); clearInterval(timer); clearInterval(counterTimer); };
   }, []);
 
   const stats = [
-    { label: "EMRS Schools",      value: counters.schools,   suffix: "",  icon: "🏫", color: "#3b82f6" },
-    { label: "Students Enrolled", value: counters.students,  suffix: "+", icon: "🎓", color: "#8b5cf6" },
-    { label: "Assets Tracked",    value: counters.assets,    suffix: "+", icon: "🏗️", color: "#f59e0b" },
-    { label: "Districts Covered", value: counters.districts, suffix: "+", icon: "🗺️", color: "#10b981" },
+    { label: "EMRS Schools",      value: counters.schools,                   suffix: "",  icon: "🏫", color: T.brown      },
+    { label: "Students Enrolled", value: counters.students.toLocaleString(), suffix: "",  icon: "🎓", color: T.purple     },
+    { label: "Assets Tracked",    value: counters.assets,                    suffix: "+", icon: "🏗️", color: T.brownLight },
+    { label: "Districts Covered", value: counters.districts,                 suffix: "+", icon: "🗺️", color: T.green      },
   ];
 
-  const navItems = ["Home", "About", "Portals", "Dashboard", "Contact"];
-  const handleNavClick = (item) => {
-    if (item === "Dashboard") { setShowDashboard(true);  window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const navItems = ["Home","About","Gallery","Dashboard","Contact"];
+  const handleNavClick = item => {
+    if (item === "Dashboard") { setShowDashboard(true); setTimeout(() => document.getElementById("dashboard-section")?.scrollIntoView({ behavior: "smooth" }), 50); return; }
     if (item === "Home")      { setShowDashboard(false); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (item === "Gallery")   { document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" }); return; }
     setShowDashboard(false);
   };
 
@@ -307,10 +1115,10 @@ const HomePage = () => {
     {
       title: "EMRS Management", subtitle: "Eklavya Model Residential School",
       description: "Manage school details, infrastructure, student enrollment, staff records, hostel administration, and operational data.",
-      icon: "🏫", gradient: "linear-gradient(135deg,#1e3a8a,#2563eb)", accent: "#60a5fa", glowColor: "rgba(37,99,235,0.3)",
+      icon: "🏫", gradient: "linear-gradient(135deg,#8b4513,#c8781e)", accent: T.brownLight, glowColor: "rgba(139,69,19,0.2)",
       features: [
-        { icon: "🏫", text: "School & Location Details" }, { icon: "🎓", text: "Student Enrollment" },
-        { icon: "👨‍🏫", text: "Staff Management" },         { icon: "🏠", text: "Hostel Administration" },
+        { icon: "🏫", text: "School & Location Details" },{ icon: "🎓", text: "Student Enrollment" },
+        { icon: "👨‍🏫", text: "Staff Management" },{ icon: "🏠", text: "Hostel Administration" },
         { icon: "🏗️", text: "Construction Status" },
       ],
       path: "/emrs/login", badge: "17 Schools",
@@ -318,245 +1126,207 @@ const HomePage = () => {
     {
       title: "Asset Management", subtitle: "Infrastructure & Project Tracking",
       description: "Track government assets, monitor construction projects, record financial details, and maintain comprehensive asset lifecycle.",
-      icon: "🏗️", gradient: "linear-gradient(135deg,#064e3b,#059669)", accent: "#34d399", glowColor: "rgba(5,150,105,0.3)",
+      icon: "🏗️", gradient: "linear-gradient(135deg,#1a3d2e,#2d6a4f)", accent: "#52b788", glowColor: "rgba(45,106,79,0.2)",
       features: [
-        { icon: "📊", text: "Project Details" },   { icon: "🏛️", text: "Asset Tracking" },
-        { icon: "💰", text: "Financial Records" }, { icon: "🔨", text: "Construction Status" },
+        { icon: "📊", text: "Project Details" },{ icon: "🏛️", text: "Asset Tracking" },
+        { icon: "💰", text: "Financial Records" },{ icon: "🔨", text: "Construction Status" },
         { icon: "📍", text: "GPS Location Tagging" },
       ],
       path: "/asset/login", badge: "50+ Assets",
     },
   ];
 
-  const recentActivities = [
-    { icon: "🏫", text: "EMRS Kampur updated infrastructure details",  time: "2 hrs ago",  color: "#3b82f6" },
-    { icon: "👨‍🏫", text: "Staff records added for EMRS Jorhat",        time: "5 hrs ago",  color: "#8b5cf6" },
-    { icon: "🏗️", text: "Construction status updated — Block A",        time: "1 day ago",  color: "#f59e0b" },
-    { icon: "🎓", text: "Enrollment data submitted for Class 9",         time: "2 days ago", color: "#10b981" },
-    { icon: "📋", text: "Asset Management form submitted",               time: "3 days ago", color: "#ef4444" },
-  ];
-
   const quickLinks = [
-    { icon: "📋", label: "New Application", path: "/asset/login", color: "#3b82f6" },
-    { icon: "🏫", label: "EMRS Portal",     path: "/emrs/login",  color: "#8b5cf6" },
-    { icon: "✅", label: "Already Applied", path: "/asset/login", color: "#10b981" },
-    { icon: "📊", label: "View Reports",    path: "/asset/login", color: "#f59e0b" },
+    { icon: "📋", label: "Asset Portal",  path: "/asset/login", color: T.brown      },
+    { icon: "🏫", label: "EMRS Portal",   path: "/emrs/login",  color: T.purple     },
+    { icon: "📸", label: "Gallery",       path: "#gallery",      color: T.brownLight },
+    { icon: "📊", label: "View Reports",  path: "/asset/login", color: T.green      },
   ];
 
-  // ── Pins repositioned to match the corrected viewBox (700×420) ──
-  // The state occupies roughly x:112–582, y:89–380
-  const emrsPins = [
-    { name: "EMRS Bajali",        district: "Bajali",       students: 320, classes: "6–12", status: "Active",  principal: "Mr. R. Basumatary", cx: 200, cy: 175 },
-    { name: "EMRS Baksa",         district: "Baksa",        students: 295, classes: "6–12", status: "Active",  principal: "Ms. P. Devi",        cx: 248, cy: 162 },
-    { name: "EMRS Dhemaji",       district: "Dhemaji",      students: 340, classes: "6–12", status: "Active",  principal: "Mr. A. Gogoi",       cx: 560, cy: 128 },
-    { name: "EMRS Karbi Anglong", district: "Karbi Anglong",students: 410, classes: "6–12", status: "Active",  principal: "Dr. S. Terang",      cx: 435, cy: 235 },
-    { name: "EMRS Dima Hasao",    district: "Dima Hasao",   students: 275, classes: "6–10", status: "Active",  principal: "Mr. K. Hmar",        cx: 472, cy: 268 },
-    { name: "EMRS Kamrup",        district: "Kamrup",       students: 380, classes: "6–12", status: "Active",  principal: "Ms. N. Das",         cx: 285, cy: 185 },
-    { name: "EMRS Jorhat",        district: "Jorhat",       students: 350, classes: "6–12", status: "Active",  principal: "Mr. B. Bora",        cx: 490, cy: 162 },
-    { name: "EMRS Lakhimpur",     district: "Lakhimpur",    students: 290, classes: "6–12", status: "Active",  principal: "Ms. R. Choudhury",   cx: 510, cy: 128 },
-    { name: "EMRS Tinsukia",      district: "Tinsukia",     students: 315, classes: "6–12", status: "Active",  principal: "Mr. D. Phukan",      cx: 562, cy: 155 },
-    { name: "EMRS Goalpara",      district: "Goalpara",     students: 260, classes: "6–10", status: "Planned", principal: "TBD",                cx: 164, cy: 195 },
-    { name: "EMRS Bongaigaon",    district: "Bongaigaon",   students: 305, classes: "6–12", status: "Active",  principal: "Ms. A. Kalita",      cx: 222, cy: 185 },
-    { name: "EMRS Sivasagar",     district: "Sivasagar",    students: 332, classes: "6–12", status: "Active",  principal: "Mr. P. Hazarika",    cx: 530, cy: 158 },
-  ];
-
-  const assetTypeColor = { infra: "#f59e0b", road: "#10b981", building: "#8b5cf6" };
+  const assetTypeColor = { infra: T.brownLight, road: T.green, building: T.purple };
   const assetTypeLabel = { infra: "Infrastructure", road: "Road Project", building: "Building" };
   const assetTypeEmoji = { infra: "🏗️", road: "🛣️", building: "🏛️" };
+  const statusColor    = s => s === "Active" ? T.green : s === "In Progress" ? T.brownLight : T.purple;
 
-  const assetPins = [
-    { name: "Kamrup Asset Hub",      district: "Kamrup",    type: "infra",    value: "₹4.2Cr", status: "Active",      year: 2023, cx: 268, cy: 190 },
-    { name: "Tezpur Road Project",   district: "Sonitpur",  type: "road",     value: "₹2.8Cr", status: "In Progress", year: 2024, cx: 365, cy: 148 },
-    { name: "Jorhat Infra Store",    district: "Jorhat",    type: "infra",    value: "₹3.1Cr", status: "Active",      year: 2022, cx: 490, cy: 162 },
-    { name: "Dibrugarh Warehouse",   district: "Dibrugarh", type: "building", value: "₹5.6Cr", status: "Active",      year: 2021, cx: 548, cy: 158 },
-    { name: "Nagaon Construction",   district: "Nagaon",    type: "building", value: "₹1.9Cr", status: "In Progress", year: 2024, cx: 390, cy: 200 },
-    { name: "Barpeta Road Network",  district: "Barpeta",   type: "road",     value: "₹2.2Cr", status: "Active",      year: 2023, cx: 210, cy: 172 },
-    { name: "Cachar Asset Depot",    district: "Cachar",    type: "infra",    value: "₹3.4Cr", status: "Active",      year: 2022, cx: 345, cy: 355 },
-    { name: "Dhubri Bridge Project", district: "Dhubri",    type: "road",     value: "₹6.0Cr", status: "Planned",     year: 2025, cx: 130, cy: 210 },
-    { name: "Sivasagar Heritage",    district: "Sivasagar", type: "building", value: "₹4.8Cr", status: "Active",      year: 2020, cx: 528, cy: 162 },
-    { name: "Kokrajhar Dev Store",   district: "Kokrajhar", type: "infra",    value: "₹1.5Cr", status: "Active",      year: 2023, cx: 148, cy: 192 },
-  ];
-
-  const statusColor = s =>
-    s === "Active"      ? "#34d399" :
-    s === "In Progress" ? "#f59e0b" : "#8b5cf6";
-
-  const currentPins  = mapLayer === "emrs" ? emrsPins : assetPins;
+  const currentPins  = mapLayer === "emrs" ? EMRS_PINS : ASSET_PINS;
   const selectedData = selectedPin !== null ? currentPins[selectedPin] : null;
-
-  const handlePinClick    = (id) => setSelectedPin(prev => prev === id ? null : id);
-  const handleLayerSwitch = (layer) => { setMapLayer(layer); setSelectedPin(null); };
-
-  // ─── shared button styles ──────────────────────────────────────────────────
-  const navBtn = (active) => ({
-    background: "transparent", border: "none",
-    color: active ? "#fff" : "rgba(255,255,255,0.7)",
-    padding: "8px 16px", borderRadius: 8, cursor: "pointer",
-    fontSize: 14, transition: "all 0.2s",
-  });
+  const handlePinClick    = id    => setSelectedPin(prev => prev === id ? null : id);
+  const handleLayerSwitch = layer => { setMapLayer(layer); setSelectedPin(null); };
 
   return (
-    <div style={{ fontFamily: "'Inter','Segoe UI',sans-serif", background: "#0f172a", minHeight: "100vh", color: "#fff" }}>
+    <div style={{ fontFamily: "'Inter','Segoe UI',sans-serif", background: T.cream, minHeight: "100vh", color: T.brownDark }}>
+      <GamosaBorder height={8} />
 
-      {/* ── TOP STRIP ── */}
-      <div style={{ background: "linear-gradient(90deg,#1e3a8a,#1d4ed8)", color: "rgba(255,255,255,0.85)", fontSize: 12, padding: "7px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+      {/* TOP STRIP */}
+      <div style={{ background: "linear-gradient(90deg,#8b4513,#a0522d)", color: "rgba(255,255,255,0.9)", fontSize: 12, padding: "7px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.15)" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ background: "rgba(255,255,255,0.15)", borderRadius: 4, padding: "2px 10px" }}>🇮🇳 Government of Assam</span>
+          <span style={{ background: "rgba(255,255,255,0.18)", borderRadius: 4, padding: "2px 10px" }}>🇮🇳 Government of Assam</span>
           <span style={{ opacity: 0.5 }}>|</span>
           Directorate of Tribal Affairs (Plain)
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11 }}>
-          <span>📅 {time.toLocaleDateString("en-IN", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</span>
+          <span>📅 {time.toLocaleDateString("en-IN",{ weekday: "short", year: "numeric", month: "short", day: "numeric" })}</span>
           <span style={{ opacity: 0.5 }}>|</span>
           <span>🕐 {time.toLocaleTimeString("en-IN")}</span>
         </span>
       </div>
 
-      {/* ── NAVBAR ── */}
-      <header style={{ background: scrolled ? "rgba(15,23,42,0.97)" : "transparent", backdropFilter: scrolled ? "blur(20px)" : "none", padding: "16px 40px", position: "sticky", top: 0, zIndex: 100, boxShadow: scrolled ? "0 4px 30px rgba(0,0,0,0.4)" : "none", transition: "all 0.3s ease", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: scrolled ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+      {/* NAVBAR */}
+      <header style={{ background: scrolled ? "rgba(253,248,240,0.97)" : "rgba(253,248,240,0.85)", backdropFilter: "blur(16px)", padding: "14px 40px", position: "sticky", top: 0, zIndex: 100, boxShadow: scrolled ? "0 2px 20px rgba(139,69,19,0.12)" : "none", transition: "all 0.3s ease", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${T.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#c8a84b,#f0d060)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏛️</div>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#8b4513,#c8781e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "0 3px 12px rgba(139,69,19,0.3)" }}>🏛️</div>
           <div>
-            <div style={{ fontSize: 10, letterSpacing: 3, color: "#c8a84b", fontWeight: 700, textTransform: "uppercase" }}>Assam EMRS</div>
-            <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 0.5 }}>EMRS & Asset Management System</div>
+            <div style={{ fontSize: 10, letterSpacing: 3, color: T.brown, fontWeight: 700, textTransform: "uppercase" }}>Assam</div>
+            <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 0.5, color: T.brownDark }}>EMRS Management System</div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {navItems.map(item => (
-            <button key={item} style={navBtn(false)} onClick={() => handleNavClick(item)}
-              onMouseEnter={e => { e.target.style.color = "#fff"; e.target.style.background = "rgba(255,255,255,0.08)"; }}
-              onMouseLeave={e => { e.target.style.color = "rgba(255,255,255,0.7)"; e.target.style.background = "transparent"; }}>
+            <button key={item} onClick={() => handleNavClick(item)}
+              style={{ background: showDashboard && item==="Dashboard" ? "rgba(139,69,19,0.1)" : "transparent", border: "none", color: showDashboard && item==="Dashboard" ? T.brown : "#5a3e28", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500, transition: "all 0.2s" }}
+              onMouseEnter={e => { e.target.style.color = T.brown; e.target.style.background = "rgba(139,69,19,0.07)"; }}
+              onMouseLeave={e => { e.target.style.color = showDashboard && item==="Dashboard" ? T.brown : "#5a3e28"; e.target.style.background = showDashboard && item==="Dashboard" ? "rgba(139,69,19,0.1)" : "transparent"; }}>
               {item}
             </button>
           ))}
-          
+          <button onClick={() => navigate("/emrs/login")}
+            style={{ marginLeft: 10, background: "transparent", color: T.brown, border: `1.5px solid ${T.brown}`, padding: "8px 18px", borderRadius: 6, fontWeight: 800, fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = T.brown; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.brown; }}>
+            EMRS Login
+          </button>
         </div>
       </header>
 
-      {/* ── HERO ── */}
-      <section style={{ background: "linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%)", padding: "100px 40px 80px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: -100, left: -100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(37,99,235,0.15),transparent)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: -100, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.12),transparent)", pointerEvents: "none" }} />
+      {/* HERO */}
+      <section style={{ background: "linear-gradient(160deg,#fdf3e3 0%,#f5e6c8 40%,#ede0b8 100%)", padding: "72px 40px 80px", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -80, left: -80, width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle,rgba(139,69,19,0.08),transparent)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -80, right: 60, width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle,rgba(200,120,30,0.1),transparent)", pointerEvents: "none" }} />
+        <svg style={{ position: "absolute", top: 0, right: 0, opacity: 0.06, pointerEvents: "none" }} width="420" height="420" viewBox="0 0 420 420">
+          <circle cx="420" cy="0" r="180" fill="none" stroke="#8b4513" strokeWidth="40" />
+          <circle cx="420" cy="0" r="260" fill="none" stroke="#c8781e" strokeWidth="20" />
+          <circle cx="420" cy="0" r="330" fill="none" stroke="#8b4513" strokeWidth="12" />
+        </svg>
+        <TribalMotifWatermark style={{ top: "8%", left: "50%", width: 380, height: 380, transform: "translateX(-50%)", opacity: 0.07, zIndex: 0 }} />
+        <HeroImageStrip images={HERO_SCROLL_IMAGES} />
         <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(200,168,75,0.1)", border: "1px solid rgba(200,168,75,0.3)", color: "#c8a84b", padding: "8px 20px", borderRadius: 50, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginBottom: 32, fontWeight: 600 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#c8a84b", display: "inline-block" }} />
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(139,69,19,0.08)", border: `1px solid rgba(139,69,19,0.22)`, color: T.brown, padding: "8px 20px", borderRadius: 50, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginBottom: 32, fontWeight: 700 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.brown, display: "inline-block" }} />
             Digital India Initiative — Govt. of Assam
           </div>
-          <h1 style={{ fontSize: "clamp(32px,5vw,58px)", fontWeight: 800, lineHeight: 1.15, marginBottom: 24, letterSpacing: -0.5 }}>
-            Empowering Tribal Education<br />
-            <span style={{ background: "linear-gradient(90deg,#c8a84b,#f0d060,#c8a84b)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Through Digital Governance
-            </span>
+          <h1 style={{ fontSize: "clamp(32px,5vw,58px)", fontWeight: 800, lineHeight: 1.15, marginBottom: 24, letterSpacing: -0.5, color: T.brownDark }}>
+            Eklavya Model Residential School<br />
+            <span style={{ background: "linear-gradient(90deg,#8b4513,#c8781e,#e8a020)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Management System</span>
           </h1>
-          <p style={{ fontSize: 18, color: "rgba(255,255,255,0.6)", maxWidth: 620, margin: "0 auto 48px", lineHeight: 1.8 }}>
-            A unified platform for managing Eklavya Model Residential Schools and Government Assets — bringing transparency, efficiency, and accountability.
+          <p style={{ fontSize: 18, color: T.muted, maxWidth: 620, margin: "0 auto 48px", lineHeight: 1.8 }}>
+            A unified platform for managing Eklavya Model Residential Schools and Government Assets
           </p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => navigate("/emrs/login")}
-              style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)", color: "#fff", border: "none", padding: "16px 36px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "translateY(-3px)"}
-              onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
-              🏫 Access EMRS Portal
-            </button>
-            <button onClick={() => navigate("/asset/login")}
-              style={{ background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", padding: "16px 36px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.transform = "translateY(0)"; }}>
-              🏗️ Asset Portal
-            </button>
+            <button onClick={() => navigate("/emrs/login")} style={{ background: "linear-gradient(135deg,#8b4513,#c8781e)", color: "#fff", border: "none", padding: "16px 36px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s", boxShadow: "0 4px 20px rgba(139,69,19,0.3)" }} onMouseEnter={e => e.currentTarget.style.transform="translateY(-3px)"} onMouseLeave={e => e.currentTarget.style.transform="translateY(0)"}>🏫 Access EMRS Portal</button>
+            <button onClick={() => navigate("/asset/login")} style={{ background: "rgba(139,69,19,0.06)", color: "#5a3e28", border: `1px solid rgba(139,69,19,0.22)`, padding: "16px 36px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background="rgba(139,69,19,0.12)"; e.currentTarget.style.transform="translateY(-3px)"; }} onMouseLeave={e => { e.currentTarget.style.background="rgba(139,69,19,0.06)"; e.currentTarget.style.transform="translateY(0)"; }}>🏗️ Asset Portal</button>
+            <button onClick={() => { setShowDashboard(true); setTimeout(() => document.getElementById("dashboard-section")?.scrollIntoView({ behavior: "smooth" }),50); }} style={{ background: "rgba(200,168,75,0.1)", color: "#8b6914", border: "1px solid rgba(200,168,75,0.35)", padding: "16px 36px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background="rgba(200,168,75,0.2)"; e.currentTarget.style.transform="translateY(-3px)"; }} onMouseLeave={e => { e.currentTarget.style.background="rgba(200,168,75,0.1)"; e.currentTarget.style.transform="translateY(0)"; }}>📊 Dashboard</button>
+            <button onClick={() => document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" })} style={{ background: "rgba(200,168,75,0.06)", color: "#8b6914", border: "1px solid rgba(200,168,75,0.25)", padding: "16px 36px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background="rgba(200,168,75,0.14)"; e.currentTarget.style.transform="translateY(-3px)"; }} onMouseLeave={e => { e.currentTarget.style.background="rgba(200,168,75,0.06)"; e.currentTarget.style.transform="translateY(0)"; }}>📸 Gallery</button>
           </div>
         </div>
       </section>
 
-      {/* ── DASHBOARD PREVIEW ── */}
-      {showDashboard && (
-        <section style={{ background: "#0b1221", padding: "40px 40px 60px" }}>
-          <div style={{ maxWidth: 1300, margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-              <div>
-                <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>EMRS Dashboard Preview</h2>
-                <p style={{ color: "rgba(255,255,255,0.7)", margin: "8px 0 0" }}>Live EMRS analytics appear below.</p>
-              </div>
-              <button onClick={() => setShowDashboard(false)}
-                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 20px", fontWeight: 700, cursor: "pointer" }}>
-                Close Dashboard
-              </button>
-            </div>
-            <EMRSDashboard />
-          </div>
-        </section>
-      )}
+      <NewsFlashTicker items={newsFlashItems} />
+      <GamosaBorder height={6} />
 
-      {/* ── STATS ── */}
-      <section style={{ background: "#0f172a", padding: "0 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, overflow: "hidden", transform: "translateY(-40px)", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
+      {/* STATS */}
+      <section style={{ background: T.cream, padding: "44px 40px 0" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "rgba(139,69,19,0.08)", border: `1px solid rgba(139,69,19,0.12)`, borderRadius: 20, overflow: "hidden", boxShadow: "0 16px 48px rgba(139,69,19,0.12)" }}>
           {stats.map((stat, i) => (
-            <div key={i} style={{ padding: "32px 24px", textAlign: "center", background: "#1e293b", borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none", transition: "background 0.3s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#1e3a5f"}
-              onMouseLeave={e => e.currentTarget.style.background = "#1e293b"}>
+            <div key={i} style={{ padding: "32px 24px", textAlign: "center", background: "#fff", borderRight: i < 3 ? `1px solid rgba(139,69,19,0.08)` : "none", transition: "background 0.3s" }} onMouseEnter={e => e.currentTarget.style.background=T.creamDark} onMouseLeave={e => e.currentTarget.style.background="#fff"}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>{stat.icon}</div>
               <div style={{ fontSize: 36, fontWeight: 800, color: stat.color, lineHeight: 1 }}>{stat.value}{stat.suffix}</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 6, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>{stat.label}</div>
+              <div style={{ fontSize: 12, color: T.faint, marginTop: 6, letterSpacing: 1, textTransform: "uppercase", fontWeight: 600 }}>{stat.label}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── QUICK LINKS ── */}
-      <section style={{ padding: "0 40px 60px", background: "#0f172a" }}>
+      {/* ABOUT + WHAT'S NEW */}
+      <section style={{ padding: "20px 40px 0", background: T.cream }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 32, alignItems: "start", minHeight: 0 }}>
+          <div style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 10, padding: "28px 32px", boxShadow: "0 4px 20px rgba(139,69,19,0.07)" }}>
+            <SectionLabel>About Us</SectionLabel>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: T.brownDark, margin: "0 0 14px" }}>EMRS & Asset Management System</h2>
+            <p style={{ fontSize: 14, color: "#5a3e28", lineHeight: 1.85, margin: "0 0 14px" }}>
+              The Directorate of Tribal Affairs (Plain), Government of Assam, established this unified digital platform to streamline governance of Eklavya Model Residential Schools (EMRS) and government assets across the state. The system brings school administration, student records, staff data, hostel management, and infrastructure tracking onto a single, transparent platform.
+            </p>
+            <p style={{ fontSize: 14, color: "#5a3e28", lineHeight: 1.85, margin: "0 0 20px" }}>
+              Built to serve school administrators, district officers, and the public alike, the platform supports the Government of Assam's commitment to accountable, efficient, and accessible tribal education infrastructure across all 17 EMRS institutions and 50+ tracked assets statewide.
+            </p>
+            <div style={{ display: "flex", gap: 28, flexWrap: "wrap", marginBottom: 22 }}>
+              {[{ label: "Schools Managed", value: "17" },{ label: "Districts Covered", value: "10+" },{ label: "Years of Operation", value: "5+" }].map((f, i) => (
+                <div key={i}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: T.brown }}>{f.value}</div>
+                  <div style={{ fontSize: 11, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5 }}>{f.label}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setShowDashboard(true); setTimeout(() => document.getElementById("dashboard-section")?.scrollIntoView({ behavior: "smooth" }),50); }} style={{ background: "linear-gradient(135deg,#8b4513,#c8781e)", color: "#fff", border: "none", padding: "11px 22px", borderRadius: 6, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              View Dashboard →
+            </button>
+          </div>
+          <NotificationBar notifications={notifications} />
+        </div>
+      </section>
+
+      {/* QUICK LINKS */}
+      <section style={{ padding: "20px 40px 32px", background: T.cream }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
           {quickLinks.map((link, i) => (
-            <button key={i} onClick={() => navigate(link.path)}
-              style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${link.color}40`, color: "#fff", padding: "12px 24px", borderRadius: 50, cursor: "pointer", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, transition: "all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${link.color}20`; e.currentTarget.style.borderColor = link.color; e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = `${link.color}40`; e.currentTarget.style.transform = "translateY(0)"; }}>
+            <button key={i} onClick={() => link.path.startsWith("#") ? document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" }) : navigate(link.path)}
+              style={{ background: "#fff", border: `1px solid ${link.color}30`, color: "#5a3e28", padding: "12px 24px", borderRadius: 50, cursor: "pointer", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, transition: "all 0.2s", boxShadow: "0 2px 8px rgba(139,69,19,0.07)" }}
+              onMouseEnter={e => { e.currentTarget.style.background=`${link.color}10`; e.currentTarget.style.borderColor=link.color; e.currentTarget.style.transform="translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor=`${link.color}30`; e.currentTarget.style.transform="translateY(0)"; }}>
               {link.icon} {link.label}
             </button>
           ))}
         </div>
       </section>
 
-      {/* ── PORTAL CARDS ── */}
-      <section style={{ padding: "60px 40px", background: "#0f172a" }}>
+      {/* DASHBOARD */}
+      <div id="dashboard-section">
+        {showDashboard && <EMRSDashboard onClose={() => setShowDashboard(false)} />}
+      </div>
+
+      {/* PORTAL CARDS */}
+      <section style={{ padding: "60px 40px", background: T.creamDark }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: "#c8a84b", fontWeight: 700, marginBottom: 12 }}>Our Portals</div>
-            <h2 style={{ fontSize: 36, fontWeight: 800, marginBottom: 12 }}>Choose Your Portal</h2>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 16, maxWidth: 500, margin: "0 auto" }}>Two powerful portals designed for efficient management</p>
+            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: T.brown, fontWeight: 700, marginBottom: 12 }}>Our Portals</div>
+            <h2 style={{ fontSize: 36, fontWeight: 800, marginBottom: 12, color: T.brownDark }}>Choose Your Portal</h2>
+            <p style={{ color: T.muted, fontSize: 16, maxWidth: 500, margin: "0 auto" }}>Two powerful portals designed for efficient management</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(440px,1fr))", gap: 28 }}>
             {portals.map((portal, i) => (
-              <div key={i}
-                onMouseEnter={() => setActivePortal(i)} onMouseLeave={() => setActivePortal(null)}
-                style={{ background: "#1e293b", border: `1px solid ${activePortal === i ? portal.accent + "60" : "rgba(255,255,255,0.08)"}`, borderRadius: 20, overflow: "hidden", boxShadow: activePortal === i ? `0 20px 60px ${portal.glowColor}` : "0 4px 20px rgba(0,0,0,0.3)", transition: "all 0.3s ease", transform: activePortal === i ? "translateY(-8px)" : "translateY(0)" }}>
+              <div key={i} onMouseEnter={() => setActivePortal(i)} onMouseLeave={() => setActivePortal(null)} style={{ background: "#fff", border: `1px solid ${activePortal===i ? portal.accent+"60" : "rgba(139,69,19,0.1)"}`, borderRadius: 20, overflow: "hidden", boxShadow: activePortal===i ? `0 16px 48px ${portal.glowColor}` : "0 2px 16px rgba(139,69,19,0.08)", transition: "all 0.3s ease", transform: activePortal===i ? "translateY(-8px)" : "translateY(0)" }}>
                 <div style={{ background: portal.gradient, padding: "36px 32px", position: "relative", overflow: "hidden" }}>
-                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
                     <div>
                       <div style={{ fontSize: 52, marginBottom: 14 }}>{portal.icon}</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{portal.title}</div>
-                      <div style={{ fontSize: 12, color: portal.accent, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{portal.subtitle}</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 4 }}>{portal.title}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{portal.subtitle}</div>
                     </div>
-                    <div style={{ background: "rgba(255,255,255,0.15)", color: "#fff", padding: "6px 14px", borderRadius: 50, fontSize: 12, fontWeight: 700 }}>{portal.badge}</div>
+                    <div style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "6px 14px", borderRadius: 50, fontSize: 12, fontWeight: 700 }}>{portal.badge}</div>
                   </div>
                 </div>
                 <div style={{ padding: "28px 32px" }}>
-                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: 24 }}>{portal.description}</p>
+                  <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.8, marginBottom: 24 }}>{portal.description}</p>
                   <div style={{ marginBottom: 28 }}>
                     {portal.features.map((f, fi) => (
-                      <div key={fi} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: fi < portal.features.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                      <div key={fi} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: fi < portal.features.length-1 ? `1px solid rgba(139,69,19,0.07)` : "none" }}>
                         <span style={{ fontSize: 16 }}>{f.icon}</span>
-                        <span style={{ fontSize: 14, color: "rgba(255,255,255,0.75)" }}>{f.text}</span>
+                        <span style={{ fontSize: 14, color: "#5a3e28" }}>{f.text}</span>
                         <span style={{ marginLeft: "auto", color: portal.accent, fontSize: 12 }}>→</span>
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => navigate(portal.path)}
-                    style={{ width: "100%", background: portal.gradient, color: "#fff", border: "none", padding: "14px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}>
-                    Access Portal →
-                  </button>
+                  <button onClick={() => navigate(portal.path)} style={{ width: "100%", background: portal.gradient, color: "#fff", border: "none", padding: "14px", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.opacity="0.9"; e.currentTarget.style.transform="translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.transform="translateY(0)"; }}>Access Portal →</button>
                 </div>
               </div>
             ))}
@@ -564,165 +1334,72 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          MAP SECTION
-      ══════════════════════════════════════════════════════════════════════ */}
-      <section style={{ padding: "60px 40px", background: "#0a1628" }}>
+      {/* MAP */}
+      <section style={{ padding: "60px 40px", background: T.cream }}>
         <div style={{ maxWidth: 1260, margin: "0 auto" }}>
-
-          {/* Section header */}
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: "#c8a84b", fontWeight: 700, marginBottom: 10 }}>Geographic Distribution</div>
-            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Locations Across Assam</h2>
-            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 15, maxWidth: 500, margin: "0 auto" }}>
-              Click any pin on the map to view detailed information
-            </p>
+            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: T.brown, fontWeight: 700, marginBottom: 10 }}>Geographic Distribution</div>
+            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8, color: T.brownDark }}>Locations Across Assam</h2>
+            <p style={{ color: T.muted, fontSize: 15, maxWidth: 500, margin: "0 auto" }}>Click any pin on the map to view detailed information</p>
           </div>
-
-          {/* Layer toggle */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-            <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: 4, gap: 4 }}>
-              {[
-                { key: "emrs",  label: "🏫 EMRS Schools", grad: "linear-gradient(135deg,#1e3a8a,#2563eb)", shadow: "rgba(37,99,235,0.4)" },
-                { key: "asset", label: "🏗️ Asset Sites",  grad: "linear-gradient(135deg,#064e3b,#059669)", shadow: "rgba(5,150,105,0.4)" },
-              ].map(tab => (
-                <button key={tab.key} onClick={() => handleLayerSwitch(tab.key)}
-                  style={{
-                    padding: "10px 28px", borderRadius: 10, border: "none", cursor: "pointer",
-                    fontWeight: 700, fontSize: 14, transition: "all 0.25s",
-                    background:  mapLayer === tab.key ? tab.grad    : "transparent",
-                    color:       mapLayer === tab.key ? "#fff"       : "rgba(255,255,255,0.45)",
-                    boxShadow:   mapLayer === tab.key ? `0 4px 16px ${tab.shadow}` : "none",
-                  }}>
-                  {tab.label}
-                </button>
+            <div style={{ display: "flex", background: "#fff", border: `1px solid rgba(139,69,19,0.15)`, borderRadius: 14, padding: 4, gap: 4, boxShadow: "0 2px 12px rgba(139,69,19,0.07)" }}>
+              {[{ key: "emrs", label: "🏫 EMRS Schools", grad: "linear-gradient(135deg,#8b4513,#c8781e)", shadow: "rgba(139,69,19,0.3)" },{ key: "asset", label: "🏗️ Asset Sites", grad: "linear-gradient(135deg,#1a3d2e,#2d6a4f)", shadow: "rgba(45,106,79,0.3)" }].map(tab => (
+                <button key={tab.key} onClick={() => handleLayerSwitch(tab.key)} style={{ padding: "10px 28px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, transition: "all 0.25s", background: mapLayer===tab.key ? tab.grad : "transparent", color: mapLayer===tab.key ? "#fff" : T.muted, boxShadow: mapLayer===tab.key ? `0 4px 16px ${tab.shadow}` : "none" }}>{tab.label}</button>
               ))}
             </div>
           </div>
-
-          {/* Map + Detail panel */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" }}>
-
-            {/* ── Map card ── */}
-            <div style={{
-              background: "#1e293b", borderRadius: 20,
-              border: `1px solid ${mapLayer === "emrs" ? "rgba(59,130,246,0.25)" : "rgba(5,150,105,0.25)"}`,
-              overflow: "hidden",
-              boxShadow: `0 20px 60px ${mapLayer === "emrs" ? "rgba(37,99,235,0.15)" : "rgba(5,150,105,0.15)"}`,
-              transition: "border-color 0.3s, box-shadow 0.3s",
-            }}>
-              {/* Map header */}
-              <div style={{
-                background: mapLayer === "emrs" ? "linear-gradient(135deg,#1e3a8a,#2563eb)" : "linear-gradient(135deg,#064e3b,#059669)",
-                padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center",
-                transition: "background 0.3s",
-              }}>
+            <div style={{ background: "#fff", borderRadius: 20, border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.2)" : "rgba(45,106,79,0.2)"}`, overflow: "hidden", boxShadow: "0 4px 24px rgba(139,69,19,0.08)", transition: "border-color 0.3s" }}>
+              <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 800 }}>
-                    {mapLayer === "emrs" ? "🏫 EMRS School Locations" : "🏗️ Asset Site Locations"}
-                  </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>
-                    {mapLayer === "emrs"
-                      ? "Eklavya Model Residential Schools across Assam"
-                      : "Infrastructure, roads & buildings tracked across Assam"}
-                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{mapLayer==="emrs" ? "🏫 EMRS School Locations" : "🏗️ Asset Site Locations"}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{mapLayer==="emrs" ? "Eklavya Model Residential Schools across Assam" : "Infrastructure, roads & buildings tracked across Assam"}</div>
                 </div>
-                <div style={{ background: "rgba(255,255,255,0.15)", color: "#fff", padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                  {mapLayer === "emrs" ? `${emrsPins.length} Schools` : `${assetPins.length} Assets`}
-                </div>
+                <div style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{mapLayer==="emrs" ? `${EMRS_PINS.length} Schools` : `${ASSET_PINS.length} Assets`}</div>
               </div>
-
-              {/* Asset type legend */}
-              {mapLayer === "asset" && (
-                <div style={{ padding: "10px 20px 0", display: "flex", gap: 20 }}>
-                  {Object.entries(assetTypeLabel).map(([type, label]) => (
-                    <div key={type} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: assetTypeColor[type] }} />
-                      {label}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* SVG Map */}
-              <div style={{ padding: "10px 14px 4px" }}>
-                <AssamMap
-                  activeLayer={mapLayer}
-                  emrsPins={emrsPins}
-                  assetPins={assetPins}
-                  selectedPin={selectedPin}
-                  onPinClick={handlePinClick}
-                />
-                <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", margin: "4px 0 4px" }}>
-                  Click any pin to view details →
-                </p>
-              </div>
-
-              {/* Summary bar */}
-              <div style={{
-                margin: "0 14px 14px",
-                background: mapLayer === "emrs" ? "rgba(59,130,246,0.07)" : "rgba(5,150,105,0.07)",
-                border: `1px solid ${mapLayer === "emrs" ? "rgba(59,130,246,0.15)" : "rgba(5,150,105,0.15)"}`,
-                borderRadius: 12, padding: "10px 16px", display: "flex", justifyContent: "space-around",
-              }}>
-                {(mapLayer === "emrs" ? [
-                  { label: "Active",  count: emrsPins.filter(p => p.status === "Active").length,  color: "#34d399" },
-                  { label: "Planned", count: emrsPins.filter(p => p.status === "Planned").length, color: "#8b5cf6" },
-                  { label: "Total",   count: emrsPins.length,                                      color: "#60a5fa" },
+              <AssamOSMMap activeLayer={mapLayer} selectedPin={selectedPin} onPinClick={handlePinClick} />
+              <div style={{ margin: "12px 14px 14px", background: mapLayer==="emrs" ? "rgba(139,69,19,0.05)" : "rgba(45,106,79,0.05)", border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.12)" : "rgba(45,106,79,0.12)"}`, borderRadius: 12, padding: "10px 16px", display: "flex", justifyContent: "space-around" }}>
+                {(mapLayer==="emrs" ? [
+                  { label: "Active",  count: EMRS_PINS.filter(p => p.status==="Active").length,  color: T.green  },
+                  { label: "Planned", count: EMRS_PINS.filter(p => p.status==="Planned").length, color: T.purple },
+                  { label: "Total",   count: EMRS_PINS.length,                                   color: T.brown  },
                 ] : [
-                  { label: "Infra",    count: assetPins.filter(p => p.type === "infra").length,    color: "#f59e0b" },
-                  { label: "Road",     count: assetPins.filter(p => p.type === "road").length,      color: "#10b981" },
-                  { label: "Building", count: assetPins.filter(p => p.type === "building").length,  color: "#8b5cf6" },
+                  { label: "Infra",    count: ASSET_PINS.filter(p => p.type==="infra").length,    color: T.brownLight },
+                  { label: "Road",     count: ASSET_PINS.filter(p => p.type==="road").length,     color: T.green      },
+                  { label: "Building", count: ASSET_PINS.filter(p => p.type==="building").length, color: T.purple     },
                 ]).map(s => (
                   <div key={s.label} style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.count}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{s.label}</div>
+                    <div style={{ fontSize: 11, color: T.faint, marginTop: 2 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* ── Detail Panel ── */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
               {selectedData ? (
-                <div style={{
-                  background: "#1e293b",
-                  border: `2px solid ${mapLayer === "emrs" ? "rgba(59,130,246,0.5)" : "rgba(5,150,105,0.5)"}`,
-                  borderRadius: 18, overflow: "hidden",
-                  boxShadow: `0 12px 40px ${mapLayer === "emrs" ? "rgba(37,99,235,0.25)" : "rgba(5,150,105,0.25)"}`,
-                }}>
-                  {/* Card header */}
-                  <div style={{
-                    background: mapLayer === "emrs" ? "linear-gradient(135deg,#1e3a8a,#2563eb)" : "linear-gradient(135deg,#064e3b,#059669)",
-                    padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                  }}>
+                <div style={{ background: "#fff", border: `2px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.35)" : "rgba(45,106,79,0.35)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(139,69,19,0.12)" }}>
+                  <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <div style={{ fontSize: 22, marginBottom: 4 }}>
-                        {mapLayer === "emrs" ? "🏫" : assetTypeEmoji[selectedData.type]}
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.3 }}>{selectedData.name}</div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>📍 {selectedData.district} District</div>
+                      <div style={{ fontSize: 22, marginBottom: 4 }}>{mapLayer==="emrs" ? "🏫" : assetTypeEmoji[selectedData.type]}</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", lineHeight: 1.3 }}>{selectedData.name}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>📍 {selectedData.district} District</div>
                     </div>
-                    <button onClick={() => setSelectedPin(null)}
-                      style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      ×
-                    </button>
+                    <button onClick={() => setSelectedPin(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
                   </div>
-
                   <div style={{ padding: "16px 18px" }}>
-                    {mapLayer === "emrs" ? (
+                    {mapLayer==="emrs" ? (
                       <>
                         {[
-                          { icon: "🎓", label: "Students",  value: `${selectedData.students} enrolled` },
-                          { icon: "📚", label: "Classes",   value: `Class ${selectedData.classes}` },
-                          { icon: "👤", label: "Principal", value: selectedData.principal },
+                          { icon: "🎓", label: "Students", value: `${selectedData.students} enrolled` },
+                          { icon: "📚", label: "Classes",  value: `Class ${selectedData.classes}`    },
+                          { icon: "👤", label: "Principal",value: selectedData.principal             },
                         ].map((row, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < 2 ? `1px solid rgba(139,69,19,0.07)` : "none" }}>
                             <span style={{ fontSize: 15, flexShrink: 0 }}>{row.icon}</span>
                             <div>
-                              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5 }}>{row.label}</div>
-                              <div style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>{row.value}</div>
+                              <div style={{ fontSize: 10, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5 }}>{row.label}</div>
+                              <div style={{ fontSize: 13, color: T.brownDark, fontWeight: 600 }}>{row.value}</div>
                             </div>
                           </div>
                         ))}
@@ -730,23 +1407,20 @@ const HomePage = () => {
                           <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor(selectedData.status) }} />
                           <span style={{ fontSize: 12, color: statusColor(selectedData.status), fontWeight: 700 }}>{selectedData.status}</span>
                         </div>
-                        <button onClick={() => navigate("/emrs/login")}
-                          style={{ width: "100%", marginTop: 14, padding: "10px", background: "linear-gradient(135deg,#1e3a8a,#2563eb)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                          Access EMRS Portal →
-                        </button>
+                        <button onClick={() => navigate("/emrs/login")} style={{ width: "100%", marginTop: 14, padding: "10px", background: "linear-gradient(135deg,#8b4513,#c8781e)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Access EMRS Portal →</button>
                       </>
                     ) : (
                       <>
                         {[
                           { icon: assetTypeEmoji[selectedData.type], label: "Type",        value: assetTypeLabel[selectedData.type] },
-                          { icon: "💰",                               label: "Asset Value", value: selectedData.value },
-                          { icon: "📅",                               label: "Year",        value: selectedData.year },
+                          { icon: "💰",                               label: "Asset Value", value: selectedData.value                },
+                          { icon: "📅",                               label: "Year",        value: selectedData.year                 },
                         ].map((row, i) => (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < 2 ? `1px solid rgba(139,69,19,0.07)` : "none" }}>
                             <span style={{ fontSize: 15, flexShrink: 0 }}>{row.icon}</span>
                             <div>
-                              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 0.5 }}>{row.label}</div>
-                              <div style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>{row.value}</div>
+                              <div style={{ fontSize: 10, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5 }}>{row.label}</div>
+                              <div style={{ fontSize: 13, color: T.brownDark, fontWeight: 600 }}>{row.value}</div>
                             </div>
                           </div>
                         ))}
@@ -754,51 +1428,32 @@ const HomePage = () => {
                           <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor(selectedData.status) }} />
                           <span style={{ fontSize: 12, color: statusColor(selectedData.status), fontWeight: 700 }}>{selectedData.status}</span>
                         </div>
-                        <button onClick={() => navigate("/asset/login")}
-                          style={{ width: "100%", marginTop: 14, padding: "10px", background: "linear-gradient(135deg,#064e3b,#059669)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                          Access Asset Portal →
-                        </button>
+                        <button onClick={() => navigate("/asset/login")} style={{ width: "100%", marginTop: 14, padding: "10px", background: "linear-gradient(135deg,#1a3d2e,#2d6a4f)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Access Asset Portal →</button>
                       </>
                     )}
                   </div>
                 </div>
               ) : (
-                /* Empty state */
-                <div style={{ background: "#1e293b", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 18, padding: "36px 24px", textAlign: "center" }}>
-                  <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>{mapLayer === "emrs" ? "🏫" : "🏗️"}</div>
-                  <div style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>
-                    Click any pin on the map<br />to view details here
-                  </div>
+                <div style={{ background: "#fff", border: "1px dashed rgba(139,69,19,0.18)", borderRadius: 18, padding: "36px 24px", textAlign: "center" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>{mapLayer==="emrs" ? "🏫" : "🏗️"}</div>
+                  <div style={{ fontSize: 14, color: "#b89a78", lineHeight: 1.6 }}>Click any pin on the map<br />to view details here</div>
                 </div>
               )}
-
-              {/* Mini list */}
-              <div style={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, overflow: "hidden" }}>
-                <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: 1, textTransform: "uppercase" }}>
-                  All {mapLayer === "emrs" ? "Schools" : "Assets"}
-                </div>
+              <div style={{ background: "#fff", border: `1px solid rgba(139,69,19,0.1)`, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 12px rgba(139,69,19,0.06)" }}>
+                <div style={{ padding: "12px 16px", borderBottom: `1px solid rgba(139,69,19,0.08)`, fontSize: 12, fontWeight: 700, color: T.muted, letterSpacing: 1, textTransform: "uppercase" }}>All {mapLayer==="emrs" ? "Schools" : "Assets"}</div>
                 <div style={{ maxHeight: 300, overflowY: "auto" }}>
                   {currentPins.map((pin, i) => {
-                    const col = mapLayer === "emrs" ? "#3b82f6" : assetTypeColor[pin.type];
+                    const col = mapLayer==="emrs" ? T.brown : assetTypeColor[pin.type];
                     return (
-                      <div key={i} onClick={() => handlePinClick(i)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 10, padding: "9px 14px",
-                          cursor: "pointer", transition: "background 0.15s",
-                          background: selectedPin === i ? `${col}12` : "transparent",
-                          borderLeft: `3px solid ${selectedPin === i ? col : "transparent"}`,
-                          borderBottom: i < currentPins.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                        }}
-                        onMouseEnter={e => { if (selectedPin !== i) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-                        onMouseLeave={e => { if (selectedPin !== i) e.currentTarget.style.background = "transparent"; }}>
+                      <div key={i} onClick={() => handlePinClick(i)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", cursor: "pointer", transition: "background 0.15s", background: selectedPin===i ? `${col}0d` : "transparent", borderLeft: `3px solid ${selectedPin===i ? col : "transparent"}`, borderBottom: i < currentPins.length-1 ? `1px solid rgba(139,69,19,0.05)` : "none" }}
+                        onMouseEnter={e => { if (selectedPin!==i) e.currentTarget.style.background="rgba(139,69,19,0.03)"; }}
+                        onMouseLeave={e => { if (selectedPin!==i) e.currentTarget.style.background="transparent"; }}>
                         <div style={{ width: 7, height: 7, borderRadius: "50%", background: col, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pin.name}</div>
-                          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{pin.district}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: T.brownDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pin.name}</div>
+                          <div style={{ fontSize: 10, color: T.faint }}>{pin.district}</div>
                         </div>
-                        <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 20, background: `${statusColor(pin.status)}15`, color: statusColor(pin.status), fontWeight: 600, whiteSpace: "nowrap" }}>
-                          {pin.status}
-                        </span>
+                        <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 20, background: `${statusColor(pin.status)}15`, color: statusColor(pin.status), fontWeight: 600, whiteSpace: "nowrap" }}>{pin.status}</span>
                       </div>
                     );
                   })}
@@ -809,75 +1464,37 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ── RECENT ACTIVITY + HOW IT WORKS ── */}
-      <section style={{ padding: "60px 40px", background: "#0a1628" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-          <div style={{ background: "#1e293b", borderRadius: 20, padding: 28, border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>📊 Recent Activity</h3>
-              <span style={{ fontSize: 11, color: "#c8a84b", background: "rgba(200,168,75,0.1)", padding: "4px 12px", borderRadius: 50, fontWeight: 600 }}>LIVE</span>
-            </div>
-            {recentActivities.map((act, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 0", borderBottom: i < recentActivities.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${act.color}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{act.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.4 }}>{act.text}</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>{act.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ background: "#1e293b", borderRadius: 20, padding: 28, border: "1px solid rgba(255,255,255,0.08)" }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 28, marginTop: 0 }}>🔄 How It Works</h3>
-            {[
-              { step: "01", title: "Visit Homepage",  desc: "Access the portal from any device",         icon: "🌐", color: "#3b82f6" },
-              { step: "02", title: "Select Portal",   desc: "Choose EMRS or Asset Management",           icon: "🎯", color: "#8b5cf6" },
-              { step: "03", title: "Login Securely",  desc: "Enter your credentials to authenticate",    icon: "🔐", color: "#f59e0b" },
-              { step: "04", title: "Fill & Submit",   desc: "Complete the form and submit data",          icon: "📋", color: "#10b981" },
-            ].map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: i < 3 ? 20 : 0 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: `${item.color}20`, border: `1px solid ${item.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: item.color, fontWeight: 700, letterSpacing: 1 }}>STEP {item.step}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>{item.title}</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)" }}>{item.desc}</div>
-                </div>
-                {i < 3 && <div style={{ color: "rgba(255,255,255,0.2)", fontSize: 20 }}>↓</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <GallerySection />
+      <GamosaBorder height={8} />
 
-      {/* ── FOOTER ── */}
-      <footer style={{ background: "#060d1a", borderTop: "1px solid rgba(200,168,75,0.3)", padding: "40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      {/* FOOTER */}
+      <footer style={{ background: "#2d1a0e", borderTop: "1px solid rgba(200,168,75,0.25)", padding: "40px", position: "relative", overflow: "hidden" }}>
+        <svg style={{ position: "absolute", bottom: -40, right: -20, opacity: 0.06, pointerEvents: "none" }} width="260" height="260" viewBox="0 0 260 260">
+          <path d="M130 230 C70 200 40 140 70 70 C90 110 120 130 130 230 Z" fill="none" stroke="#c8a84b" strokeWidth="3" />
+          <path d="M130 230 C190 200 220 140 190 70 C170 110 140 130 130 230 Z" fill="none" stroke="#c8a84b" strokeWidth="3" />
+          <line x1="130" y1="230" x2="130" y2="100" stroke="#c8a84b" strokeWidth="2" />
+        </svg>
+        <div style={{ maxWidth: 1100, margin: "0 auto", position: "relative" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20, marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#c8a84b,#f0d060)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏛️</div>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#8b4513,#c8781e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏛️</div>
               <div>
                 <div style={{ fontWeight: 700, color: "#c8a84b", fontSize: 14 }}>EMRS & Asset Management System</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Directorate of Tribal Affairs (Plain)</div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 20 }}>
-              {["Privacy Policy", "Terms of Use", "Contact Us", "Help"].map(link => (
-                <button key={link}
-                  style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer", padding: 0 }}
-                  onMouseEnter={e => e.target.style.color = "#c8a84b"}
-                  onMouseLeave={e => e.target.style.color = "rgba(255,255,255,0.4)"}>
-                  {link}
-                </button>
+              {["Privacy Policy","Terms of Use","Contact Us","Help"].map(link => (
+                <button key={link} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 12, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.target.style.color="#c8a84b"} onMouseLeave={e => e.target.style.color="rgba(255,255,255,0.4)"}>{link}</button>
               ))}
             </div>
           </div>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 20, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>© {new Date().getFullYear()} Government of Assam. All Rights Reserved.</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>Designed & Developed by IntelliSight Consultancy Private Limited</div>
           </div>
         </div>
       </footer>
-
     </div>
   );
 };

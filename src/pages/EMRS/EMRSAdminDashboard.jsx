@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchEmrsSchools } from "../../api/emrsAuthApi";
+import { fetchEmrsFromBackend } from "../submitted-application/emrsAppliedShared"; // adjust path if this file isn't in the same folder
 import {
   Box,
   Button,
@@ -786,12 +787,12 @@ const SchoolDetailPanel = ({ school, data }) => {
                 {data.utilizationPercentage && (
                   <Box sx={{ mt: 3 }}>
                     <Typography variant="caption" sx={{ fontWeight: 700, color: "#546e7a" }}>FUND UTILIZATION</Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min(Number(data.utilizationPercentage), 100)}
-                      sx={{ mt: 0.5, height: 10, borderRadius: 5, background: "#e0e0e0", "& .MuiLinearProgress-bar": { background: "linear-gradient(90deg, #1976d2, #42a5f5)" } }}
-                    />
-                    <Typography variant="caption" sx={{ color: "#1565c0", fontWeight: 700 }}>{data.utilizationPercentage}% utilized</Typography>
+              <LinearProgress
+               variant="determinate"
+               value={Math.min(Number(data.utilizationPercentage), 100)}
+               sx={{ mt: 0.5, height: 10, borderRadius: 5, background: "#e0e0e0", "& .MuiLinearProgress-bar": { background: "linear-gradient(90deg, #1976d2, #42a5f5)" } }}
+                />
+              <Typography variant="caption" sx={{ color: "#1565c0", fontWeight: 700 }}>{data.utilizationPercentage}% utilized</Typography>
                   </Box>
                 )}
               </Box>
@@ -985,70 +986,77 @@ const EMRSAdminDashboard = () => {
       .catch(() => setSchools([]));
   }, []);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
+  try {
+    // ── Always try the backend first — it's the authoritative source,
+    //    independent of whatever any school's browser happens to have cached.
+    let raw = [];
     try {
-      const raw = JSON.parse(localStorage.getItem("emrs_submitted_forms") || "[]");
+      const fromApi = await fetchEmrsFromBackend();
+      raw = Array.isArray(fromApi) ? fromApi : [];
+      localStorage.setItem("emrs_submitted_forms", JSON.stringify(raw)); // keep cache in sync
+    } catch (apiErr) {
+      // Backend unreachable — fall back to whatever is cached locally.
+      raw = JSON.parse(localStorage.getItem("emrs_submitted_forms") || "[]");
+    }
 
-      // Safe string coerce helper
-      const str = (v) => (v !== undefined && v !== null ? String(v).trim() : "");
+    // Safe string coerce helper
+    const str = (v) => (v !== undefined && v !== null ? String(v).trim() : "");
 
-      // ── Normalize every entry: find its true SCHOOL_CREDENTIALS record
-      //    by trying every field the form might have used to store the login id,
-      //    then re-stamp all identity fields from the credential record.
-      //    This fixes wrong-school-name bugs at the root.
-      const normalized = raw.map((entry) => {
-        // Collect every possible "who submitted this" value from the entry
-        const entryUserCandidates = [
-          entry.username, entry.loginId, entry.login_id,
-          entry.userId,   entry.user_id, entry.submittedBy,
-          entry.submitted_by, entry.schoolUsername,
-        ].map((v) => str(v).toLowerCase()).filter(Boolean);
+    // ── Normalize every entry: find its true SCHOOL_CREDENTIALS record
+    //    by trying every field the form might have used to store the login id,
+    //    then re-stamp all identity fields from the credential record.
+    //    This fixes wrong-school-name bugs at the root.
+    const normalized = raw.map((entry) => {
+      const entryUserCandidates = [
+        entry.username, entry.loginId, entry.login_id,
+        entry.userId,   entry.user_id, entry.submittedBy,
+        entry.submitted_by, entry.schoolUsername,
+      ].map((v) => str(v).toLowerCase()).filter(Boolean);
 
-        const entryCodeCandidates = [
-          entry.schoolCode, entry.school_code,
-          entry.EMRScode,   entry.emrsCode, entry.emrs_code, entry.code,
-        ].map((v) => str(v)).filter(Boolean);
+      const entryCodeCandidates = [
+        entry.schoolCode, entry.school_code,
+        entry.EMRScode,   entry.emrsCode, entry.emrs_code, entry.code,
+      ].map((v) => str(v)).filter(Boolean);
 
-        const entryNameCandidates = [
-          entry.schoolname, entry.schoolName, entry.school_name, entry.name,
-        ].map((v) => str(v).toLowerCase()).filter(Boolean);
+      const entryNameCandidates = [
+        entry.schoolname, entry.schoolName, entry.school_name, entry.name,
+      ].map((v) => str(v).toLowerCase()).filter(Boolean);
 
-        // Find the matching credential
-        const cred = schools.find((s) => {
-          const credUser = str(s.username).toLowerCase();
-          const credCode = str(s.schoolCode);
-          const credCodeNum = String(parseInt(credCode.split("-").pop(), 10));
-          const credName = str(s.schoolName).toLowerCase();
+      const cred = schools.find((s) => {
+        const credUser = str(s.username).toLowerCase();
+        const credCode = str(s.schoolCode);
+        const credCodeNum = String(parseInt(credCode.split("-").pop(), 10));
+        const credName = str(s.schoolName).toLowerCase();
 
-          if (credUser && entryUserCandidates.includes(credUser)) return true;
-          if (credCode && entryCodeCandidates.includes(credCode)) return true;
-          if (credCodeNum && entryCodeCandidates.includes(credCodeNum)) return true;
-          if (credName && entryNameCandidates.some(
-            (n) => n.includes(credName) || credName.includes(n)
-          )) return true;
-          return false;
-        });
-
-        if (!cred) return entry; // unrecognised entry — leave untouched
-
-        // Stamp the authoritative identity onto the entry
-        return {
-          ...entry,
-          username:   cred.username,   // ensure username is always present
-          schoolCode: cred.schoolCode,
-          schoolname: cred.schoolName,
-          district:   cred.district,
-          block:      cred.block,
-          EMRScode:   cred.schoolCode,
-        };
+        if (credUser && entryUserCandidates.includes(credUser)) return true;
+        if (credCode && entryCodeCandidates.includes(credCode)) return true;
+        if (credCodeNum && entryCodeCandidates.includes(credCodeNum)) return true;
+        if (credName && entryNameCandidates.some(
+          (n) => n.includes(credName) || credName.includes(n)
+        )) return true;
+        return false;
       });
 
-      localStorage.setItem("emrs_submitted_forms", JSON.stringify(normalized));
-      setSubmittedData(normalized);
-    } catch {
-      setSubmittedData([]);
-    }
-  }, [schools]);
+      if (!cred) return entry;
+
+      return {
+        ...entry,
+        username:   cred.username,
+        schoolCode: cred.schoolCode,
+        schoolname: cred.schoolName,
+        district:   cred.district,
+        block:      cred.block,
+        EMRScode:   cred.schoolCode,
+      };
+    });
+
+    localStorage.setItem("emrs_submitted_forms", JSON.stringify(normalized));
+    setSubmittedData(normalized);
+  } catch {
+    setSubmittedData([]);
+  }
+}, [schools]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {

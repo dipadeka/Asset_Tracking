@@ -57,7 +57,7 @@ export default function HostelDetails({
                        render={({ field, fieldState: { error } }) => (
                          <TextField
                            {...field}
-                           label="Boys Hostel Capacity"
+                           label="Hostel Capacity"
                            type="number"
                            fullWidth
                            size="small"
@@ -305,7 +305,7 @@ export default function HostelDetails({
                        render={({ field }) => (
                          <TextField
                            {...field}
-                           label="Boys Warden Name"
+                           label="Warden Name"
                            fullWidth
                            size="small"
                          />
@@ -320,7 +320,7 @@ export default function HostelDetails({
                        render={({ field }) => (
                          <TextField
                            {...field}
-                           label="Boys Warden Contact"
+                           label="Warden Contact"
                            fullWidth
                            size="small"
                            inputProps={{
@@ -362,7 +362,7 @@ export default function HostelDetails({
                        render={({ field }) => (
                          <TextField
                            {...field}
-                           label="Boys Warden Email"
+                           label="Warden Email"
                            fullWidth
                            size="small"
                          />
@@ -393,7 +393,7 @@ export default function HostelDetails({
                        render={({ field, fieldState: { error } }) => (
                          <TextField
                            {...field}
-                           label="Girls Hostel Capacity"
+                           label="Hostel Capacity"
                            type="number"
                            fullWidth
                            size="small"
@@ -639,7 +639,7 @@ export default function HostelDetails({
                        render={({ field }) => (
                          <TextField
                            {...field}
-                           label="Girls Warden Name"
+                           label="Warden Name"
                            fullWidth
                            size="small"
                          />
@@ -654,7 +654,7 @@ export default function HostelDetails({
                        render={({ field }) => (
                          <TextField
                            {...field}
-                           label="Girls Warden Contact"
+                           label="Warden Contact"
                            fullWidth
                            size="small"
                            inputProps={{
@@ -696,7 +696,7 @@ export default function HostelDetails({
                        render={({ field }) => (
                          <TextField
                            {...field}
-                           label="Girls Warden Email"
+                           label="Warden Email"
                            fullWidth
                            size="small"
                          />
@@ -704,7 +704,6 @@ export default function HostelDetails({
                      />
                    </Grid>
                  </Grid>
-                 {/* ================= MESS DETAILS ================= */}
                  {/* ================= MAIN SECTION ================= */}
                  <Typography
                    variant="subtitle1"
@@ -721,333 +720,63 @@ export default function HostelDetails({
                      background: "#fff",
                    }}
                  >
-                   {/* ================= SUBSECTION 1 ================= */}
-                   <Typography sx={{ fontWeight: 600, color: "#16a34a", mb: 2 }}>
-                     🧾 Mess Expenditure Details
-                   </Typography>
- 
-                   <Grid container spacing={2}>
-                     <Grid item xs={12} md={2}>
-                       <TextField
-                         select
-                         fullWidth
-                         size="small"
-                         label="Mess Year"
-                         value={messData.year}
-                         onChange={(e) =>
-                           setMessData({ ...messData, year: e.target.value })
-                         }
-                       >
-                         {["2024", "2025", "2026"].map((y) => (
-                           <MenuItem key={y} value={y}>
-                             {y}
-                           </MenuItem>
-                         ))}
-                       </TextField>
-                     </Grid>
- 
-                     <Grid item xs={12} md={2}>
-                       <TextField
-                         select
-                         fullWidth
-                         size="small"
-                         label="Mess Month"
-                         value={messData.month}
-                         onChange={(e) =>
-                           setMessData({ ...messData, month: e.target.value })
-                         }
-                       >
-                         {[
-                           "January",
-                           "February",
-                           "March",
-                           "April",
-                           "May",
-                           "June",
-                           "July",
-                           "August",
-                           "September",
-                           "October",
-                           "November",
-                           "December",
-                         ].map((m) => (
-                           <MenuItem key={m} value={m}>
-                             {m}
-                           </MenuItem>
-                         ))}
-                       </TextField>
-                     </Grid>
- 
-                     <Grid item xs={12} md={2}>
-                       <TextField
-                         type="date"
-                         fullWidth
-                         size="small"
-                         label="Purchase Date"
-                         InputLabelProps={{ shrink: true }}
-                         value={messData.purchaseDate}
-                         onChange={(e) =>
-                           setMessData({
-                             ...messData,
-                             purchaseDate: e.target.value,
-                           })
-                         }
-                       />
-                     </Grid>
- 
-                     <Grid item xs={12} md={3}>
-                       <TextField
-                         fullWidth
-                         size="small"
-                         label="Invoice/Bill No."
-                         value={messData.billNo}
-                         onChange={(e) =>
-                           setMessData({ ...messData, billNo: e.target.value })
-                         }
-                       />
-                     </Grid>
- 
-                     <Grid item xs={12} md={3}>
-                       <TextField
-                         select
-                         fullWidth
-                         size="small"
-                         sx={{ minWidth: 220 }}
-                         label="Payment Method"
-                         value={messData.paymentMethod}
-                         onChange={(e) =>
-                           setMessData({
-                             ...messData,
-                             paymentMethod: e.target.value,
-                           })
-                         }
-                       >
-                         <MenuItem value="Cash">Cash</MenuItem>
-                         <MenuItem value="Card">Card</MenuItem>
-                         <MenuItem value="Online">Online</MenuItem>
-                       </TextField>
-                     </Grid>
-                   </Grid>
- 
-                   {/* TABLE */}
-                   <TableContainer component={Paper} sx={{ mt: 3 }}>
-                     <Table size="small">
-                       <TableHead sx={{ background: "#f1f5f9" }}>
-                         <TableRow>
-                           <TableCell>
-                             <b>Category</b>
-                           </TableCell>
-                           <TableCell>
-                             <b>Item</b>
-                           </TableCell>
-                           <TableCell>
-                             <b>Quantity</b>
-                           </TableCell>
-                           <TableCell>
-                             <b>Price (₹)</b>
-                           </TableCell>
-                           <TableCell>
-                             <b>Total (₹)</b>
-                           </TableCell>
-                           <TableCell>
-                             <b>Action</b>
-                           </TableCell>
-                         </TableRow>
-                       </TableHead>
- 
-                       <TableBody>
-                         {messData.items.map((item, index) => (
-                           <TableRow key={index}>
-                             <TableCell>
-                               <TextField
-                                 select
-                                 size="small"
-                                 value={item.category}
-                                 onChange={(e) =>
-                                   handleItemChange(
-                                     index,
-                                     "category",
-                                     e.target.value,
-                                   )
-                                 }
-                               >
-                                 <MenuItem value="Recurring">Recurring</MenuItem>
-                                 <MenuItem value="Non-recurring">
-                                   Non-recurring
-                                 </MenuItem>
-                               </TextField>
-                             </TableCell>
- 
-                             <TableCell>
-                               <TextField
-                                 size="small"
-                                 value={item.name}
-                                 onChange={(e) =>
-                                   handleItemChange(
-                                     index,
-                                     "name",
-                                     e.target.value,
-                                   )
-                                 }
-                               />
-                             </TableCell>
- 
-                             <TableCell>
-                               <TextField
-                                 type="number"
-                                 size="small"
-                                 value={item.quantity}
-                                 onChange={(e) =>
-                                   handleItemChange(
-                                     index,
-                                     "quantity",
-                                     e.target.value,
-                                   )
-                                 }
-                               />
-                             </TableCell>
- 
-                             <TableCell>
-                               <TextField
-                                 type="number"
-                                 size="small"
-                                 value={item.price}
-                                 onChange={(e) =>
-                                   handleItemChange(
-                                     index,
-                                     "price",
-                                     e.target.value,
-                                   )
-                                 }
-                               />
-                             </TableCell>
- 
-                             <TableCell>
-                               ₹ {Number(item.total || 0).toFixed(2)}
-                             </TableCell>
- 
-                             <TableCell>
-                               <Button
-                                 color="error"
-                                 onClick={() => removeItem(index)}
-                               >
-                                 X
-                               </Button>
-                             </TableCell>
-                           </TableRow>
-                         ))}
-                       </TableBody>
-                     </Table>
-                   </TableContainer>
- 
-                   {/* ADD + TOTAL */}
-                   <Box
-                     sx={{
-                       mt: 2,
-                       display: "flex",
-                       justifyContent: "space-between",
-                     }}
-                   >
-                     <Button variant="outlined" onClick={addItem}>
-                       + Add
-                     </Button>
-                     <Typography sx={{ fontWeight: 700 }}>
-                       Grand Total: ₹ {calculateGrandTotal().toFixed(2)}
-                     </Typography>
-                   </Box>
- {/* ================= MENU CHART ================= */}
- <Typography
-   variant="subtitle1"
-   sx={{ fontWeight: 700, color: "#d97706", mb: 2, mt: 4 }}
- >
-   📋 Menu Chart as per NEST Guideline
- </Typography>
- 
- <TableContainer component={Paper}>
-   <Table size="small">
-     <TableHead sx={{ background: "#f1f5f9" }}>
-       <TableRow>
-         <TableCell><b>Day</b></TableCell>
-         <TableCell><b>Breakfast</b></TableCell>
-         <TableCell><b>Snacks (Morning)</b></TableCell>
-         <TableCell><b>Lunch</b></TableCell>
-         <TableCell><b>Snacks (Evening)</b></TableCell>
-         <TableCell><b>Dinner</b></TableCell>
-       </TableRow>
-     </TableHead>
- 
-     <TableBody>
-       {[
-         {
-           day: "Monday",
-           breakfast: "Suji, Motor chana curry",
-           morning: "Moongdal",
-           lunch: "Rice, Dal, Mix Veg Curry",
-           evening: "Samosa / Bora",
-           dinner: "Rice, Dal, Seasonal Veg",
-         },
-         {
-           day: "Tuesday",
-           breakfast: "Veg Biryani",
-           morning: "Biscuit",
-           lunch: "Rice, Dal, Egg Curry",
-           evening: "Milk with Biscuit",
-           dinner: "Rice, Dal, Potato Soyabin",
-         },
-         {
-           day: "Wednesday",
-           breakfast: "Mudhi Mixture",
-           morning: "Cake",
-           lunch: "Rice, Dal, Fish/Mushroom",
-           evening: "Masala Channa",
-           dinner: "Rice, Dalama",
-         },
-         {
-           day: "Thursday",
-           breakfast: "Idli with curry",
-           morning: "Fruit / Sev",
-           lunch: "Rice, Dal, Veg Curry",
-           evening: "Milk with Biscuit",
-           dinner: "Rice, Dal, Soyabin",
-         },
-         {
-           day: "Friday",
-           breakfast: "Bread and Milk",
-           morning: "Sonpapdi",
-           lunch: "Rice, Dal, Egg Curry",
-           evening: "Mudhi Mixture",
-           dinner: "Rice, Dal, Veg Curry",
-         },
-         {
-           day: "Saturday",
-           breakfast: "Veg Biryani",
-           morning: "Peanut",
-           lunch: "Rice, Dal, Veg Curry",
-           evening: "Cake / Bun",
-           dinner: "Rice, Dal, Veg Curry",
-         },
-         {
-           day: "Sunday",
-           breakfast: "Idli with curry",
-           morning: "-",
-           lunch: "Rice, Dal, Chicken/Paneer",
-           evening: "Biscuit",
-           dinner: "Rice, Dalama with Papad",
-         },
-       ].map((row, index) => (
-         <TableRow key={index}>
-           <TableCell>{row.day}</TableCell>
-           <TableCell>{row.breakfast}</TableCell>
-           <TableCell>{row.morning}</TableCell>
-           <TableCell>{row.lunch}</TableCell>
-           <TableCell>{row.evening}</TableCell>
-           <TableCell>{row.dinner}</TableCell>
-         </TableRow>
-       ))}
-     </TableBody>
-   </Table>
- </TableContainer>
-                   {/* ================= SUBSECTION 2 ================= */}
+                  
+                  
+{/* ================= MENU CHART ================= */}
+<Typography
+  variant="subtitle1"
+  sx={{ fontWeight: 700, color: "#d97706", mb: 2, mt: 4 }}
+>
+  📋 Food Menu for Students (As per NEST Guideline)
+</Typography>
+
+<TableContainer component={Paper}>
+  <Table size="small">
+    <TableHead sx={{ background: "#f1f5f9" }}>
+      <TableRow>
+        <TableCell><b>Meal</b></TableCell>
+        <TableCell><b>Items Served</b></TableCell>
+        <TableCell><b>Timing</b></TableCell>
+      </TableRow>
+    </TableHead>
+
+    <TableBody>
+      {[
+        {
+          meal: "Pre-Breakfast",
+          items: "Nuts (Almonds – 4 nuts per student), Tea & Biscuit",
+          timing: "6:15 AM – 7:00 AM",
+        },
+        {
+          meal: "Breakfast",
+          items: "Puri/Sabji (Kabuli, Chanadal, Rajma), Rice, Suji/Upma, Poha, Milk, Boiled Egg, Bread with Butter/Jam, Tea, Juice, Honey, Fruits",
+          timing: "8:55 AM – 9:30 AM",
+        },
+        {
+          meal: "Lunch",
+          items: "Rice/Roti with lentils and vegetables, Salad, Pickle, Rajma",
+          timing: "1:40 PM – 3:00 PM",
+        },
+        {
+          meal: "Evening Meal",
+          items: "Noodles, Cake, Samosa, Kachori, Tea/Coffee, Pakoda",
+          timing: "6:00 PM – 6:20 PM",
+        },
+        {
+          meal: "Dinner",
+          items: "Rice with lentils, Boiled Vegetable, Mixed Veg Fry/Curry, Fried Rice, Soup, Pickle. *Fish/Chicken/Egg curry on alternate days. *Paneer – one day a week.",
+          timing: "8:00 PM – 8:45 PM",
+        },
+      ].map((row, index) => (
+        <TableRow key={index}>
+          <TableCell sx={{ fontWeight: 600 }}>{row.meal}</TableCell>
+          <TableCell>{row.items}</TableCell>
+          <TableCell sx={{ whiteSpace: "nowrap" }}>{row.timing}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</TableContainer>                   {/* ================= SUBSECTION 2 ================= */}
                    <Typography
                      sx={{ fontWeight: 600, color: "#2563eb", mt: 4, mb: 2 }}
                    >
