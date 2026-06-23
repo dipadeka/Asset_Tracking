@@ -301,9 +301,9 @@ const HospitalizationSection = ({
                 {/* Marks Box */}
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f7faff", border: "1px solid #c8d4e8", borderRadius: 1.5, px: 2, py: 1.2 }}>
                   <Typography sx={{ fontSize: "0.72rem", color: "#5a6a85", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                    Marks Obtained (out of 9)
+                    Marks Obtained (out of 7)
                   </Typography>
-                  <Typography sx={{ fontSize: "1.4rem", fontWeight: 500, color: row.marksHealth === 9 ? "#b8860b" : row.marksHealth === 7 ? "#155724" : row.marksHealth === 5 ? "#856404" : row.marksHealth === 3 ? "#7d3c0c" : row.marksHealth === 0 ? "#721c24" : "#1a1a2e" }}>
+                  <Typography sx={{ fontSize: "1.4rem", fontWeight: 500, color: row.marksHealth === 7 ? "#b8860b" : row.marksHealth === 5 ? "#155724" : row.marksHealth === 3 ? "#856404" : row.marksHealth === 1 ? "#7d3c0c" : row.marksHealth === 0 ? "#721c24" : "#1a1a2e" }}>
                     {row.marksHealth !== undefined && row.marksHealth !== null ? row.marksHealth : "—"}
                   </Typography>
                 </Box>
@@ -316,7 +316,7 @@ const HospitalizationSection = ({
                   <Typography sx={{ color: "#fff", fontSize: "0.68rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>Marks</Typography>
                 </Box>
                 {[
-                  { status: "All 7 conditions fulfilled",   marks: 9, bg: "#fff8e1", color: "#b8860b", border: "#f9d84a" },
+                  
                   { status: "5 or 6 conditions fulfilled",  marks: 7, bg: "#d4edda", color: "#155724", border: "#b8dfc4" },
                   { status: "3 or 4 conditions fulfilled",  marks: 5, bg: "#fff3cd", color: "#856404", border: "#f0d78c" },
                   { status: "1 or 2 conditions fulfilled",  marks: 3, bg: "#fde8d8", color: "#7d3c0c", border: "#f0c09a" },
@@ -328,7 +328,7 @@ const HospitalizationSection = ({
                   </Box>
                 ))}
                 <Box sx={{ background: "#e8f0fb", borderTop: "1px solid #c8d4e8", px: 2, py: 0.7, textAlign: "right" }}>
-                  <Typography sx={{ fontSize: "0.68rem", color: "#0c447c" }}>Total: out of 9 marks</Typography>
+                  <Typography sx={{ fontSize: "0.68rem", color: "#0c447c" }}>Total: out of 7 marks</Typography>
                 </Box>
               </Box>
             </Box>

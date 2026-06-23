@@ -3,6 +3,11 @@ import { Grid, Typography, TextField, MenuItem, Box,
          Button, Table, TableBody, TableCell, TableContainer,
          TableHead, TableRow, Paper } from "@mui/material";
 import { Controller } from "react-hook-form";
+const AUTO_FILLED_FIELDS = {
+  
+  "Hostel Capacity": "240"
+};
+
 
 export default function HostelDetails({
   control,
@@ -14,6 +19,8 @@ export default function HostelDetails({
   handleItemChange,
   calculateGrandTotal,
 }) {
+   
+  
   return (
     <>
    <Grid container spacing={2}>
@@ -40,6 +47,7 @@ export default function HostelDetails({
                  >
                    Boys Hostel Details
                  </Typography>
+                 
  
                  <Grid container spacing={2} mb={4}>
                    {/* ── Line 1: Capacity, Beds, Occupancy ── */}
@@ -47,7 +55,7 @@ export default function HostelDetails({
                      <Controller
                        name="boysHostelCapacity"
                        control={control}
-                       defaultValue=""
+                       defaultValue="240"
                        rules={{
                          min: {
                            value: 0,
@@ -61,7 +69,9 @@ export default function HostelDetails({
                            type="number"
                            fullWidth
                            size="small"
-                           inputProps={{ min: 0 }}
+                           InputProps={{
+  readOnly: true,
+}}
                            error={!!error}
                            helperText={error ? error.message : ""}
                            onKeyDown={(e) => {
@@ -383,7 +393,7 @@ export default function HostelDetails({
                      <Controller
                        name="girlsHostelCapacity"
                        control={control}
-                       defaultValue=""
+                       defaultValue="240"
                        rules={{
                          min: {
                            value: 0,
@@ -397,7 +407,9 @@ export default function HostelDetails({
                            type="number"
                            fullWidth
                            size="small"
-                           inputProps={{ min: 0 }}
+                           InputProps={{
+  readOnly: true,
+}}
                            error={!!error}
                            helperText={error ? error.message : ""}
                            onKeyDown={(e) => {

@@ -50,29 +50,52 @@ const SectionTable = ({ title, rows }) => (
     </TableContainer>
   </Box>
 );
-/* Schools only ever see their own submissions; any non-"school" role (admin) sees all. */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FIX 1: filterFormsForUser — match on ANY identifier field
+   Previously only matched schoolCode OR username, missing cases where the
+   form was saved with EMRScode / loginId / email instead.
+───────────────────────────────────────────────────────────────────────────── */
 const filterFormsForUser = (forms, currentUser) => {
-  if (!currentUser) return [];               // not logged in → show nothing
+  if (!currentUser) return [];
   if (currentUser.role !== "school") return forms; // admin / other roles → see everything
 
-  const userCode = String(currentUser.schoolCode || "").trim().toLowerCase();
-  const userId = String(currentUser.username || currentUser.loginId || currentUser.id || "")
-    .trim()
-    .toLowerCase();
+  // Collect every possible identifier this user might have
+  const userIdentifiers = new Set(
+    [
+      currentUser.schoolCode,
+      currentUser.username,
+      currentUser.loginId,
+      currentUser.id,
+      currentUser.email,
+      currentUser.emailid,
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).trim().toLowerCase())
+  );
+
+  // Failsafe: if we genuinely have no identifiers, show all so the user
+  // isn't locked out (edge case during development/testing).
+  if (userIdentifiers.size === 0) return forms;
 
   return forms.filter((f) => {
-    const formCode = String(f.EMRScode || f.schoolCode || "").trim().toLowerCase();
-    if (userCode && formCode && formCode === userCode) return true;
+    const formIdentifiers = [
+      f.EMRScode,
+      f.schoolCode,
+      f.username,
+      f.loginId,
+      f.email,
+      f.emailid,
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).trim().toLowerCase());
 
-    const formUserId = String(f.username || f.loginId || "").trim().toLowerCase();
-    if (userId && formUserId && formUserId === userId) return true;
-
-    return false;
+    return formIdentifiers.some((fi) => userIdentifiers.has(fi));
   });
 };
 
 const EMRSApplied = () => {
-  const { user } = useAuth();  
+  const { user } = useAuth();
   const [submittedForms, setSubmittedForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [usingCache, setUsingCache] = useState(false);
@@ -80,28 +103,49 @@ const EMRSApplied = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   const [deleting, setDeleting] = useState(false);
-const loadForms = useCallback(async () => {
-  setLoading(true);
-  setError(null);
-  setUsingCache(false);
 
-  try {
-    const fromApi = await fetchEmrsFromBackend();
-    const allForms = deduplicate(fromApi);
+  /* ─────────────────────────────────────────────────────────────────────────
+     FIX 2: loadForms — merge local_* records with API so a freshly-submitted
+     form (saved to localStorage while the API call may have failed) is always
+     visible immediately without needing a separate offline-fallback path.
+  ───────────────────────────────────────────────────────────────────────── */
+  const loadForms = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setUsingCache(false);
 
-    writeLS(allForms);                              // cache EVERYTHING
-    const visibleForms = filterFormsForUser(allForms, user);
-    setSubmittedForms(visibleForms);                 // but only DISPLAY this user's own forms
-  } catch (apiError) {
-    const cached = deduplicate(readLS());
-    const visibleCached = filterFormsForUser(cached, user);
-    setSubmittedForms(visibleCached);
-    setUsingCache(true);
-    setError(apiError.message || "Could not reach the server. Showing cached submissions.");
-  } finally {
-    setLoading(false);
-  }
-}, [user]);   // 👈 add user as a dependency
+    // Always load localStorage first — local_* records must never be lost
+    const localRecords = deduplicate(readLS());
+
+    try {
+      const fromApi = await fetchEmrsFromBackend();
+
+      // Keep any local_* entries that the server doesn't have yet
+      const apiIds = new Set(fromApi.map((f) => String(getFormId(f) || "")));
+      const localOnly = localRecords.filter(
+        (f) =>
+          String(getFormId(f) || "").startsWith("local_") &&
+          !apiIds.has(String(getFormId(f) || ""))
+      );
+
+      const allForms = deduplicate([...fromApi, ...localOnly]);
+      writeLS(allForms); // update cache with merged result
+
+      const visibleForms = filterFormsForUser(allForms, user);
+      setSubmittedForms(visibleForms);
+    } catch (apiError) {
+      // API unreachable — fall back to local cache
+      const visibleCached = filterFormsForUser(localRecords, user);
+      setSubmittedForms(visibleCached);
+      setUsingCache(true);
+      setError(
+        apiError.message || "Could not reach the server. Showing cached submissions."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     loadForms();
     window.addEventListener("emrs-form-submitted", loadForms);
@@ -190,16 +234,16 @@ const loadForms = useCallback(async () => {
       )}
 
       {submittedForms.length === 0 ? (
-  <Box sx={{ textAlign: "center", p: 6, border: "2px dashed #e2e8f0", borderRadius: 3, background: "#f8fafc" }}>
-    <Typography fontSize={48}>📋</Typography>
-    <Typography fontWeight={600} mt={1}>No EMRS forms submitted yet</Typography>
-    <Typography color="text.secondary" fontSize={14}>
-      {user?.role === "school"
-        ? "You haven't submitted an EMRS form for your school yet."
-        : "Complete and submit the EMRS form to see your application here."}
-    </Typography>
-  </Box>
-) : (
+        <Box sx={{ textAlign: "center", p: 6, border: "2px dashed #e2e8f0", borderRadius: 3, background: "#f8fafc" }}>
+          <Typography fontSize={48}>📋</Typography>
+          <Typography fontWeight={600} mt={1}>No EMRS forms submitted yet</Typography>
+          <Typography color="text.secondary" fontSize={14}>
+            {user?.role === "school"
+              ? "You haven't submitted an EMRS form for your school yet."
+              : "Complete and submit the EMRS form to see your application here."}
+          </Typography>
+        </Box>
+      ) : (
         submittedForms.map((form, index) => (
           <Accordion
             key={getFormId(form) || index}
@@ -218,7 +262,8 @@ const loadForms = useCallback(async () => {
                 <Box>
                   <Typography fontWeight={700} fontSize={16}>{form.schoolname || "—"}</Typography>
                   <Typography fontSize={12} sx={{ opacity: 0.85 }}>
-                    EMRS Code: {form.EMRScode} &nbsp;|&nbsp; District: {form.district} &nbsp;|&nbsp;
+                    EMRS Code: {form.EMRScode || form.schoolCode} &nbsp;|&nbsp;
+                    District: {form.district} &nbsp;|&nbsp;
                     Submitted: {form.createdAt ? new Date(form.createdAt).toLocaleString() : "—"}
                   </Typography>
                 </Box>

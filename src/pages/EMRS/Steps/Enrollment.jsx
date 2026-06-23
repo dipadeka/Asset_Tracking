@@ -5,32 +5,32 @@ import { achievementLevels } from "./constants/emrsfields";
 
 // ── Exam eligibility map by class ──
 const EXAM_CLASS_MAP = {
-  "School Level":                         ["6","7","8","9","10","11","12"],
-  "District Level":                       ["6","7","8","9","10","11","12"],
-  "State Level":                          ["6","7","8","9","10","11","12"],
-  "National Level":                       ["6","7","8","9","10","11","12"],
-  "Mathematics Olympiad":                 ["6","7","8","9","10","11","12"],
-  "Physics Olympiad":                     ["6","7","8","9","10","11","12"],
-  "Chemistry Olympiad":                   ["6","7","8","9","10","11","12"],
-  "Biology Olympiad":                     ["6","7","8","9","10","11","12"],
-  "Astronomy Olympiad":                   ["6","7","8","9","10","11","12"],
-  "National Sports Championship":         ["6","7","8","9","10","11","12"],
-  "State Sports Championship":            ["6","7","8","9","10","11","12"],
-  "National Cultural Competition":        ["6","7","8","9","10","11","12"],
-  "Junior Science Olympiad":              ["6","7","8","9","10"],
-  "National Talent Search Examination":   ["10"],
-  "INSPIRE Scholarship":                  ["10","11","12"],
-  "Board Topper":                         ["10","11","12"],
-  "Board Merit List":                     ["10","11","12"],
-  "National Defence Academy":             ["11","12"],
-  "JEE Mains":                            ["12"],
-  "JEE Advanced":                         ["12"],
-  "NEET":                                 ["12"],
-  "CUET":                                 ["12"],
-  "Common Law Admission Test":            ["12"],
-  "CA Foundation":                        ["12"],
-  "National Institute of Fashion":        ["12"],
-  "NID":                                  ["12"],
+  "School Level": ["6", "7", "8", "9", "10", "11", "12"],
+  "District Level": ["6", "7", "8", "9", "10", "11", "12"],
+  "State Level": ["6", "7", "8", "9", "10", "11", "12"],
+  "National Level": ["6", "7", "8", "9", "10", "11", "12"],
+  "Mathematics Olympiad": ["6", "7", "8", "9", "10", "11", "12"],
+  "Physics Olympiad": ["6", "7", "8", "9", "10", "11", "12"],
+  "Chemistry Olympiad": ["6", "7", "8", "9", "10", "11", "12"],
+  "Biology Olympiad": ["6", "7", "8", "9", "10", "11", "12"],
+  "Astronomy Olympiad": ["6", "7", "8", "9", "10", "11", "12"],
+  "National Sports Championship": ["6", "7", "8", "9", "10", "11", "12"],
+  "State Sports Championship": ["6", "7", "8", "9", "10", "11", "12"],
+  "National Cultural Competition": ["6", "7", "8", "9", "10", "11", "12"],
+  "Junior Science Olympiad": ["6", "7", "8", "9", "10"],
+  "National Talent Search Examination": ["10"],
+  "INSPIRE Scholarship": ["10", "11", "12"],
+  "Board Topper": ["10", "11", "12"],
+  "Board Merit List": ["10", "11", "12"],
+  "National Defence Academy": ["11", "12"],
+  "JEE Mains": ["12"],
+  "JEE Advanced": ["12"],
+  "NEET": ["12"],
+  "CUET": ["12"],
+  "Common Law Admission Test": ["12"],
+  "CA Foundation": ["12"],
+  "National Institute of Fashion": ["12"],
+  "NID": ["12"],
 };
 
 const getFilteredAchievementLevels = (className) => {
@@ -144,7 +144,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   value={row.academicYear}
                   onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].academicYear = e.target.value; setEnrollmentRows(u); }}
                 >
-                  {["2024-2025","2025-2026","2026-2027","2027-2028","2028-2029","2029-2030"].map((y) => (
+                  {["2024-2025", "2025-2026", "2026-2027", "2027-2028", "2028-2029", "2029-2030"].map((y) => (
                     <MenuItem key={y} value={y}>{y}</MenuItem>
                   ))}
                 </TextField>
@@ -155,7 +155,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   value={row.class}
                   onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].class = e.target.value; setEnrollmentRows(u); }}
                 >
-                  {["6","7","8","9","10","11","12"].map((c) => (
+                  {["6", "7", "8", "9", "10", "11", "12"].map((c) => (
                     <MenuItem key={c} value={c}>{c}</MenuItem>
                   ))}
                 </TextField>
@@ -166,7 +166,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   value={row.section}
                   onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].section = e.target.value; setEnrollmentRows(u); }}
                 >
-                  {["A","B","C"].map((s) => (
+                  {["A", "B", "C"].map((s) => (
                     <MenuItem key={s} value={s}>{s}</MenuItem>
                   ))}
                 </TextField>
@@ -212,9 +212,9 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                       u[rowIndex].categoryBreakdown[catKey][level] = value;
                       setEnrollmentRows(u);
                     };
-                    const categoryKeys = ["ST","PVTG","DNT_NT_SNT","LWE_Covid","Widow","Divyang","LandDonor"];
-                    const categoryLabels = ["ST","PVTG","DNT/NT/SNT","LWE/Covid","Widow","Divyang/Orphan","Land Donor"];
-                    const colors = ["#1976d2","#7b1fa2","#2e7d32","#e65100","#f57c00","#c62828","#00838f"];
+                    const categoryKeys = ["ST", "PVTG", "DNT_NT_SNT", "LWE_Covid", "Widow", "Divyang", "LandDonor"];
+                    const categoryLabels = ["ST", "PVTG", "DNT/NT/SNT", "LWE/Covid", "Widow", "Divyang/Orphan", "Land Donor"];
+                    const colors = ["#1976d2", "#7b1fa2", "#2e7d32", "#e65100", "#f57c00", "#c62828", "#00838f"];
                     const breakdown = row.categoryBreakdown || {};
                     const getCatTotal = (key) => {
                       const bd = breakdown[key] || {};
@@ -252,7 +252,22 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                                           disabled={cat.notApplicable || (level === "State" && !cat.hasState)}
                                           value={cat.notApplicable ? "0" : bd[level] || ""}
                                           helperText={cat.notApplicable ? "Not applicable" : level === "State" && !cat.hasState ? "0 (N/A)" : `Expected: ${cat.expected[level]}`}
-                                          onChange={(e) => { if (cat.notApplicable) return; handleChange(cat.key, level, e.target.value); }}
+                                    
+                                     inputProps={{ min: 0 }}
+  onKeyDown={(e) => {
+    if (e.key === "-" || e.key === "e") {
+      e.preventDefault();
+    }
+  }}
+        onChange={(e) => {
+                                            if (cat.notApplicable) return;
+
+                                            const value = e.target.value;
+
+                                            if (value === "" || Number(value) >= 0) {
+                                              handleChange(cat.key, level, value);
+                                            }
+                                          }}
                                         />
                                       </Grid>
                                     ))}
@@ -287,7 +302,19 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                                                 disabled={level === "State"}
                                                 value={bd[level] || ""}
                                                 helperText={level === "State" ? "0 (N/A)" : ""}
-                                                onChange={(e) => handleChange(cat.key, level, e.target.value)}
+                                                  inputProps={{ min: 0 }}
+onKeyDown={(e) => {
+  if (e.key === "-" || e.key === "e") {
+    e.preventDefault();
+  }
+}}
+                                                onChange={(e) => {
+  const value = e.target.value;
+
+  if (value === "" || Number(value) >= 0) {
+    handleChange(cat.key, level, value);
+  }
+}}
                                               />
                                             </Grid>
                                           ))}
@@ -298,7 +325,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                                 })}
                               </Grid>
                               {(() => {
-                                const cat4Total = ["LWE_Covid","Widow","Divyang"].reduce((sum, k) => sum + levels.reduce((s, l) => s + Number(breakdown[k]?.[l] || 0), 0), 0);
+                                const cat4Total = ["LWE_Covid", "Widow", "Divyang"].reduce((sum, k) => sum + levels.reduce((s, l) => s + Number(breakdown[k]?.[l] || 0), 0), 0);
                                 const cat4Max = Math.round((row.sanctionedCapacity || 60) * 0.07);
                                 if (cat4Total === 0) return null;
                                 return (
@@ -358,7 +385,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
             </Typography>
 
             {/* ── CLASS 6, 7, 8, 9 — Annual Exam ── */}
-            {["6","7","8","9"].includes(row.class) && (
+            {["6", "7", "8", "9"].includes(row.class) && (
               <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 3, backgroundColor: "#f8fafc" }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 2 }}>
                   Annual Exam Performance — Class {row.class}
@@ -466,7 +493,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   <Table size="small">
                     <TableHead><TableRow><TableCell>Pass %</TableCell><TableCell>Marks</TableCell></TableRow></TableHead>
                     <TableBody>
-                      {[{ range: "100%", marks: 10 },{ range: "90–99%", marks: 9 },{ range: "80–89%", marks: 8 },{ range: "70–79%", marks: 7 },{ range: "60–69%", marks: 6 },{ range: "50–59%", marks: 5 },{ range: "40–49%", marks: 4 },{ range: "33–39%", marks: 3 },{ range: "Below 33%", marks: 0 }].map((r) => (
+                      {[{ range: "100%", marks: 10 }, { range: "90–99%", marks: 9 }, { range: "80–89%", marks: 8 }, { range: "70–79%", marks: 7 }, { range: "60–69%", marks: 6 }, { range: "50–59%", marks: 5 }, { range: "40–49%", marks: 4 }, { range: "33–39%", marks: 3 }, { range: "Below 33%", marks: 0 }].map((r) => (
                         <TableRow key={r.range}><TableCell>{r.range}</TableCell><TableCell>{r.marks}</TableCell></TableRow>
                       ))}
                     </TableBody>
@@ -476,7 +503,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
             )}
 
             {/* ── CLASS 11 & 12 — Board Exam by Stream ── */}
-            {["11","12"].includes(row.class) && (
+            {["11", "12"].includes(row.class) && (
               <Box sx={{ border: "1px solid #e2e8f0", borderRadius: 1, p: 2, mb: 3, backgroundColor: "#f8fafc" }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 2 }}>
                   Board Exam Performance — Class {row.class} (Stream-wise)
@@ -487,7 +514,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                       select label="Stream" fullWidth size="small" sx={{ minWidth: 220 }} value={row.stream || ""}
                       onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].stream = e.target.value; setEnrollmentRows(u); }}
                     >
-                      {["Science","Commerce","Arts"].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                      {["Science", "Commerce", "Arts"].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                     </TextField>
                   </Grid>
                 </Grid>
@@ -546,7 +573,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   <Table size="small">
                     <TableHead><TableRow><TableCell>Pass %</TableCell><TableCell>Marks</TableCell></TableRow></TableHead>
                     <TableBody>
-                      {[{ range: "100%", marks: 10 },{ range: "90–99%", marks: 9 },{ range: "80–89%", marks: 8 },{ range: "70–79%", marks: 7 },{ range: "60–69%", marks: 6 },{ range: "50–59%", marks: 5 },{ range: "40–49%", marks: 4 },{ range: "33–39%", marks: 3 },{ range: "Below 33%", marks: 0 }].map((r) => (
+                      {[{ range: "100%", marks: 10 }, { range: "90–99%", marks: 9 }, { range: "80–89%", marks: 8 }, { range: "70–79%", marks: 7 }, { range: "60–69%", marks: 6 }, { range: "50–59%", marks: 5 }, { range: "40–49%", marks: 4 }, { range: "33–39%", marks: 3 }, { range: "Below 33%", marks: 0 }].map((r) => (
                         <TableRow key={r.range}><TableCell>{r.range}</TableCell><TableCell>{r.marks}</TableCell></TableRow>
                       ))}
                     </TableBody>
@@ -606,7 +633,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                         value={dropout.wasCounselled || ""}
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].dropouts[dIndex].wasCounselled = e.target.value; setEnrollmentRows(u); }}
                       >
-                        {["Yes","No"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                        {["Yes", "No"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                       </TextField>
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
@@ -633,7 +660,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                         value={dropout.counselledBy || ""}
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].dropouts[dIndex].counselledBy = e.target.value; setEnrollmentRows(u); }}
                       >
-                        {["Class Teacher","Principal / Head Teacher","Warden","Counsellor","Parent / Guardian","Other"].map((v) => (
+                        {["Class Teacher", "Principal / Head Teacher", "Warden", "Counsellor", "Parent / Guardian", "Other"].map((v) => (
                           <MenuItem key={v} value={v}>{v}</MenuItem>
                         ))}
                       </TextField>
@@ -645,7 +672,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                         value={dropout.guardianPresentInCounselling || ""}
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].dropouts[dIndex].guardianPresentInCounselling = e.target.value; setEnrollmentRows(u); }}
                       >
-                        {["Yes","No"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                        {["Yes", "No"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                       </TextField>
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
@@ -654,7 +681,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                         value={dropout.dropoutPreventable || ""}
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].dropouts[dIndex].dropoutPreventable = e.target.value; setEnrollmentRows(u); }}
                       >
-                        {["Yes","No","Uncertain"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                        {["Yes", "No", "Uncertain"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                       </TextField>
                     </Grid>
                     <Grid item xs={12} sm={6} md={6}>
@@ -663,7 +690,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                         value={dropout.followUpAction || ""}
                         onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].dropouts[dIndex].followUpAction = e.target.value; setEnrollmentRows(u); }}
                       >
-                        {["Home visit conducted","Letter sent to guardian","Referred to welfare officer","No follow-up taken","Other"].map((v) => (
+                        {["Home visit conducted", "Letter sent to guardian", "Referred to welfare officer", "No follow-up taken", "Other"].map((v) => (
                           <MenuItem key={v} value={v}>{v}</MenuItem>
                         ))}
                       </TextField>
@@ -704,7 +731,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                     <TextField
                       label="Guardian Contact No" fullWidth size="small" value={dropout.guardianContactNo}
                       inputProps={{ maxLength: 10, inputMode: "numeric", pattern: "[0-9]*" }}
-                      onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) e.preventDefault(); }}
+                      onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key)) e.preventDefault(); }}
                       error={dropout.guardianContactNo && dropout.guardianContactNo.toString().length !== 10}
                       helperText={dropout.guardianContactNo && dropout.guardianContactNo.toString().length !== 10 ? "Must be exactly 10 digits" : ""}
                       onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].dropouts[dIndex].guardianContactNo = e.target.value; setEnrollmentRows(u); }}
@@ -722,7 +749,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                       label="PIN Code" fullWidth size="small" type="number" value={dropout.pinCode || ""}
                       inputProps={{ min: 0, maxLength: 6, inputMode: "numeric", pattern: "[0-9]*" }}
                       onKeyDown={(e) => {
-                        if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab"].includes(e.key)) e.preventDefault();
+                        if (!/[0-9]/.test(e.key) && !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key)) e.preventDefault();
                         if (e.key === "-" || e.key === "e") e.preventDefault();
                       }}
                       onChange={async (e) => {
@@ -866,7 +893,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
               Student Special Achievements
             </Typography>
 
-           
+
             {row.achievements.map((achievement, aIndex) => (
               <Grid container spacing={2} mb={1} key={aIndex}>
                 <Grid item xs={12} md={3}>
@@ -983,7 +1010,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {[{ condition: "30 or above", marks: 7 },{ condition: "20 or above", marks: 5 },{ condition: "10 or above", marks: 3 },{ condition: "Below 10", marks: 1 }].map((item, i) => (
+                          {[{ condition: "30 or above", marks: 7 }, { condition: "20 or above", marks: 5 }, { condition: "10 or above", marks: 3 }, { condition: "Below 10", marks: 1 }].map((item, i) => (
                             <TableRow key={i}>
                               <TableCell>{item.condition}</TableCell>
                               <TableCell>{item.marks}</TableCell>

@@ -1251,7 +1251,7 @@ const HomePage = () => {
         <div style={{ maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 32, alignItems: "start", minHeight: 0 }}>
           <div style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 10, padding: "28px 32px", boxShadow: "0 4px 20px rgba(139,69,19,0.07)" }}>
             <SectionLabel>About Us</SectionLabel>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: T.brownDark, margin: "0 0 14px" }}>EMRS & Asset Management System</h2>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: T.brownDark, margin: "0 0 14px" }}>EMRS Management System</h2>
             <p style={{ fontSize: 14, color: "#5a3e28", lineHeight: 1.85, margin: "0 0 14px" }}>
               The Directorate of Tribal Affairs (Plain), Government of Assam, established this unified digital platform to streamline governance of Eklavya Model Residential Schools (EMRS) and government assets across the state. The system brings school administration, student records, staff data, hostel management, and infrastructure tracking onto a single, transparent platform.
             </p>
@@ -1479,7 +1479,7 @@ const HomePage = () => {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg,#8b4513,#c8781e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏛️</div>
               <div>
-                <div style={{ fontWeight: 700, color: "#c8a84b", fontSize: 14 }}>EMRS & Asset Management System</div>
+                <div style={{ fontWeight: 700, color: "#c8a84b", fontSize: 14 }}>EMRS Management System</div>
                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Directorate of Tribal Affairs (Plain)</div>
               </div>
             </div>

@@ -370,11 +370,11 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
   const below75    = filteredRows.filter((r) => r.percentage < 75 && r.percentage > 0).length;
 
   const leaveFields = [
-    { key: "casualLeave",    label: "CL",  full: "Casual Leave" },
-    { key: "earnedLeave",    label: "EL",  full: "Earned Leave" },
-    { key: "medicalLeave",   label: "ML",  full: "Medical Leave" },
-    { key: "maternityLeave", label: "Mat", full: "Maternity Leave" },
-    { key: "paternityLeave", label: "Pat", full: "Paternity Leave" },
+    { key: "casualLeave",    label: "Casual Leave",  full: "Casual Leave" },
+    { key: "earnedLeave",    label: "Earned Leave",  full: "Earned Leave" },
+    { key: "medicalLeave",   label: "Medical Leave",  full: "Medical Leave" },
+    { key: "maternityLeave", label: "Maternity Leave", full: "Maternity Leave" },
+    { key: "paternityLeave", label: "Paternity Leave", full: "Paternity Leave" },
   ];
 
   const monthHolidays = getHolidaysForMonth(activeMonth);
@@ -640,6 +640,25 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 /* ─────────────────────────────────────────────────────────────────────────────
    STUDENT ATTENDANCE SECTION
 ───────────────────────────────────────────────────────────────────────────── */
+const normalizeMonth = (raw) => {
+  if (raw == null || raw === "") return "";
+  const s = String(raw).trim();
+ 
+  // Numeric: "6" or 6 → index 5 → "June"
+  const n = Number(s);
+  if (!isNaN(n) && n >= 1 && n <= 12) return MONTHS[n - 1];
+ 
+  // Try full or partial match (case-insensitive)
+  const lower = s.toLowerCase();
+  const found = MONTHS.find(
+    (m) => m.toLowerCase() === lower || m.toLowerCase().startsWith(lower.slice(0, 3))
+  );
+  return found || "";
+};
+ 
+/* ─────────────────────────────────────────────────────────────────────────────
+   STUDENT ATTENDANCE SECTION  (complete replacement)
+───────────────────────────────────────────────────────────────────────────── */
 const StudentAttendanceSection = ({
   studentAttendanceData, setStudentAttendanceData,
   studentAttendanceMonth, setStudentAttendanceMonth,
@@ -649,15 +668,15 @@ const StudentAttendanceSection = ({
   const [studentExcelError,     setStudentExcelError]     = useState("");
   const [studentExcelUploading, setStudentExcelUploading] = useState(false);
   const [showAddForm,           setShowAddForm]           = useState(false);
-
+ 
   const [newRow, setNewRow] = useState({
     rollNo: "", name: "", class: "", section: "",
     month: studentAttendanceMonth, workingDays: "", daysPresent: "",
     daysAbsent: 0, percentage: 0,
   });
-
+ 
   useEffect(() => { setNewRow((p) => ({ ...p, month: studentAttendanceMonth })); }, [studentAttendanceMonth]);
-
+ 
   const computeStudentRow = (row) => {
     const wd  = parseFloat(row.workingDays) || 0;
     const dp  = parseFloat(row.daysPresent) || 0;
@@ -665,7 +684,7 @@ const StudentAttendanceSection = ({
     const pct = wd > 0 ? parseFloat(((dp / wd) * 100).toFixed(1)) : 0;
     return { ...row, daysAbsent: da, percentage: pct };
   };
-
+ 
   const downloadStudentAttendanceTemplate = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([["Roll No","Name","Class","Section","Month","Working Days","Days Present"]]);
@@ -678,7 +697,8 @@ const StudentAttendanceSection = ({
     XLSX.writeFile(wb, "Student_Attendance_Template.xlsx");
     toast.success("Template downloaded!");
   };
-
+ 
+  // ── FIX 1 + FIX 2: normalise month & coerce rollNo to string ──────────────
   const handleStudentExcelUpload = (file) => {
     if (!file) return;
     setStudentExcelError(""); setStudentExcelUploading(true);
@@ -688,27 +708,42 @@ const StudentAttendanceSection = ({
         const wb  = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
         const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
         if (!raw.length) { setStudentExcelError("File is empty."); setStudentExcelUploading(false); return; }
+ 
         const parsed = raw.map((row) => {
-          const r = normaliseKeys(row);
+          const r = normaliseKeys(row);   // existing helper – lowercases keys
+ 
+          // ── FIX 1: normalise whatever the Excel stored as "month" ──
+          const rawMonth  = r["month"] ?? "";
+          const normMonth = normalizeMonth(rawMonth) || studentAttendanceMonth;
+ 
+          // ── FIX 2: always store rollNo as a trimmed string ──
+          const rollNo = String(r["rollno"] ?? r["roll"] ?? "").trim();
+ 
           return computeStudentRow({
-            rollNo:      String(r["rollno"] ?? r["roll"] ?? "").trim(),
+            rollNo,
             name:        String(r["name"]   ?? r["studentname"] ?? "").trim(),
             class:       String(r["class"]  ?? r["grade"] ?? "").trim(),
             section:     String(r["section"] ?? r["sec"] ?? "").trim(),
-            month:       String(r["month"] || studentAttendanceMonth).trim(),
+            month:       normMonth,          // ← normalised canonical month name
             workingDays: r["workingdays"] ?? r["totaldays"] ?? "",
             daysPresent: r["dayspresent"] ?? r["present"] ?? "",
             daysAbsent: 0, percentage: 0,
           });
         });
+ 
         setStudentAttendanceData((prev) => {
           const updated = [...prev];
           parsed.forEach((inc) => {
-            const idx = updated.findIndex((x) => x.rollNo === inc.rollNo && x.month === inc.month);
+            // ── FIX 2: both sides are strings now, so findIndex is reliable ──
+            const idx = updated.findIndex(
+              (x) => String(x.rollNo).trim() === String(inc.rollNo).trim() &&
+                     x.month === inc.month
+            );
             if (idx !== -1) updated[idx] = inc; else updated.push(inc);
           });
           return updated;
         });
+ 
         toast.success(`✅ Imported ${parsed.length} student record(s).`);
       } catch (err) {
         setStudentExcelError("Failed to parse: " + err.message);
@@ -717,7 +752,7 @@ const StudentAttendanceSection = ({
     reader.onerror = () => { setStudentExcelError("Could not read file."); setStudentExcelUploading(false); };
     reader.readAsArrayBuffer(file);
   };
-
+ 
   const exportStudentAttendance = () => {
     const data = studentAttendanceData.filter((r) => !studentAttendanceMonth || r.month === studentAttendanceMonth);
     if (!data.length) { toast.error("No data to export."); return; }
@@ -731,53 +766,67 @@ const StudentAttendanceSection = ({
     XLSX.writeFile(wb, `Student_${studentAttendanceMonth}_Attendance.xlsx`);
     toast.success("Exported!");
   };
-
+ 
   const allClasses = [...new Set(
     studentAttendanceData
       .filter((r) => !studentAttendanceMonth || r.month === studentAttendanceMonth)
       .map((r) => r.class).filter(Boolean)
   )].sort();
-
+ 
   const filteredData = studentAttendanceData.filter((r) => {
     const monthOk = !studentAttendanceMonth || r.month === studentAttendanceMonth;
     const classOk = filterClass === "All" || r.class === filterClass;
     return monthOk && classOk;
   });
-
+ 
   const classAverages = {};
   allClasses.forEach((cls) => {
-    const recs = studentAttendanceData.filter((r) => r.class === cls && (!studentAttendanceMonth || r.month === studentAttendanceMonth));
-    if (recs.length) classAverages[cls] = parseFloat((recs.reduce((s, r) => s + r.percentage, 0) / recs.length).toFixed(1));
+    const recs = studentAttendanceData.filter(
+      (r) => r.class === cls && (!studentAttendanceMonth || r.month === studentAttendanceMonth)
+    );
+    if (recs.length)
+      classAverages[cls] = parseFloat((recs.reduce((s, r) => s + r.percentage, 0) / recs.length).toFixed(1));
   });
-
+ 
   const addManualRow = () => {
+    if (!newRow.name.trim()) { toast.error("Please enter student name."); return; }
     const computed = computeStudentRow({ ...newRow, month: studentAttendanceMonth });
     setStudentAttendanceData((prev) => {
-      const idx = prev.findIndex((x) => x.rollNo === computed.rollNo && x.month === computed.month);
+      const idx = prev.findIndex(
+        (x) => String(x.rollNo).trim() === String(computed.rollNo).trim() && x.month === computed.month
+      );
       const updated = [...prev];
       if (idx !== -1) updated[idx] = computed; else updated.push(computed);
       return updated;
     });
-    setNewRow({ rollNo:"", name:"", class:"", section:"", month: studentAttendanceMonth, workingDays:"", daysPresent:"", daysAbsent:0, percentage:0 });
+    setNewRow({
+      rollNo: "", name: "", class: "", section: "",
+      month: studentAttendanceMonth, workingDays: "", daysPresent: "",
+      daysAbsent: 0, percentage: 0,
+    });
     setShowAddForm(false);
+    toast.success("✅ Student added.");
   };
-
+ 
   const removeRow = (rollNo, month) =>
-    setStudentAttendanceData((prev) => prev.filter((r) => !(r.rollNo === rollNo && r.month === month)));
-
+    setStudentAttendanceData((prev) =>
+      prev.filter((r) => !(String(r.rollNo).trim() === String(rollNo).trim() && r.month === month))
+    );
+ 
   const totalStudents = filteredData.length;
-  const avgAttendance = totalStudents > 0 ? (filteredData.reduce((s, r) => s + r.percentage, 0) / totalStudents).toFixed(1) : null;
+  const avgAttendance = totalStudents > 0
+    ? (filteredData.reduce((s, r) => s + r.percentage, 0) / totalStudents).toFixed(1) : null;
   const above75 = filteredData.filter((r) => r.percentage >= 75).length;
   const below50 = filteredData.filter((r) => r.percentage < 50).length;
-
+ 
   const attColor = (pct) => {
     if (pct >= 75) return { color: "#16a34a", bg: "#dcfce7" };
     if (pct >= 50) return { color: "#d97706", bg: "#fef3c7" };
     return { color: "#dc2626", bg: "#fee2e2" };
   };
-
+ 
   const monthHolidays = getHolidaysForMonth(studentAttendanceMonth);
-
+ 
   return (
     <Box>
       <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
@@ -788,7 +837,7 @@ const StudentAttendanceSection = ({
           </Button>
         ))}
       </Box>
-
+ 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Month:</Typography>
         {MONTHS.map((m) => (
@@ -798,7 +847,7 @@ const StudentAttendanceSection = ({
             sx={{ fontWeight: studentAttendanceMonth === m ? 700 : 400, cursor: "pointer", fontSize: 11 }} />
         ))}
       </Box>
-
+ 
       {monthHolidays.length > 0 && (
         <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {studentAttendanceMonth}:</Typography>
@@ -810,7 +859,8 @@ const StudentAttendanceSection = ({
           </Box>
         </Alert>
       )}
-
+ 
+      {/* ── ATTENDANCE TAB ── */}
       {activeTab === "attendance" && (
         <>
           {totalStudents > 0 && (
@@ -831,7 +881,7 @@ const StudentAttendanceSection = ({
               ))}
             </Grid>
           )}
-
+ 
           <Box sx={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 2, p: 2, mb: 2 }}>
             <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#0f766e", mb: 1 }}>📁 Excel Import / Export — Student Attendance</Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
@@ -860,9 +910,9 @@ const StudentAttendanceSection = ({
               Columns: Roll No · Name · Class · Section · Month · Working Days · Days Present
             </Typography>
           </Box>
-
+ 
           {studentExcelError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setStudentExcelError("")}>{studentExcelError}</Alert>}
-
+ 
           {showAddForm && (
             <Box sx={{ border: "1px solid #0f766e33", borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
               <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#0f766e", mb: 1.5 }}>✏️ Add Student Manually</Typography>
@@ -888,9 +938,16 @@ const StudentAttendanceSection = ({
                   </Button>
                 </Grid>
               </Grid>
+              {(newRow.workingDays || newRow.daysPresent) && (
+                <Box sx={{ mt: 1.5, display: "flex", gap: 2, p: 1.5, background: "#f0fdf4", borderRadius: 1.5 }}>
+                  <Typography sx={{ fontSize: 12, color: "#16a34a" }}>✅ Present: <strong>{newRow.daysPresent}</strong></Typography>
+                  <Typography sx={{ fontSize: 12, color: "#dc2626" }}>❌ Absent: <strong>{newRow.daysAbsent}</strong></Typography>
+                  <Typography sx={{ fontSize: 12, color: "#0f766e" }}>📊 <strong>{newRow.percentage}%</strong></Typography>
+                </Box>
+              )}
             </Box>
           )}
-
+ 
           {allClasses.length > 0 && (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Class:</Typography>
@@ -903,7 +960,7 @@ const StudentAttendanceSection = ({
               ))}
             </Box>
           )}
-
+ 
           {filteredData.length > 0 ? (
             <Box sx={{ overflowX: "auto", borderRadius: 2, border: "1px solid #e2e8f0" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
@@ -918,7 +975,7 @@ const StudentAttendanceSection = ({
                   {filteredData.map((r, i) => {
                     const tc = attColor(r.percentage);
                     return (
-                      <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f0fdfa" : "#fff" }}>
+                      <tr key={`${r.rollNo}-${r.month}-${i}`} style={{ backgroundColor: i % 2 === 0 ? "#f0fdfa" : "#fff" }}>
                         <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center", fontSize:12, color:"#94a3b8" }}>{i+1}</td>
                         <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:12, fontWeight:600 }}>{r.rollNo}</td>
                         <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:13, fontWeight:600 }}>{r.name}</td>
@@ -955,7 +1012,8 @@ const StudentAttendanceSection = ({
           )}
         </>
       )}
-
+ 
+      {/* ── CLASS-WISE TAB ── */}
       {activeTab === "classwise" && (
         <Box>
           <Typography sx={{ fontWeight:700, color:"#0f766e", fontSize:14, mb:2 }}>🏫 Class-wise Average — {studentAttendanceMonth}</Typography>
@@ -992,26 +1050,52 @@ const StudentAttendanceSection = ({
           )}
         </Box>
       )}
-
+ 
+      {/* ── PERFORMANCE TAB ──
+          FIX 3: trend uses studentAttendanceData directly (all months),
+          so the bar chart shows every month that has records regardless
+          of the currently selected month filter.                          */}
       {activeTab === "performance" && (
         <Box>
           <Typography sx={{ fontWeight:700, color:"#0f766e", fontSize:14, mb:1.5 }}>📈 Monthly Attendance Trend</Typography>
           {(() => {
-            const trend  = MONTHS.map((m) => {
+            // ── FIX 3: aggregate across ALL stored records (not filtered by month) ──
+            const trend = MONTHS.map((m) => {
               const recs = studentAttendanceData.filter((r) => r.month === m);
-              return { month: m, avg: recs.length ? parseFloat((recs.reduce((s,r) => s+r.percentage,0)/recs.length).toFixed(1)) : null };
+              return {
+                month: m,
+                avg: recs.length
+                  ? parseFloat((recs.reduce((s, r) => s + r.percentage, 0) / recs.length).toFixed(1))
+                  : null,
+                count: recs.length,
+              };
             });
-            const maxAvg = Math.max(...trend.filter((m) => m.avg !== null).map((m) => m.avg), 1);
+            const maxAvg = Math.max(...trend.filter((t) => t.avg !== null).map((t) => t.avg), 1);
+            const hasAnyData = trend.some((t) => t.avg !== null);
+ 
+            if (!hasAnyData) {
+              return (
+                <Box sx={{ textAlign:"center", py:4, border:"2px dashed #e2e8f0", borderRadius:2, color:"#94a3b8" }}>
+                  <Typography sx={{ fontSize:13 }}>No attendance data yet. Import records to see the trend.</Typography>
+                </Box>
+              );
+            }
+ 
             return (
-              <Box sx={{ display:"flex", alignItems:"flex-end", gap:1, height:140, background:"#f0fdfa", border:"1px solid #a7f3d0", borderRadius:2, px:2, py:2, overflowX:"auto", mb:3 }}>
-                {trend.map(({ month, avg }) => {
-                  const clr = avg >= 75 ? "#16a34a" : avg >= 50 ? "#d97706" : avg !== null ? "#dc2626" : "#d1d5db";
+              <Box sx={{ display:"flex", alignItems:"flex-end", gap:1, height:160, background:"#f0fdfa", border:"1px solid #a7f3d0", borderRadius:2, px:2, py:2, overflowX:"auto", mb:3 }}>
+                {trend.map(({ month, avg, count }) => {
+                  const clr = avg === null ? "#d1d5db" : avg >= 75 ? "#16a34a" : avg >= 50 ? "#d97706" : "#dc2626";
+                  const barH = avg !== null ? `${Math.max((avg / maxAvg) * 100, 4)}px` : "4px";
                   return (
-                    <Tooltip key={month} title={avg !== null ? `${avg}%` : "No data"} arrow>
-                      <Box sx={{ display:"flex", flexDirection:"column", alignItems:"center", minWidth:36, flex:1 }}>
-                        <Typography sx={{ fontSize:9, fontWeight:700, color:clr, mb:0.5 }}>{avg !== null ? `${avg}%` : "—"}</Typography>
-                        <Box sx={{ width:"100%", height: avg !== null ? `${(avg/maxAvg)*90}px` : "4px", background:clr, borderRadius:"4px 4px 0 0", minHeight:4 }} />
-                        <Typography sx={{ fontSize:9, color:"#64748b", mt:0.5 }}>{month.slice(0,3)}</Typography>
+                    <Tooltip key={month} title={avg !== null ? `${avg}% (${count} students)` : "No data"} arrow>
+                      <Box sx={{ display:"flex", flexDirection:"column", alignItems:"center", minWidth:36, flex:1, cursor:"default" }}>
+                        <Typography sx={{ fontSize:9, fontWeight:700, color:clr, mb:0.5 }}>
+                          {avg !== null ? `${avg}%` : "—"}
+                        </Typography>
+                        <Box sx={{ width:"80%", height: barH, background:clr, borderRadius:"4px 4px 0 0", minHeight:4, transition:"height 0.3s" }} />
+                        <Typography sx={{ fontSize:9, color: month === studentAttendanceMonth ? "#0f766e" : "#64748b", mt:0.5, fontWeight: month === studentAttendanceMonth ? 800 : 400 }}>
+                          {month.slice(0,3)}
+                        </Typography>
                       </Box>
                     </Tooltip>
                   );
@@ -1019,9 +1103,10 @@ const StudentAttendanceSection = ({
               </Box>
             );
           })()}
+ 
           {studentAttendanceData.filter((r) => r.percentage < 75).length > 0 && (
             <Alert severity="warning" sx={{ borderRadius:2 }}>
-              <Typography sx={{ fontWeight:700, fontSize:13, mb:1 }}>⚠️ Students Below 75%</Typography>
+              <Typography sx={{ fontWeight:700, fontSize:13, mb:1 }}>⚠️ Students Below 75% (all months)</Typography>
               <Box sx={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
                   <thead>
@@ -1030,15 +1115,19 @@ const StudentAttendanceSection = ({
                     ))}</tr>
                   </thead>
                   <tbody>
-                    {studentAttendanceData.filter((r) => r.percentage < 75).sort((a,b) => a.percentage-b.percentage).slice(0,10).map((r,i) => (
-                      <tr key={i} style={{ backgroundColor: r.percentage < 50 ? "#fee2e2" : "#fffbeb" }}>
-                        <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.rollNo}</td>
-                        <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12, fontWeight:600 }}>{r.name}</td>
-                        <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.class} - {r.section}</td>
-                        <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.month}</td>
-                        <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12, fontWeight:700, color: r.percentage < 50 ? "#dc2626" : "#d97706" }}>{r.percentage}%</td>
-                      </tr>
-                    ))}
+                    {studentAttendanceData
+                      .filter((r) => r.percentage < 75)
+                      .sort((a, b) => a.percentage - b.percentage)
+                      .slice(0, 20)
+                      .map((r, i) => (
+                        <tr key={i} style={{ backgroundColor: r.percentage < 50 ? "#fee2e2" : "#fffbeb" }}>
+                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.rollNo}</td>
+                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12, fontWeight:600 }}>{r.name}</td>
+                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.class} {r.section ? `- ${r.section}` : ""}</td>
+                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.month}</td>
+                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12, fontWeight:700, color: r.percentage < 50 ? "#dc2626" : "#d97706" }}>{r.percentage}%</td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </Box>
@@ -1049,8 +1138,7 @@ const StudentAttendanceSection = ({
     </Box>
   );
 };
-
-/* ─────────────────────────────────────────────────────────────────────────────
+ /* ─────────────────────────────────────────────────────────────────────────────
    ANNUAL STAFF OVERVIEW
 ───────────────────────────────────────────────────────────────────────────── */
 const AnnualStaffOverview = ({ staffAttendanceRows }) => {

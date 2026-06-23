@@ -1458,42 +1458,61 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
   const handleStudentExcelUpload_FIXED = (file) => {
   if (!file) return;
-  // setStudentExcelError("");
-  // setStudentExcelUploading(true);
+  setStudentExcelError("");
+  setStudentExcelUploading(true);
  
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      // FIX: use ArrayBuffer instead of BinaryString
       const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const raw = XLSX.utils.sheet_to_json(sheet, { defval: "" });
  
       if (!raw || raw.length === 0) {
-        // setStudentExcelError("The uploaded file appears to be empty.");
-        // setStudentExcelUploading(false);
+        setStudentExcelError("The uploaded file appears to be empty.");
+        setStudentExcelUploading(false);
         return;
       }
  
+      // Normalize column header keys
       const normalise = (obj) => {
         const out = {};
-        Object.entries(obj).forEach(([k, v]) => { out[k.toLowerCase().replace(/[\s_\-]/g, "")] = v; });
+        Object.entries(obj).forEach(([k, v]) => {
+          out[k.toLowerCase().replace(/[\s_\-]/g, "")] = v;
+        });
         return out;
+      };
+ 
+      // Convert any month format → canonical MONTHS[] entry
+      const normalizeMonth = (raw) => {
+        if (raw == null || raw === "") return "";
+        const s = String(raw).trim();
+        const n = Number(s);
+        if (!isNaN(n) && n >= 1 && n <= 12) return MONTHS[n - 1];
+        const lower = s.toLowerCase();
+        const found = MONTHS.find(
+          (m) => m.toLowerCase() === lower || m.toLowerCase().startsWith(lower.slice(0, 3))
+        );
+        return found || "";
       };
  
       const parsed = raw.map((row) => {
         const r = normalise(row);
-        const wd = parseFloat(r["workingdays"] ?? r["totaldays"] ?? "") || 0;
-        const dp = parseFloat(r["dayspresent"] ?? r["present"] ?? "") || 0;
-        const da = wd > 0 ? Math.max(0, wd - dp) : 0;
+        const wd  = parseFloat(r["workingdays"] ?? r["totaldays"] ?? "") || 0;
+        const dp  = parseFloat(r["dayspresent"] ?? r["present"] ?? "") || 0;
+        const da  = wd > 0 ? Math.max(0, wd - dp) : 0;
         const pct = wd > 0 ? parseFloat(((dp / wd) * 100).toFixed(1)) : 0;
+ 
+        const rawMonth  = r["month"] ?? "";
+        const normMonth = normalizeMonth(rawMonth) || studentAttendanceMonth;
+ 
         return {
-          rollNo:     String(r["rollno"] ?? r["roll"] ?? r["rollnumber"] ?? ""),
-          name:       String(r["name"] ?? r["studentname"] ?? ""),
-          class:      String(r["class"] ?? r["std"] ?? r["grade"] ?? ""),
-          section:    String(r["section"] ?? ""),
-          month:      String(r["month"] ?? ""), // will use studentAttendanceMonth as fallback
+          rollNo:      String(r["rollno"] ?? r["roll"] ?? r["rollnumber"] ?? "").trim(),
+          name:        String(r["name"]   ?? r["studentname"] ?? "").trim(),
+          class:       String(r["class"]  ?? r["std"] ?? r["grade"] ?? "").trim(),
+          section:     String(r["section"] ?? "").trim(),
+          month:       normMonth,
           workingDays: wd,
           daysPresent: dp,
           daysAbsent:  da,
@@ -1501,32 +1520,37 @@ const EMRSForm = ({ addSubmittedForm }) => {
         };
       });
  
-      // setStudentAttendanceData((prev) => {
-      //   const merged = [...prev];
-      //   parsed.forEach((incoming) => {
-      //     const idx = merged.findIndex((x) => x.rollNo === incoming.rollNo && x.month === incoming.month);
-      //     if (idx !== -1) merged[idx] = incoming;
-      //     else merged.push(incoming);
-      //   });
-      //   return merged;
-      // });
+      setStudentAttendanceData((prev) => {
+        const merged = [...prev];
+        parsed.forEach((incoming) => {
+          const idx = merged.findIndex(
+            (x) =>
+              String(x.rollNo).trim() === String(incoming.rollNo).trim() &&
+              x.month === incoming.month
+          );
+          if (idx !== -1) merged[idx] = incoming;
+          else merged.push(incoming);
+        });
+        return merged;
+      });
  
-      // toast.success(`✅ Imported ${parsed.length} student attendance records.`);
+      toast.success(`✅ Imported ${parsed.length} student attendance records.`);
     } catch (err) {
-      // setStudentExcelError("Failed to parse file: " + err.message);
+      setStudentExcelError("Failed to parse file: " + err.message);
     } finally {
-      // setStudentExcelUploading(false);
+      setStudentExcelUploading(false);
     }
   };
  
   reader.onerror = () => {
-    // setStudentExcelError("Could not read the file.");
-    // setStudentExcelUploading(false);
+    setStudentExcelError("Could not read the file.");
+    setStudentExcelUploading(false);
   };
  
-  // FIX: readAsArrayBuffer instead of readAsBinaryString
+  // Must use readAsArrayBuffer (not readAsBinaryString)
   reader.readAsArrayBuffer(file);
 };
+ 
  
 
 
@@ -1748,14 +1772,67 @@ const EMRSForm = ({ addSubmittedForm }) => {
       } catch (fetchError) { submittedId = `local_${Date.now()}`; }
 
       try {
-        const recordToSave = { ...payload, _id: submittedId || `local_${Date.now()}`, createdAt: new Date().toISOString(), submittedAt: new Date().toISOString() };
-        const existing = JSON.parse(localStorage.getItem("emrs_submitted_forms") || "[]");
-        const idx = existing.findIndex((f) => { if (payload.schoolCode && f.schoolCode === payload.schoolCode) return true; if (payload.username && f.username === payload.username) return true; if (payload.EMRScode && String(f.EMRScode) === String(payload.EMRScode)) return true; return false; });
-        if (idx !== -1) existing[idx] = recordToSave; else existing.push(recordToSave);
-        localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));
-        window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
-      } catch (storageError) { console.warn("localStorage save failed:", storageError.message); }
-
+  // FIX: always write BOTH EMRScode and schoolCode so filterFormsForUser
+  // can match the record regardless of which field it checks.
+  const credSchoolCode =
+    (user?.role === "school" ? user?.schoolCode : null) ||
+    payload.EMRScode ||
+    "";
+ 
+  const recordToSave = {
+    ...payload,
+    _id:         submittedId || `local_${Date.now()}`,
+    EMRScode:    credSchoolCode || payload.EMRScode || "",
+    schoolCode:  credSchoolCode || payload.EMRScode || "",   // ← NEW: mirror field
+    createdAt:   new Date().toISOString(),
+    submittedAt: new Date().toISOString(),
+  };
+ 
+  const existing = JSON.parse(
+    localStorage.getItem("emrs_submitted_forms") || "[]"
+  );
+ 
+  // Match priority:
+  //   1. Exact _id (for server records being updated)
+  //   2. Same EMRScode / schoolCode
+  //   3. Same username / loginId
+  const idx = existing.findIndex((f) => {
+    // 1. exact server _id (skip local_ ids to avoid collisions)
+    if (
+      recordToSave._id &&
+      !String(recordToSave._id).startsWith("local_") &&
+      f._id === recordToSave._id
+    )
+      return true;
+ 
+    // 2. same school code
+    const recCode = String(credSchoolCode || "").toLowerCase();
+    if (recCode) {
+      const fCode = String(f.EMRScode || f.schoolCode || "").toLowerCase();
+      if (fCode && fCode === recCode) return true;
+    }
+ 
+    // 3. same username / loginId
+    const recUser = String(payload.username || "").toLowerCase();
+    if (recUser) {
+      const fUser = String(f.username || f.loginId || "").toLowerCase();
+      if (fUser && fUser === recUser) return true;
+    }
+ 
+    return false;
+  });
+ 
+  if (idx !== -1) {
+    existing[idx] = recordToSave; // update existing record
+  } else {
+    existing.push(recordToSave);  // insert new record
+  }
+ 
+  localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));
+  window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
+} catch (storageError) {
+  console.warn("localStorage save failed:", storageError.message);
+}
       toast.dismiss(loadingToast);
       toast.success("✅ EMRS Form Submitted Successfully!");
       if (addSubmittedForm) addSubmittedForm({ id: submittedId, schoolname: payload.schoolname, EMRScode: payload.EMRScode, district: payload.district, submittedAt: new Date().toLocaleString(), payload });
