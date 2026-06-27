@@ -252,21 +252,12 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                                           disabled={cat.notApplicable || (level === "State" && !cat.hasState)}
                                           value={cat.notApplicable ? "0" : bd[level] || ""}
                                           helperText={cat.notApplicable ? "Not applicable" : level === "State" && !cat.hasState ? "0 (N/A)" : `Expected: ${cat.expected[level]}`}
-                                    
-                                     inputProps={{ min: 0 }}
-  onKeyDown={(e) => {
-    if (e.key === "-" || e.key === "e") {
-      e.preventDefault();
-    }
-  }}
-        onChange={(e) => {
+                                          inputProps={{ min: 0 }}
+                                          onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+                                          onChange={(e) => {
                                             if (cat.notApplicable) return;
-
                                             const value = e.target.value;
-
-                                            if (value === "" || Number(value) >= 0) {
-                                              handleChange(cat.key, level, value);
-                                            }
+                                            if (value === "" || Number(value) >= 0) handleChange(cat.key, level, value);
                                           }}
                                         />
                                       </Grid>
@@ -302,19 +293,12 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                                                 disabled={level === "State"}
                                                 value={bd[level] || ""}
                                                 helperText={level === "State" ? "0 (N/A)" : ""}
-                                                  inputProps={{ min: 0 }}
-onKeyDown={(e) => {
-  if (e.key === "-" || e.key === "e") {
-    e.preventDefault();
-  }
-}}
+                                                inputProps={{ min: 0 }}
+                                                onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
                                                 onChange={(e) => {
-  const value = e.target.value;
-
-  if (value === "" || Number(value) >= 0) {
-    handleChange(cat.key, level, value);
-  }
-}}
+                                                  const value = e.target.value;
+                                                  if (value === "" || Number(value) >= 0) handleChange(cat.key, level, value);
+                                                }}
                                               />
                                             </Grid>
                                           ))}
@@ -892,7 +876,6 @@ onKeyDown={(e) => {
             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "#1976d2", mb: 1 }}>
               Student Special Achievements
             </Typography>
-
 
             {row.achievements.map((achievement, aIndex) => (
               <Grid container spacing={2} mb={1} key={aIndex}>

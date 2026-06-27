@@ -27,6 +27,8 @@ const MONTHS = [
   "July","August","September","October","November","December",
 ];
 
+const CLASS_OPTIONS = ["6", "7", "8"];
+
 const TEACHING_POSTS = [
   "Principal","Vice Principal","PGT - English","PGT - Hindi","PGT - Mathematics",
   "PGT - Physics","PGT - Chemistry","PGT - Biology","PGT - History","PGT - Geography",
@@ -43,7 +45,6 @@ const NON_TEACHING_POSTS = [
   "Electrician","Plumber","Driver","Nurse","Other",
 ];
 
-// Combined set for cross-validation
 const ALL_TEACHING_POSTS_SET    = new Set(TEACHING_POSTS.map((p) => p.toLowerCase().trim()));
 const ALL_NON_TEACHING_POSTS_SET = new Set(NON_TEACHING_POSTS.map((p) => p.toLowerCase().trim()));
 
@@ -115,10 +116,6 @@ const pctColor = (pct) => {
   return { color: "#dc2626", bg: "#fee2e2" };
 };
 
-/**
- * Detects the staffType of a post string.
- * Returns "Teaching" | "Non-Teaching" | "Unknown"
- */
 const detectPostType = (postStr) => {
   const p = postStr.toLowerCase().trim();
   if (ALL_TEACHING_POSTS_SET.has(p))     return "Teaching";
@@ -196,20 +193,16 @@ const AssamHolidayList = () => {
 
 /* ─────────────────────────────────────────────────────────────────────────────
    STAFF ATTENDANCE SECTION
-   KEY FIX: staffType isolation during Excel upload
-   - Template only shows posts valid for this staffType
-   - On upload: rows whose Post belongs to the OTHER staffType are REJECTED
-   - Rejected rows show a clear warning with count & post names
 ───────────────────────────────────────────────────────────────────────────── */
 const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActiveMonth }) => {
   const [excelError,   setExcelError]   = useState("");
-  const [uploadWarn,   setUploadWarn]   = useState("");   // soft warning (wrong-type rows skipped)
+  const [uploadWarn,   setUploadWarn]   = useState("");
   const [uploading,    setUploading]    = useState(false);
   const [showAddForm,  setShowAddForm]  = useState(false);
 
-  const postOptions = staffType === "Teaching" ? TEACHING_POSTS : NON_TEACHING_POSTS;
-  const accent      = staffType === "Teaching" ? "#1976d2" : "#7c3aed";
-  const accentLight = staffType === "Teaching" ? "#eff6ff" : "#f5f3ff";
+  const postOptions  = staffType === "Teaching" ? TEACHING_POSTS : NON_TEACHING_POSTS;
+  const accent       = staffType === "Teaching" ? "#1976d2" : "#7c3aed";
+  const accentLight  = staffType === "Teaching" ? "#eff6ff" : "#f5f3ff";
   const sectionLabel = staffType === "Teaching" ? "Teaching Staff" : "Non-Teaching Staff";
 
   const blankRow = useCallback(() => ({
@@ -240,13 +233,11 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 
   const removeRow = (rowId) => setRows((prev) => prev.filter((r) => r.id !== rowId));
 
-  /* ── Download template with only this section's posts ── */
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
       ["Post", "Name", "Month", "Working Days", "Casual Leave", "Earned Leave", "Medical Leave", "Maternity Leave", "Paternity Leave"],
     ]);
-    // Add 3 sample rows with valid posts for this staffType
     postOptions.slice(0, 3).forEach((post, i) => {
       const rowVals = [post, "Staff Name", activeMonth, "26", "1", "0", "0", "0", "0"];
       rowVals.forEach((val, j) => {
@@ -274,7 +265,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
     toast.success("Exported!");
   };
 
-  /* ── KEY FIX: Excel upload with strict staffType validation ── */
   const handleExcelUpload = (file) => {
     if (!file) return;
     setExcelError(""); setUploadWarn(""); setUploading(true);
@@ -292,18 +282,13 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         raw.forEach((row) => {
           const r    = normaliseKeys(row);
           const post = String(r["post"] ?? r["designation"] ?? "").trim();
-
-          // ── STRICT CHECK: detect the type from the post value ──
           const detectedType = detectPostType(post);
 
           if (detectedType === "Unknown") {
-            // Post not found in either list → accept with this section's staffType (user may have typed "Other")
             accepted.push(buildRow(r, post, staffType, activeMonth));
           } else if (detectedType !== staffType) {
-            // Post belongs to the OTHER section → REJECT
             rejected.push(post || "(blank)");
           } else {
-            // Post matches this section → ACCEPT
             accepted.push(buildRow(r, post, staffType, activeMonth));
           }
         });
@@ -318,7 +303,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
           return;
         }
 
-        // Merge accepted rows
         setRows((prev) => {
           const updated = [...prev];
           accepted.forEach((incoming) => {
@@ -349,17 +333,16 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
     reader.readAsArrayBuffer(file);
   };
 
-  // Helper to build a parsed row object
   const buildRow = (r, post, type, month) => computeAttendance({
     id: Date.now() + Math.random(),
     staffType: type,
     post,
-    name:          String(r["name"] ?? r["staffname"] ?? r["teachername"] ?? r["employeename"] ?? "").trim(),
-    month:         String(r["month"] || month).trim(),
-    workingDays:   r["workingdays"]    ?? r["totaldays"] ?? "",
-    casualLeave:   r["casualleave"]    ?? r["cl"] ?? "",
-    earnedLeave:   r["earnedleave"]    ?? r["el"] ?? "",
-    medicalLeave:  r["medicalleave"]   ?? r["ml"] ?? "",
+    name:           String(r["name"] ?? r["staffname"] ?? r["teachername"] ?? r["employeename"] ?? "").trim(),
+    month:          String(r["month"] || month).trim(),
+    workingDays:    r["workingdays"]    ?? r["totaldays"] ?? "",
+    casualLeave:    r["casualleave"]    ?? r["cl"] ?? "",
+    earnedLeave:    r["earnedleave"]    ?? r["el"] ?? "",
+    medicalLeave:   r["medicalleave"]   ?? r["ml"] ?? "",
     maternityLeave: r["maternityleave"] ?? r["mat"] ?? "",
     paternityLeave: r["paternityleave"] ?? r["pat"] ?? "",
   });
@@ -370,8 +353,8 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
   const below75    = filteredRows.filter((r) => r.percentage < 75 && r.percentage > 0).length;
 
   const leaveFields = [
-    { key: "casualLeave",    label: "Casual Leave",  full: "Casual Leave" },
-    { key: "earnedLeave",    label: "Earned Leave",  full: "Earned Leave" },
+    { key: "casualLeave",    label: "Casual Leave",   full: "Casual Leave" },
+    { key: "earnedLeave",    label: "Earned Leave",   full: "Earned Leave" },
     { key: "medicalLeave",   label: "Medical Leave",  full: "Medical Leave" },
     { key: "maternityLeave", label: "Maternity Leave", full: "Maternity Leave" },
     { key: "paternityLeave", label: "Paternity Leave", full: "Paternity Leave" },
@@ -381,7 +364,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 
   return (
     <Box>
-      {/* ── Section identity badge ── */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <Box sx={{ px: 1.5, py: 0.5, borderRadius: 2, background: accentLight, border: `1px solid ${accent}33` }}>
           <Typography sx={{ fontSize: 12, fontWeight: 700, color: accent }}>
@@ -390,7 +372,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         </Box>
       </Box>
 
-      {/* ── Month Selector ── */}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Month:</Typography>
         {MONTHS.map((m) => (
@@ -402,7 +383,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         ))}
       </Box>
 
-      {/* ── Holidays alert ── */}
       {monthHolidays.length > 0 && (
         <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {activeMonth}:</Typography>
@@ -415,7 +395,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         </Alert>
       )}
 
-      {/* ── Stats ── */}
       {totalStaff > 0 && (
         <Grid container spacing={1.5} sx={{ mb: 2 }}>
           {[
@@ -435,7 +414,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         </Grid>
       )}
 
-      {/* ── Excel Controls ── */}
       <Box sx={{ background: accentLight, border: `1px solid ${accent}33`, borderRadius: 2, p: 2, mb: 2 }}>
         <Typography sx={{ fontSize: 11, fontWeight: 700, color: accent, mb: 1 }}>
           📁 Excel Import / Export — {sectionLabel}
@@ -467,11 +445,9 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         </Typography>
       </Box>
 
-      {/* ── Error / Warning banners ── */}
       {excelError  && <Alert severity="error"   sx={{ mb: 2, borderRadius: 2 }} onClose={() => setExcelError("")}>{excelError}</Alert>}
       {uploadWarn  && <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setUploadWarn("")}>{uploadWarn}</Alert>}
 
-      {/* ── Inline Add Form ── */}
       {showAddForm && (
         <Box sx={{ border: `1px solid ${accent}33`, borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
           <Typography sx={{ fontWeight: 700, fontSize: 13, color: accent, mb: 1.5 }}>
@@ -519,7 +495,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
         </Box>
       )}
 
-      {/* ── Attendance Table ── */}
       {filteredRows.length > 0 ? (
         <>
           <Box sx={{ overflowX: "auto", borderRadius: 2, border: "1px solid #e2e8f0", mb: 3 }}>
@@ -541,7 +516,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
                   return (
                     <tr key={r.id} style={{ backgroundColor: i % 2 === 0 ? "#f8fafc" : "#fff" }}>
                       <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center", fontSize: 12, color: "#94a3b8" }}>{i + 1}</td>
-
                       <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
                         <TextField select size="small" value={r.post} sx={{ minWidth: 140 }}
                           onChange={(e) => handleFieldChange(r.id, "post", e.target.value)}
@@ -549,19 +523,16 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
                           {postOptions.map((opt) => <MenuItem key={opt} value={opt} sx={{ fontSize: 12 }}>{opt}</MenuItem>)}
                         </TextField>
                       </td>
-
                       <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
                         <TextField size="small" value={r.name} sx={{ minWidth: 120 }}
                           onChange={(e) => handleFieldChange(r.id, "name", e.target.value)}
                           inputProps={{ style: { fontSize: 12 } }} />
                       </td>
-
                       <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
                         <TextField size="small" type="number" value={r.workingDays} sx={{ minWidth: 60 }}
                           inputProps={{ min: 0, max: 31, style: { fontSize: 12, textAlign: "center" } }}
                           onChange={(e) => handleFieldChange(r.id, "workingDays", e.target.value)} />
                       </td>
-
                       {leaveFields.map(({ key }) => (
                         <td key={key} style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
                           <TextField size="small" type="number" value={r[key]} sx={{ minWidth: 52 }}
@@ -569,7 +540,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
                             onChange={(e) => handleFieldChange(r.id, key, e.target.value)} />
                         </td>
                       ))}
-
                       <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center" }}>
                         <Chip label={r.daysPresent} color="success" size="small" sx={{ fontWeight: 700, minWidth: 34 }} />
                       </td>
@@ -596,7 +566,6 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
             </table>
           </Box>
 
-          {/* ── Summary Cards ── */}
           <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#374151", mb: 1.5 }}>
             Individual Summary — {activeMonth}
           </Typography>
@@ -643,22 +612,15 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 const normalizeMonth = (raw) => {
   if (raw == null || raw === "") return "";
   const s = String(raw).trim();
- 
-  // Numeric: "6" or 6 → index 5 → "June"
   const n = Number(s);
   if (!isNaN(n) && n >= 1 && n <= 12) return MONTHS[n - 1];
- 
-  // Try full or partial match (case-insensitive)
   const lower = s.toLowerCase();
   const found = MONTHS.find(
     (m) => m.toLowerCase() === lower || m.toLowerCase().startsWith(lower.slice(0, 3))
   );
   return found || "";
 };
- 
-/* ─────────────────────────────────────────────────────────────────────────────
-   STUDENT ATTENDANCE SECTION  (complete replacement)
-───────────────────────────────────────────────────────────────────────────── */
+
 const StudentAttendanceSection = ({
   studentAttendanceData, setStudentAttendanceData,
   studentAttendanceMonth, setStudentAttendanceMonth,
@@ -668,15 +630,15 @@ const StudentAttendanceSection = ({
   const [studentExcelError,     setStudentExcelError]     = useState("");
   const [studentExcelUploading, setStudentExcelUploading] = useState(false);
   const [showAddForm,           setShowAddForm]           = useState(false);
- 
+
   const [newRow, setNewRow] = useState({
     rollNo: "", name: "", class: "", section: "",
     month: studentAttendanceMonth, workingDays: "", daysPresent: "",
     daysAbsent: 0, percentage: 0,
   });
- 
+
   useEffect(() => { setNewRow((p) => ({ ...p, month: studentAttendanceMonth })); }, [studentAttendanceMonth]);
- 
+
   const computeStudentRow = (row) => {
     const wd  = parseFloat(row.workingDays) || 0;
     const dp  = parseFloat(row.daysPresent) || 0;
@@ -684,7 +646,7 @@ const StudentAttendanceSection = ({
     const pct = wd > 0 ? parseFloat(((dp / wd) * 100).toFixed(1)) : 0;
     return { ...row, daysAbsent: da, percentage: pct };
   };
- 
+
   const downloadStudentAttendanceTemplate = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([["Roll No","Name","Class","Section","Month","Working Days","Days Present"]]);
@@ -697,8 +659,7 @@ const StudentAttendanceSection = ({
     XLSX.writeFile(wb, "Student_Attendance_Template.xlsx");
     toast.success("Template downloaded!");
   };
- 
-  // ── FIX 1 + FIX 2: normalise month & coerce rollNo to string ──────────────
+
   const handleStudentExcelUpload = (file) => {
     if (!file) return;
     setStudentExcelError(""); setStudentExcelUploading(true);
@@ -708,33 +669,28 @@ const StudentAttendanceSection = ({
         const wb  = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
         const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
         if (!raw.length) { setStudentExcelError("File is empty."); setStudentExcelUploading(false); return; }
- 
+
         const parsed = raw.map((row) => {
-          const r = normaliseKeys(row);   // existing helper – lowercases keys
- 
-          // ── FIX 1: normalise whatever the Excel stored as "month" ──
+          const r = normaliseKeys(row);
           const rawMonth  = r["month"] ?? "";
           const normMonth = normalizeMonth(rawMonth) || studentAttendanceMonth;
- 
-          // ── FIX 2: always store rollNo as a trimmed string ──
           const rollNo = String(r["rollno"] ?? r["roll"] ?? "").trim();
- 
+
           return computeStudentRow({
             rollNo,
             name:        String(r["name"]   ?? r["studentname"] ?? "").trim(),
             class:       String(r["class"]  ?? r["grade"] ?? "").trim(),
             section:     String(r["section"] ?? r["sec"] ?? "").trim(),
-            month:       normMonth,          // ← normalised canonical month name
+            month:       normMonth,
             workingDays: r["workingdays"] ?? r["totaldays"] ?? "",
             daysPresent: r["dayspresent"] ?? r["present"] ?? "",
             daysAbsent: 0, percentage: 0,
           });
         });
- 
+
         setStudentAttendanceData((prev) => {
           const updated = [...prev];
           parsed.forEach((inc) => {
-            // ── FIX 2: both sides are strings now, so findIndex is reliable ──
             const idx = updated.findIndex(
               (x) => String(x.rollNo).trim() === String(inc.rollNo).trim() &&
                      x.month === inc.month
@@ -743,7 +699,7 @@ const StudentAttendanceSection = ({
           });
           return updated;
         });
- 
+
         toast.success(`✅ Imported ${parsed.length} student record(s).`);
       } catch (err) {
         setStudentExcelError("Failed to parse: " + err.message);
@@ -752,7 +708,7 @@ const StudentAttendanceSection = ({
     reader.onerror = () => { setStudentExcelError("Could not read file."); setStudentExcelUploading(false); };
     reader.readAsArrayBuffer(file);
   };
- 
+
   const exportStudentAttendance = () => {
     const data = studentAttendanceData.filter((r) => !studentAttendanceMonth || r.month === studentAttendanceMonth);
     if (!data.length) { toast.error("No data to export."); return; }
@@ -766,19 +722,19 @@ const StudentAttendanceSection = ({
     XLSX.writeFile(wb, `Student_${studentAttendanceMonth}_Attendance.xlsx`);
     toast.success("Exported!");
   };
- 
+
   const allClasses = [...new Set(
     studentAttendanceData
       .filter((r) => !studentAttendanceMonth || r.month === studentAttendanceMonth)
       .map((r) => r.class).filter(Boolean)
   )].sort();
- 
+
   const filteredData = studentAttendanceData.filter((r) => {
     const monthOk = !studentAttendanceMonth || r.month === studentAttendanceMonth;
     const classOk = filterClass === "All" || r.class === filterClass;
     return monthOk && classOk;
   });
- 
+
   const classAverages = {};
   allClasses.forEach((cls) => {
     const recs = studentAttendanceData.filter(
@@ -787,7 +743,7 @@ const StudentAttendanceSection = ({
     if (recs.length)
       classAverages[cls] = parseFloat((recs.reduce((s, r) => s + r.percentage, 0) / recs.length).toFixed(1));
   });
- 
+
   const addManualRow = () => {
     if (!newRow.name.trim()) { toast.error("Please enter student name."); return; }
     const computed = computeStudentRow({ ...newRow, month: studentAttendanceMonth });
@@ -807,26 +763,26 @@ const StudentAttendanceSection = ({
     setShowAddForm(false);
     toast.success("✅ Student added.");
   };
- 
+
   const removeRow = (rollNo, month) =>
     setStudentAttendanceData((prev) =>
       prev.filter((r) => !(String(r.rollNo).trim() === String(rollNo).trim() && r.month === month))
     );
- 
+
   const totalStudents = filteredData.length;
   const avgAttendance = totalStudents > 0
     ? (filteredData.reduce((s, r) => s + r.percentage, 0) / totalStudents).toFixed(1) : null;
   const above75 = filteredData.filter((r) => r.percentage >= 75).length;
   const below50 = filteredData.filter((r) => r.percentage < 50).length;
- 
+
   const attColor = (pct) => {
     if (pct >= 75) return { color: "#16a34a", bg: "#dcfce7" };
     if (pct >= 50) return { color: "#d97706", bg: "#fef3c7" };
     return { color: "#dc2626", bg: "#fee2e2" };
   };
- 
+
   const monthHolidays = getHolidaysForMonth(studentAttendanceMonth);
- 
+
   return (
     <Box>
       <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
@@ -837,7 +793,7 @@ const StudentAttendanceSection = ({
           </Button>
         ))}
       </Box>
- 
+
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Month:</Typography>
         {MONTHS.map((m) => (
@@ -847,7 +803,7 @@ const StudentAttendanceSection = ({
             sx={{ fontWeight: studentAttendanceMonth === m ? 700 : 400, cursor: "pointer", fontSize: 11 }} />
         ))}
       </Box>
- 
+
       {monthHolidays.length > 0 && (
         <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {studentAttendanceMonth}:</Typography>
@@ -859,8 +815,7 @@ const StudentAttendanceSection = ({
           </Box>
         </Alert>
       )}
- 
-      {/* ── ATTENDANCE TAB ── */}
+
       {activeTab === "attendance" && (
         <>
           {totalStudents > 0 && (
@@ -881,7 +836,7 @@ const StudentAttendanceSection = ({
               ))}
             </Grid>
           )}
- 
+
           <Box sx={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 2, p: 2, mb: 2 }}>
             <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#0f766e", mb: 1 }}>📁 Excel Import / Export — Student Attendance</Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
@@ -910,9 +865,9 @@ const StudentAttendanceSection = ({
               Columns: Roll No · Name · Class · Section · Month · Working Days · Days Present
             </Typography>
           </Box>
- 
+
           {studentExcelError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setStudentExcelError("")}>{studentExcelError}</Alert>}
- 
+
           {showAddForm && (
             <Box sx={{ border: "1px solid #0f766e33", borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
               <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#0f766e", mb: 1.5 }}>✏️ Add Student Manually</Typography>
@@ -947,7 +902,7 @@ const StudentAttendanceSection = ({
               )}
             </Box>
           )}
- 
+
           {allClasses.length > 0 && (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Class:</Typography>
@@ -960,7 +915,7 @@ const StudentAttendanceSection = ({
               ))}
             </Box>
           )}
- 
+
           {filteredData.length > 0 ? (
             <Box sx={{ overflowX: "auto", borderRadius: 2, border: "1px solid #e2e8f0" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
@@ -1012,8 +967,7 @@ const StudentAttendanceSection = ({
           )}
         </>
       )}
- 
-      {/* ── CLASS-WISE TAB ── */}
+
       {activeTab === "classwise" && (
         <Box>
           <Typography sx={{ fontWeight:700, color:"#0f766e", fontSize:14, mb:2 }}>🏫 Class-wise Average — {studentAttendanceMonth}</Typography>
@@ -1050,16 +1004,11 @@ const StudentAttendanceSection = ({
           )}
         </Box>
       )}
- 
-      {/* ── PERFORMANCE TAB ──
-          FIX 3: trend uses studentAttendanceData directly (all months),
-          so the bar chart shows every month that has records regardless
-          of the currently selected month filter.                          */}
+
       {activeTab === "performance" && (
         <Box>
           <Typography sx={{ fontWeight:700, color:"#0f766e", fontSize:14, mb:1.5 }}>📈 Monthly Attendance Trend</Typography>
           {(() => {
-            // ── FIX 3: aggregate across ALL stored records (not filtered by month) ──
             const trend = MONTHS.map((m) => {
               const recs = studentAttendanceData.filter((r) => r.month === m);
               return {
@@ -1072,7 +1021,7 @@ const StudentAttendanceSection = ({
             });
             const maxAvg = Math.max(...trend.filter((t) => t.avg !== null).map((t) => t.avg), 1);
             const hasAnyData = trend.some((t) => t.avg !== null);
- 
+
             if (!hasAnyData) {
               return (
                 <Box sx={{ textAlign:"center", py:4, border:"2px dashed #e2e8f0", borderRadius:2, color:"#94a3b8" }}>
@@ -1080,7 +1029,7 @@ const StudentAttendanceSection = ({
                 </Box>
               );
             }
- 
+
             return (
               <Box sx={{ display:"flex", alignItems:"flex-end", gap:1, height:160, background:"#f0fdfa", border:"1px solid #a7f3d0", borderRadius:2, px:2, py:2, overflowX:"auto", mb:3 }}>
                 {trend.map(({ month, avg, count }) => {
@@ -1103,7 +1052,7 @@ const StudentAttendanceSection = ({
               </Box>
             );
           })()}
- 
+
           {studentAttendanceData.filter((r) => r.percentage < 75).length > 0 && (
             <Alert severity="warning" sx={{ borderRadius:2 }}>
               <Typography sx={{ fontWeight:700, fontSize:13, mb:1 }}>⚠️ Students Below 75% (all months)</Typography>
@@ -1138,7 +1087,8 @@ const StudentAttendanceSection = ({
     </Box>
   );
 };
- /* ─────────────────────────────────────────────────────────────────────────────
+
+/* ─────────────────────────────────────────────────────────────────────────────
    ANNUAL STAFF OVERVIEW
 ───────────────────────────────────────────────────────────────────────────── */
 const AnnualStaffOverview = ({ staffAttendanceRows }) => {
@@ -1190,6 +1140,572 @@ const AnnualStaffOverview = ({ staffAttendanceRows }) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   HELPERS — SAKSHAM SATURDAY
+───────────────────────────────────────────────────────────────────────────── */
+const getSaturdaysForMonth = (monthName, yearValue) => {
+  const monthIndex = MONTHS.indexOf(monthName);
+  const year = parseInt(yearValue, 10);
+  if (monthIndex === -1 || Number.isNaN(year)) return [];
+  const dates = [];
+  const current = new Date(year, monthIndex, 1);
+  while (current.getMonth() === monthIndex) {
+    if (current.getDay() === 6) dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
+const SAKSHAM_THEME_CATEGORIES = [
+  "Literary Arts and Language Enrichment",
+  "Tourism, Heritage and Hospitality",
+  "Arts, Crafts and Handicrafts",
+  "Performing and Visual Arts",
+  "Technical and Vocational Trades",
+  "Allied Agricultural and Horticulture Activities",
+  "Craft and Innovation through Reusable/Waste Materials",
+  "Information Technology, Digital Literacy and Innovation",
+  "Life Skills, Health and Wellness Education",
+  "Traditional Indigenous Games and Recreational Activities",
+  "Educational Exposure Visits and Community Interaction",
+  "Sports, Physical Education and Fitness Activities",
+  "Environment Conservation, Sustainability and Climate Awareness",
+];
+
+const SAKSHAM_ACTIVITIES_BY_THEME = {
+  "Literary Arts and Language Enrichment": ["Storytelling","Creative writing","Debate","Poetry recitation","Reading activity","Language-based learning exercise"],
+  "Tourism, Heritage and Hospitality": ["Visit to historical monument","Museum visit","Cultural site visit","Tourist place visit","Interaction with local community"],
+  "Arts, Crafts and Handicrafts": ["Pottery","Bamboo craft","Weaving","Tribal handicraft activity","Clay modelling","Local artisan-based activity"],
+  "Performing and Visual Arts": ["Music activity","Dance activity","Theatre activity","Painting","Drawing","Folk arts presentation","Cultural presentation"],
+  "Technical and Vocational Trades": ["Carpentry basics","Electrical basics","Repair activity","Entrepreneurship exposure","Skill-based demonstration"],
+  "Allied Agricultural and Horticulture Activities": ["Gardening","Kitchen gardening","Plantation drive","Composting","Sustainable farming awareness"],
+  "Craft and Innovation through Reusable/Waste Materials": ["Waste-to-art activity","Recycling project","Creative use of locally available materials"],
+  "Information Technology, Digital Literacy and Innovation": ["Coding exposure","Cyber safety awareness","Robotics activity","AI awareness","Digital learning activity"],
+  "Life Skills, Health and Wellness Education": ["Communication skills activity","Leadership activity","Teamwork activity","Nutrition awareness","Mental well-being activity","Yoga","Sanitation awareness"],
+  "Traditional Indigenous Games and Recreational Activities": ["Local games","Teamwork game","Fitness activity","Tribal tradition preservation activity"],
+  "Educational Exposure Visits and Community Interaction": ["Farm visit","Local industry visit","Public institution visit","Skill centre visit","Interaction with local artisan","Interaction with expert/resource person"],
+  "Sports, Physical Education and Fitness Activities": ["Indoor sports","Outdoor sports","Athletics","Yoga","Wellness programme","Physical fitness programme"],
+  "Environment Conservation, Sustainability and Climate Awareness": ["Biodiversity awareness","Water conservation activity","Waste management activity","Environmental campaign","Sustainable lifestyle practice"],
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ACADEMIC CALENDAR WIDGET  (shared between pre & post sections)
+   - Month + Year selectors
+   - Saturday chips — clickable to set selectedDate
+   - Holidays shown inline on each chip
+───────────────────────────────────────────────────────────────────────────── */
+const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear, setCalendarYear, selectedDate, setSelectedDate }) => {
+  const saturdays = getSaturdaysForMonth(calendarMonth, calendarYear);
+  const holidays  = getHolidaysForMonth(calendarMonth).filter(
+    (h) => new Date(h.date).getFullYear() === parseInt(calendarYear, 10)
+  );
+
+  return (
+    <Box sx={{ border: "1px solid #dbeafe", borderRadius: 2, overflow: "hidden", mb: 2, background: "#fff" }}>
+      {/* Header */}
+      <Box sx={{ px: 2, py: 1.5, background: "linear-gradient(135deg, #1e40af, #3b82f6)", display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography sx={{ fontWeight: 800, color: "#fff", fontSize: 13 }}>📅 Academic Calendar</Typography>
+        {selectedDate && (
+          <Chip
+            label={`Selected: ${new Date(selectedDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
+            size="small"
+            onDelete={() => setSelectedDate("")}
+            sx={{ ml: "auto", background: "#fff", color: "#1e40af", fontWeight: 700, fontSize: 11 }}
+          />
+        )}
+      </Box>
+
+      {/* Month / Year selectors */}
+      <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid #dbeafe", display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center", background: "#eff6ff" }}>
+        <TextField
+          select size="small" label="Month" value={calendarMonth}
+          onChange={(e) => { setCalendarMonth(e.target.value); setSelectedDate(""); }}
+          sx={{ minWidth: 140 }}
+        >
+          {MONTHS.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+        </TextField>
+        <TextField
+          size="small" label="Year" value={calendarYear}
+          onChange={(e) => { setCalendarYear(e.target.value); setSelectedDate(""); }}
+          sx={{ minWidth: 100 }}
+          inputProps={{ maxLength: 4 }}
+        />
+        <Typography sx={{ fontSize: 11, color: "#3b82f6", fontWeight: 600, ml: "auto" }}>
+          Click a Saturday below to auto-fill the date in your rows
+        </Typography>
+      </Box>
+
+      {/* Saturday chips */}
+      <Box sx={{ p: 1.5, display: "flex", gap: 1, flexWrap: "wrap" }}>
+        {saturdays.length > 0 ? saturdays.map((date) => {
+          const iso     = date.toISOString().slice(0, 10);
+          const holiday = holidays.find((h) => h.date === iso);
+          const isSelected = selectedDate === iso;
+          const weekNum = saturdays.indexOf(date) + 1;
+
+          return (
+            <Tooltip
+              key={iso}
+              title={holiday ? `🏖️ Holiday: ${holiday.name}` : `Click to select — Week ${weekNum} Saturday`}
+              arrow
+            >
+              <Chip
+                onClick={() => setSelectedDate(isSelected ? "" : iso)}
+                label={
+                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 0.25 }}>
+                    <Typography sx={{ fontSize: 10, fontWeight: 700, lineHeight: 1.2 }}>
+                      {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                    </Typography>
+                    <Typography sx={{ fontSize: 9, lineHeight: 1.2, opacity: 0.85 }}>
+                      Sat · Wk {weekNum}
+                    </Typography>
+                    {holiday && (
+                      <Typography sx={{ fontSize: 8, lineHeight: 1.2, color: "#dc2626", fontWeight: 700 }}>
+                        Holiday
+                      </Typography>
+                    )}
+                  </Box>
+                }
+                sx={{
+                  height: "auto",
+                  py: 0.5,
+                  cursor: "pointer",
+                  background: isSelected
+                    ? "#1d4ed8"
+                    : holiday
+                    ? "#fee2e2"
+                    : "#dcfce7",
+                  color: isSelected ? "#fff" : holiday ? "#dc2626" : "#166534",
+                  fontWeight: 700,
+                  border: isSelected ? "2px solid #1e40af" : holiday ? "1px solid #fca5a5" : "1px solid #86efac",
+                  "&:hover": {
+                    background: isSelected ? "#1e40af" : holiday ? "#fecaca" : "#bbf7d0",
+                    transform: "translateY(-1px)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                  },
+                  transition: "all 0.15s ease",
+                }}
+              />
+            </Tooltip>
+          );
+        }) : (
+          <Typography sx={{ color: "#94a3b8", fontSize: 12, py: 0.5 }}>
+            Enter a valid month and year to view Saturdays.
+          </Typography>
+        )}
+      </Box>
+
+      {/* Legend */}
+      <Box sx={{ px: 2, py: 1, borderTop: "1px solid #dbeafe", background: "#f8faff", display: "flex", gap: 2, flexWrap: "wrap" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#dcfce7", border: "1px solid #86efac" }} />
+          <Typography sx={{ fontSize: 10, color: "#64748b" }}>Regular Saturday</Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#fee2e2", border: "1px solid #fca5a5" }} />
+          <Typography sx={{ fontSize: 10, color: "#64748b" }}>Holiday Saturday</Typography>
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#1d4ed8" }} />
+          <Typography sx={{ fontSize: 10, color: "#64748b" }}>Selected</Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CLASS DROPDOWN CELL — renders a select with Class 6 / 7 / 8
+───────────────────────────────────────────────────────────────────────────── */
+const ClassDropdown = ({ value, onChange }) => (
+  <TextField select fullWidth size="small" value={value} onChange={(e) => onChange(e.target.value)}>
+    <MenuItem value="">Select Class</MenuItem>
+    {CLASS_OPTIONS.map((c) => (
+      <MenuItem key={c} value={c}>Class {c}</MenuItem>
+    ))}
+  </TextField>
+);
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SAKSHAM SATURDAY REPORT
+   CHANGES:
+   1. AcademicCalendarWidget moved ABOVE the Pre-Activity Planning box
+   2. Clicking a Saturday chip sets `selectedDate` which is the shared state
+   3. className field in both tables now uses ClassDropdown (6 / 7 / 8)
+───────────────────────────────────────────────────────────────────────────── */
+const SakshamSaturdayReport = () => {
+  const currentYear = new Date().getFullYear();
+
+  // ── SHARED calendar state (used by both pre & post tables) ──
+  const [calendarMonth, setCalendarMonth] = useState(MONTHS[new Date().getMonth()]);
+  const [calendarYear,  setCalendarYear]  = useState(String(currentYear));
+  const [selectedDate,  setSelectedDate]  = useState("");   // ISO date string of chosen Saturday
+
+  // Derive a "Week N" label from the selected date
+  const selectedWeekLabel = (() => {
+    if (!selectedDate) return "";
+    const saturdays = getSaturdaysForMonth(calendarMonth, calendarYear);
+    const idx = saturdays.findIndex((d) => d.toISOString().slice(0, 10) === selectedDate);
+    return idx >= 0 ? `Week ${idx + 1} (${new Date(selectedDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })})` : selectedDate;
+  })();
+
+  const [prePlanningRows, setPrePlanningRows] = useState([
+    {
+      id: 1,
+      monthWeek: "Week 1",
+      className: "6",
+      themeCategory: "Literary Arts and Language Enrichment",
+      activity: "Reading activity",
+      resourcePersons: "Language teacher",
+      studentsParticipated: "40",
+      orientation: "Student orientation before activity",
+      learningObjectives: "Reading fluency and comprehension",      
+    },
+  ]);
+
+  const [postPlanningRows, setPostPlanningRows] = useState([
+    {
+      id: 1,
+      monthWeek: "Week 1",
+      className: "6",
+      themeCategory: "Literary Arts and Language Enrichment",
+      activity: "Reading activity",
+      resourcePersons: "Language teacher",
+      studentsParticipated: "",
+      learningObjectives: "Reading fluency and comprehension",
+      resourcesRequired: "Story cards, worksheets",
+      preActivityPlanning: "Orientation, materials and briefing completed",
+      executionDuringActivity: "",
+      learningOutcomesAssessment: "",
+      photos: [],
+      reportFile: null,
+    },
+  ]);
+
+  /* ── Row mutation helpers ── */
+  const handlePrePlanningChange = (id, field, value) => {
+    setPrePlanningRows((prev) => prev.map((row) => {
+      if (row.id !== id) return row;
+      if (field === "themeCategory") return { ...row, themeCategory: value, activity: "" };
+      return { ...row, [field]: value };
+    }));
+  };
+
+  const handlePostPlanningChange = (id, field, value) => {
+    setPostPlanningRows((prev) => prev.map((row) => {
+      if (row.id !== id) return row;
+      if (field === "themeCategory") return { ...row, themeCategory: value, activity: "" };
+      return { ...row, [field]: value };
+    }));
+  };
+
+  const handlePostFileUpload = (id, field, files) => {
+    const selectedFiles = Array.from(files || []);
+    setPostPlanningRows((prev) => prev.map((row) => {
+      if (row.id !== id) return row;
+      if (field === "photos") return { ...row, photos: selectedFiles.map((f) => f.name) };
+      return { ...row, reportFile: selectedFiles[0]?.name || null };
+    }));
+  };
+
+  const addPrePlanningRow = () => {
+    setPrePlanningRows((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        // Pre-fill monthWeek from the calendar selection if available
+        monthWeek: selectedWeekLabel || "",
+        className: "",
+        themeCategory: "", activity: "", resourcePersons: "",
+        studentsParticipated: "", orientation: "", learningObjectives: "",  
+      },
+    ]);
+  };
+
+  const addPostPlanningRow = () => {
+    setPostPlanningRows((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        monthWeek: selectedWeekLabel || "",
+        className: "", themeCategory: "", activity: "", resourcePersons: "",
+        studentsParticipated: "", learningObjectives: "", resourcesRequired: "",
+        preActivityPlanning: "", executionDuringActivity: "",
+        learningOutcomesAssessment: "", 
+        photos: [], reportFile: null,
+      },
+    ]);
+  };
+
+  const removePrePlanningRow  = (id) => setPrePlanningRows((prev) => prev.filter((r) => r.id !== id));
+  const removePostPlanningRow = (id) => setPostPlanningRows((prev) => prev.filter((r) => r.id !== id));
+
+  /* ── Gap analysis ── */
+  const makeActivityKey = (row) =>
+    [row.monthWeek, row.className, row.themeCategory, row.activity]
+      .map((v) => String(v || "").trim().toLowerCase()).join("|");
+
+  const prePlanningMap    = new Map(prePlanningRows.map((r) => [makeActivityKey(r), r]));
+  const reportedPostKeys  = new Set(postPlanningRows.map(makeActivityKey));
+
+  const postGapRows = postPlanningRows.map((postRow) => {
+    const matchingPlan = prePlanningMap.get(makeActivityKey(postRow));
+    const gaps = [
+      !matchingPlan                                               ? "No matching pre-activity planning row" : "",
+      !postRow.themeCategory.trim()                              ? "Theme category not selected" : "",
+      matchingPlan && matchingPlan.learningObjectives.trim() &&
+        postRow.learningObjectives.trim() &&
+      !postRow.resourcePersons.trim()                            ? "Resource person not recorded" : "",
+      !postRow.studentsParticipated.trim()                       ? "Students participated not recorded" : "",
+      !postRow.resourcesRequired.trim()                          ? "Resources/resource persons not recorded" : "",
+      !postRow.preActivityPlanning.trim()                        ? "Pre-activity planning summary missing" : "",     
+     
+      (!postRow.photos?.length && !postRow.reportFile)           ? "Activity photos or report file not uploaded" : "",
+    ].filter(Boolean);
+
+    return {
+      id: `post-${postRow.id}`,
+      monthWeek: postRow.monthWeek || "-",
+      className: postRow.className || "-",
+      themeCategory: postRow.themeCategory || "-",
+      activity: postRow.activity || "Untitled activity",
+      status: gaps.length ? "Gap Found" : "Complete",
+      gap: gaps.join("; ") || "No gap",
+      action: gaps.length ? "Complete missing documentation and align report with pre-activity plan" : "Ready for documentation",
+    };
+  });
+
+  const unreportedPreRows = prePlanningRows
+    .filter((preRow) => !reportedPostKeys.has(makeActivityKey(preRow)))
+    .map((preRow) => ({
+      id: `pre-${preRow.id}`,
+      monthWeek: preRow.monthWeek || "-",
+      className: preRow.className || "-",
+      themeCategory: preRow.themeCategory || "-",
+      activity: preRow.activity || "Untitled activity",
+      status: "Report Pending",
+      gap: "Pre-activity planned but post-activity report is not added",
+      action: "Add the matching post-activity report after completion",
+    }));
+
+  const gapRows = [...postGapRows, ...unreportedPreRows];
+
+  const renderEditableTable = (headers, rows, renderRow) => (
+    <Box sx={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            {headers.map((h) => (
+              <th key={h} style={{ background: "#f1f5f9", color: "#334155", padding: "8px", textAlign: "left", fontSize: 12, fontWeight: 700, border: "1px solid #e2e8f0", whiteSpace: "nowrap" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{rows.map(renderRow)}</tbody>
+      </table>
+    </Box>
+  );
+
+  /* ── Shared cell renderer for className ── */
+  const renderPreTableRow = (row) => (
+    <tr key={row.id}>
+      {[
+        ["monthWeek",           "Month / Week"],
+        ["className",           "Class"],
+        ["themeCategory",       "Theme Category"],
+        ["activity",            "Activity Name"],
+        ["resourcePersons",     "Resource Person"],
+        ["studentsParticipated","Students Participated"],       
+      ].map(([field, label]) => (
+        <td key={field} style={{
+          padding: "6px", border: "1px solid #e2e8f0",
+          minWidth: field === "className" ? 110 : field === "studentsParticipated" ? 140 : 180,
+        }}>
+          {field === "className" ? (
+            <ClassDropdown value={row[field]} onChange={(v) => handlePrePlanningChange(row.id, field, v)} />
+          ) : field === "themeCategory" ? (
+            <TextField select fullWidth size="small" value={row[field]} onChange={(e) => handlePrePlanningChange(row.id, field, e.target.value)}>
+              <MenuItem value="">Select Theme Category</MenuItem>
+              {SAKSHAM_THEME_CATEGORIES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+            </TextField>
+          ) : field === "activity" ? (
+            <TextField select fullWidth size="small" value={row[field]} onChange={(e) => handlePrePlanningChange(row.id, field, e.target.value)} disabled={!row.themeCategory}>
+              <MenuItem value="">Select Activity</MenuItem>
+              {(SAKSHAM_ACTIVITIES_BY_THEME[row.themeCategory] || []).map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+            </TextField>
+          ) : (
+            <TextField fullWidth size="small" type={field === "studentsParticipated" ? "number" : "text"}
+              placeholder={label} value={row[field]}
+              onChange={(e) => handlePrePlanningChange(row.id, field, e.target.value)} />
+          )}
+        </td>
+      ))}
+      <td style={{ padding: "6px", border: "1px solid #e2e8f0", textAlign: "center" }}>
+        <Button size="small" color="error" onClick={() => removePrePlanningRow(row.id)}>Remove</Button>
+      </td>
+    </tr>
+  );
+
+  const renderPostTableRow = (row) => (
+    <tr key={row.id}>
+      {[
+        ["monthWeek",                  "Month / Week"],
+        ["className",                  "Class"],
+        ["themeCategory",              "Theme Category"],
+        ["activity",                   "Activity Name"],
+        ["resourcePersons",            "Resource Person"],
+        ["studentsParticipated",       "Students Participated"], 
+             
+      ].map(([field, label]) => (
+        <td key={field} style={{
+          padding: "6px", border: "1px solid #dbeafe",
+          minWidth: field === "className" ? 110 : field === "studentsParticipated" ? 140 : 180,
+        }}>
+          {field === "className" ? (
+            <ClassDropdown value={row[field]} onChange={(v) => handlePostPlanningChange(row.id, field, v)} />
+          ) : field === "themeCategory" ? (
+            <TextField select fullWidth size="small" value={row[field]} onChange={(e) => handlePostPlanningChange(row.id, field, e.target.value)}>
+              <MenuItem value="">Select Theme Category</MenuItem>
+              {SAKSHAM_THEME_CATEGORIES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+            </TextField>
+          ) : field === "activity" ? (
+            <TextField select fullWidth size="small" value={row[field]} onChange={(e) => handlePostPlanningChange(row.id, field, e.target.value)} disabled={!row.themeCategory}>
+              <MenuItem value="">Select Activity</MenuItem>
+              {(SAKSHAM_ACTIVITIES_BY_THEME[row.themeCategory] || []).map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+            </TextField>
+          ) : (
+            <TextField fullWidth size="small" type={field === "studentsParticipated" ? "number" : "text"}
+              placeholder={label} value={row[field]}
+              onChange={(e) => handlePostPlanningChange(row.id, field, e.target.value)} />
+          )}
+        </td>
+      ))}
+      {/* Photos / Report column */}
+      <td style={{ padding: "6px", border: "1px solid #dbeafe", minWidth: 220 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+          <Button size="small" variant="outlined" component="label">
+            Upload Photos
+            <input hidden multiple accept="image/*" type="file"
+              onChange={(e) => handlePostFileUpload(row.id, "photos", e.target.files)} />
+          </Button>
+          <Typography sx={{ fontSize: 11, color: "#475569" }}>
+            {row.photos?.length ? `${row.photos.length} photo(s): ${row.photos.join(", ")}` : "No photos uploaded"}
+          </Typography>
+          <Button size="small" variant="outlined" component="label">
+            Upload Report
+            <input hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" type="file"
+              onChange={(e) => handlePostFileUpload(row.id, "reportFile", e.target.files)} />
+          </Button>
+          <Typography sx={{ fontSize: 11, color: "#475569" }}>
+            {row.reportFile || "No report uploaded"}
+          </Typography>
+        </Box>
+      </td>
+      <td style={{ padding: "6px", border: "1px solid #dbeafe", textAlign: "center" }}>
+        <Button size="small" color="error" onClick={() => removePostPlanningRow(row.id)}>Remove</Button>
+      </td>
+    </tr>
+  );
+
+  return (
+    <Box>
+      <Typography sx={{ fontWeight: 800, color: "#1e3a5f", fontSize: 15, mb: 2 }}>
+        Saksham Saturday Planning Report
+      </Typography>
+
+      {/* ══════════════════════════════════════════════════════
+          ① ACADEMIC CALENDAR — placed first, above all tables
+         ══════════════════════════════════════════════════════ */}
+      <AcademicCalendarWidget
+        calendarMonth={calendarMonth}  setCalendarMonth={setCalendarMonth}
+        calendarYear={calendarYear}    setCalendarYear={setCalendarYear}
+        selectedDate={selectedDate}    setSelectedDate={setSelectedDate}
+      />
+
+      {/* Selected date hint banner */}
+      {selectedDate && (
+        <Alert
+          severity="info"
+          icon={false}
+          sx={{ mb: 2, py: 0.75, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 2 }}
+        >
+          <Typography sx={{ fontSize: 12, color: "#1e40af" }}>
+            📌 <strong>{selectedWeekLabel}</strong> is selected — click <em>"Add Row"</em> in either table below to start a new entry pre-filled with this week label.
+          </Typography>
+        </Alert>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          ② PRE-ACTIVITY PLANNING TABLE
+         ══════════════════════════════════════════════════════ */}
+      <Paper elevation={0} sx={{ p: 2, border: "1px solid #cbd5e1", borderRadius: 2, mb: 2, background: "#fff" }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
+          <Box>
+            <Typography sx={{ fontWeight: 700, color: "#334155", fontSize: 13 }}>Pre-Activity Planning</Typography>
+            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 0.25 }}>
+              Class dropdown: 6 / 7 / 8 &nbsp;·&nbsp; Select a Saturday above then click Add Row to pre-fill the week
+            </Typography>
+          </Box>
+          <Button size="small" variant="outlined" onClick={addPrePlanningRow}>+ Add Row</Button>
+        </Box>
+        {renderEditableTable(
+          ["Month / Week", "Class", "Theme Category", "Activity Name", "Resource Person", "Students Participated",  ""],
+          prePlanningRows,
+          renderPreTableRow
+        )}
+      </Paper>
+
+      {/* ══════════════════════════════════════════════════════
+          ③ POST-ACTIVITY REPORT TABLE
+         ══════════════════════════════════════════════════════ */}
+      <Paper elevation={0} sx={{ p: 2, border: "1px solid #bfdbfe", borderRadius: 2, mb: 2, background: "#f8fbff" }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
+          <Box>
+            <Typography sx={{ fontWeight: 700, color: "#1d4ed8", fontSize: 13 }}>Post-Activity Report</Typography>
+            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 0.25 }}>
+              Uses the same Academic Calendar above — select a Saturday and Add Row to pre-fill
+            </Typography>
+          </Box>
+          <Button size="small" variant="outlined" onClick={addPostPlanningRow}>+ Add Row</Button>
+        </Box>
+
+        {renderEditableTable(
+          ["Month / Week", "Class", "Theme Category", "Activity Name", "Resource Person", "Students Participated",           
+           
+           "Photos / Report", ""],
+          postPlanningRows,
+          renderPostTableRow
+        )}
+      </Paper>
+
+      {/* ══════════════════════════════════════════════════════
+          ④ GAP ANALYSIS
+         ══════════════════════════════════════════════════════ */}
+      <Paper elevation={0} sx={{ p: 2, border: "1px solid #fed7aa", borderRadius: 2, background: "#fff7ed" }}>
+        <Typography sx={{ fontWeight: 700, color: "#c2410c", fontSize: 13, mb: 1.5 }}>Gap Analysis</Typography>
+        {renderEditableTable(
+          ["Month / Week", "Class", "Theme Category", "Activity Name", "Gap Identified", "Status", "Action Point"],
+          gapRows,
+          (row) => (
+            <tr key={row.id}>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.monthWeek}</td>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.className}</td>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.themeCategory}</td>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12, fontWeight: 600 }}>{row.activity}</td>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12, color: row.gap === "No gap" ? "#16a34a" : "#dc2626", fontWeight: 700 }}>{row.gap}</td>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa" }}>
+                <Chip label={row.status} size="small" sx={{ background: row.status === "Complete" ? "#dcfce7" : "#fee2e2", color: row.status === "Complete" ? "#16a34a" : "#dc2626", fontWeight: 700 }} />
+              </td>
+              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.action}</td>
+            </tr>
+          )
+        )}
+      </Paper>
+    </Box>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
    MAIN ATTENDANCE COMPONENT
 ───────────────────────────────────────────────────────────────────────────── */
 const Attendance = ({
@@ -1204,35 +1720,46 @@ const Attendance = ({
 
   return (
     <Box>
-      <Box sx={{ background:"linear-gradient(135deg, #0f172a, #1e3a5f)", borderRadius:3, px:3, py:2.5, mb:3, display:"flex", alignItems:"center", gap:2 }}>
-        <Typography sx={{ fontSize:30 }}>📅</Typography>
+      <Box sx={{ background: "linear-gradient(135deg, #0f172a, #1e3a5f)", borderRadius: 3, px: 3, py: 2.5, mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
+        <Typography sx={{ fontSize: 30 }}>📅</Typography>
         <Box>
-          <Typography sx={{ color:"#fff", fontWeight:800, fontSize:18 }}>Attendance Management</Typography>
-          <Typography sx={{ color:"#94a3b8", fontSize:12 }}>
+          <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>Attendance Management</Typography>
+          <Typography sx={{ color: "#94a3b8", fontSize: 12 }}>
             Staff &amp; Student monthly attendance — Excel import or manual entry
           </Typography>
         </Box>
       </Box>
 
       {/* Holiday List */}
-      <Accordion defaultExpanded={false} sx={{ mb:2, borderRadius:"10px !important", overflow:"hidden", "&::before":{ display:"none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color:"#fff" }} />}
-          sx={{ background:"linear-gradient(135deg, #1e3a5f, #2563eb)", color:"#fff", minHeight:48 }}>
-          <Typography sx={{ fontWeight:700, fontSize:13 }}>🗓️ Assam Government Holiday List (2024–2026)</Typography>
+      <Accordion defaultExpanded={false} sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+          sx={{ background: "linear-gradient(135deg, #1e3a5f, #2563eb)", color: "#fff", minHeight: 48 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 13 }}>🗓️ Assam Government Holiday List (2024–2026)</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ p:2, background:"#f8fafc" }}><AssamHolidayList /></AccordionDetails>
+        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}><AssamHolidayList /></AccordionDetails>
+      </Accordion>
+
+      {/* Saksham Saturday Planning Report */}
+      <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+          sx={{ background: "linear-gradient(135deg, #92400e, #f97316)", color: "#fff", minHeight: 48 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 13 }}>Saksham Saturday - Pre-Activity Planning, Post-Activity Report &amp; Gap Analysis</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+          <SakshamSaturdayReport />
+        </AccordionDetails>
       </Accordion>
 
       {/* Teaching Staff */}
-      <Accordion defaultExpanded sx={{ mb:2, borderRadius:"10px !important", overflow:"hidden", "&::before":{ display:"none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color:"#fff" }} />}
-          sx={{ background:"linear-gradient(to right, #1976d2, #42a5f5)", color:"#fff", minHeight:48 }}>
-          <Box sx={{ display:"flex", alignItems:"center", gap:1.5 }}>
-            <Typography sx={{ fontWeight:700, fontSize:13 }}>👨‍🏫 Teaching Staff — Monthly Attendance</Typography>
-            {teachingCount > 0 && <Chip label={`${teachingCount} records`} size="small" sx={{ background:"#ffffff33", color:"#fff", fontWeight:700, fontSize:11 }} />}
+      <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+          sx={{ background: "linear-gradient(to right, #1976d2, #42a5f5)", color: "#fff", minHeight: 48 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 13 }}>👨‍🏫 Teaching Staff — Monthly Attendance</Typography>
+            {teachingCount > 0 && <Chip label={`${teachingCount} records`} size="small" sx={{ background: "#ffffff33", color: "#fff", fontWeight: 700, fontSize: 11 }} />}
           </Box>
         </AccordionSummary>
-        <AccordionDetails sx={{ p:2, background:"#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
           <StaffAttendanceSection
             staffType="Teaching"
             rows={staffAttendanceRows} setRows={setStaffAttendanceRows}
@@ -1242,15 +1769,15 @@ const Attendance = ({
       </Accordion>
 
       {/* Non-Teaching Staff */}
-      <Accordion defaultExpanded sx={{ mb:2, borderRadius:"10px !important", overflow:"hidden", "&::before":{ display:"none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color:"#fff" }} />}
-          sx={{ background:"linear-gradient(to right, #7c3aed, #a78bfa)", color:"#fff", minHeight:48 }}>
-          <Box sx={{ display:"flex", alignItems:"center", gap:1.5 }}>
-            <Typography sx={{ fontWeight:700, fontSize:13 }}>🧹 Non-Teaching Staff — Monthly Attendance</Typography>
-            {nonTeachingCount > 0 && <Chip label={`${nonTeachingCount} records`} size="small" sx={{ background:"#ffffff33", color:"#fff", fontWeight:700, fontSize:11 }} />}
+      <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+          sx={{ background: "linear-gradient(to right, #7c3aed, #a78bfa)", color: "#fff", minHeight: 48 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 13 }}>🧹 Non-Teaching Staff — Monthly Attendance</Typography>
+            {nonTeachingCount > 0 && <Chip label={`${nonTeachingCount} records`} size="small" sx={{ background: "#ffffff33", color: "#fff", fontWeight: 700, fontSize: 11 }} />}
           </Box>
         </AccordionSummary>
-        <AccordionDetails sx={{ p:2, background:"#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
           <StaffAttendanceSection
             staffType="Non-Teaching"
             rows={staffAttendanceRows} setRows={setStaffAttendanceRows}
@@ -1260,26 +1787,26 @@ const Attendance = ({
       </Accordion>
 
       {/* Annual Overview */}
-      <Accordion sx={{ mb:2, borderRadius:"10px !important", overflow:"hidden", "&::before":{ display:"none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color:"#fff" }} />}
-          sx={{ background:"linear-gradient(to right, #374151, #6b7280)", color:"#fff", minHeight:48 }}>
-          <Typography sx={{ fontWeight:700, fontSize:13 }}>📊 Annual Staff Attendance Overview</Typography>
+      <Accordion sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+          sx={{ background: "linear-gradient(to right, #374151, #6b7280)", color: "#fff", minHeight: 48 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 13 }}>📊 Annual Staff Attendance Overview</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ p:2, background:"#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
           <AnnualStaffOverview staffAttendanceRows={staffAttendanceRows} />
         </AccordionDetails>
       </Accordion>
 
       {/* Student Attendance */}
-      <Accordion defaultExpanded sx={{ mb:2, borderRadius:"10px !important", overflow:"hidden", "&::before":{ display:"none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color:"#fff" }} />}
-          sx={{ background:"linear-gradient(135deg, #0f766e, #14b8a6)", color:"#fff", minHeight:48 }}>
-          <Box sx={{ display:"flex", alignItems:"center", gap:1.5 }}>
-            <Typography sx={{ fontWeight:700, fontSize:13 }}>🎓 Student Attendance &amp; Performance</Typography>
-            {studentAttendanceData.length > 0 && <Chip label={`${studentAttendanceData.length} records`} size="small" sx={{ background:"#ffffff33", color:"#fff", fontWeight:700, fontSize:11 }} />}
+      <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+          sx={{ background: "linear-gradient(135deg, #0f766e, #14b8a6)", color: "#fff", minHeight: 48 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 13 }}>🎓 Student Attendance &amp; Performance</Typography>
+            {studentAttendanceData.length > 0 && <Chip label={`${studentAttendanceData.length} records`} size="small" sx={{ background: "#ffffff33", color: "#fff", fontWeight: 700, fontSize: 11 }} />}
           </Box>
         </AccordionSummary>
-        <AccordionDetails sx={{ p:2, background:"#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
           <StudentAttendanceSection
             studentAttendanceData={studentAttendanceData}
             setStudentAttendanceData={setStudentAttendanceData}
