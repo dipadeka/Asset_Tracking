@@ -52,6 +52,78 @@ const SectionTable = ({ title, rows }) => (
 );
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   NEW: EMRS IMAGES SECTION
+   Renders every image stored under form.emrsImages (base64 data URLs saved
+   from Step 11 "EMRS Image Upload" during submission). Supports both a
+   single value per key and an array of values per key.
+───────────────────────────────────────────────────────────────────────────── */
+const EMRSImagesSection = ({ images }) => {
+  const [previewSrc, setPreviewSrc] = useState(null);
+
+  if (!images || typeof images !== "object") return null;
+
+  const entries = Object.entries(images).flatMap(([key, val]) => {
+    const values = Array.isArray(val) ? val : [val];
+    return values
+      .filter((src) => typeof src === "string" && src.startsWith("data:"))
+      .map((src, i) => ({ key, src, id: `${key}-${i}` }));
+  });
+
+  if (entries.length === 0) return null;
+
+  const labelize = (key) =>
+    key
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/^./, (c) => c.toUpperCase());
+
+  return (
+    <Box mb={2}>
+      <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#1976d2", mb: 1, borderBottom: "2px solid #e3f2fd", pb: 0.5 }}>
+        📸 Uploaded Images
+      </Typography>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+        {entries.map(({ key, src, id }) => (
+          <Box key={id} sx={{ textAlign: "center" }}>
+            <Box
+              component="img"
+              src={src}
+              alt={key}
+              onClick={() => setPreviewSrc(src)}
+              sx={{
+                width: 160,
+                height: 120,
+                objectFit: "cover",
+                borderRadius: 2,
+                border: "1px solid #e2e8f0",
+                boxShadow: 1,
+                cursor: "pointer",
+                transition: "transform 0.15s",
+                "&:hover": { transform: "scale(1.03)" },
+              }}
+            />
+            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 0.5, maxWidth: 160 }}>
+              {labelize(key)}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+      {/* Click-to-zoom preview dialog */}
+      <Dialog open={Boolean(previewSrc)} onClose={() => setPreviewSrc(null)} maxWidth="md">
+        <DialogContent sx={{ p: 1, display: "flex", justifyContent: "center" }}>
+          {previewSrc && (
+            <Box component="img" src={previewSrc} alt="preview" sx={{ maxWidth: "100%", maxHeight: "80vh", borderRadius: 1 }} />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewSrc(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
    FIX 1: filterFormsForUser — match on ANY identifier field
    Previously only matched schoolCode OR username, missing cases where the
    form was saved with EMRScode / loginId / email instead.
@@ -301,6 +373,9 @@ const EMRSApplied = () => {
               {buildSections(form).map((sec) => (
                 <SectionTable key={sec.title} title={sec.title} rows={sec.rows} />
               ))}
+
+              {/* NEW: Uploaded EMRS images (Step 11), if present on the record */}
+              <EMRSImagesSection images={form.emrsImages} />
 
               {form.classStrength?.length > 0 && (
                 <Box mb={2}>

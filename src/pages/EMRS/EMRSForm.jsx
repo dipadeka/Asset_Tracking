@@ -168,6 +168,39 @@ const getHolidaysForMonth = (monthName) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   IMAGE HELPERS — convert File objects to base64 data URLs so they survive
+   JSON.stringify / localStorage / API submission, and can be re-rendered
+   later in EMRSApplied.jsx
+───────────────────────────────────────────────────────────────────────────── */
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    if (!(file instanceof File) && !(file instanceof Blob)) {
+      // already a string (base64 / URL) or null/undefined — pass through
+      resolve(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+const convertUploadedImages = async (imagesObj) => {
+  if (!imagesObj || typeof imagesObj !== "object") return {};
+  const entries = await Promise.all(
+    Object.entries(imagesObj).map(async ([key, val]) => {
+      if (Array.isArray(val)) {
+        const converted = await Promise.all(val.map((f) => fileToBase64(f)));
+        return [key, converted];
+      }
+      const converted = await fileToBase64(val);
+      return [key, converted];
+    })
+  );
+  return Object.fromEntries(entries);
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
    ASSAM HOLIDAY LIST COMPONENT
 ───────────────────────────────────────────────────────────────────────────── */
 const AssamHolidayList = () => {
@@ -1176,7 +1209,15 @@ const EMRSForm = ({ addSubmittedForm }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+
+  // NOTE: this local `submittedForms` state is intentionally unused for
+  // display — this component's job is to SUBMIT a form, not render the
+  // list of submitted forms. The list should be owned by the dashboard /
+  // EMRSApplied.jsx component so it survives navigation and re-mounts.
+  // Kept here (unused) only for backward compatibility with older code
+  // paths that may still reference it.
   const [submittedForms, setSubmittedForms] = useState([]);
+
   const [safetyCompliance, setSafetyCompliance] = useState({
     totalFireExtinguishers: "",
     functionalFireExtinguishers: "",
@@ -1547,13 +1588,9 @@ const EMRSForm = ({ addSubmittedForm }) => {
     setStudentExcelUploading(false);
   };
  
-  // Must use readAsArrayBuffer (not readAsBinaryString)
-  reader.readAsArrayBuffer(file);
+ reader.readAsArrayBuffer(file);
 };
  
- 
-
-
   const handleItemChange = (index, field, value) => {
     const updatedItems = [...messData.items];
     if (["quantity", "price"].includes(field)) value = Math.max(0, value);
@@ -1708,7 +1745,6 @@ const EMRSForm = ({ addSubmittedForm }) => {
       setConstructionRows((prev) => ({ ...prev, [cat]: prev[cat].map((r) => r.component === component && r.status === "Not Started" ? { ...r, status: "In Progress" } : r) }));
     }
   };
-
   const onPincodeChange = async (pincode) => {
     if (!pincode || String(pincode).length !== 6) return;
     try {
@@ -1726,6 +1762,8 @@ const EMRSForm = ({ addSubmittedForm }) => {
     const loadingToast = toast.loading("Submitting EMRS data...");
 
     try {
+      const emrsImagesBase64 = await convertUploadedImages(uploadedImages);
+
       const payload = {
         userId: "1",
         ...prepareBasicDetails(data),
@@ -1752,6 +1790,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
         nonTeachingStaffAttendance: staffAttendanceRows.filter((r) => r.staffType === "Non-Teaching"),
         studentAttendance: studentAttendanceData,
         operationalCost: operationalCostRows.map((row) => ({ year: row.year, month: row.month, costType: row.costType, amount: toSafeNumber(row.amount) })),
+        emrsImages: emrsImagesBase64,
       };
 
       const cred = resolveCredential();
@@ -1768,74 +1807,61 @@ const EMRSForm = ({ addSubmittedForm }) => {
         let result = {};
         if (contentType && contentType.includes("application/json")) result = await response.json();
         if (response.ok) submittedId = result.data?._id || result._id;
-        else submittedId = `local_${Date.now()}`;
-      } catch (fetchError) { submittedId = `local_${Date.now()}`; }
-
+        else submittedId = null; // let the local-save block assign a unique local id below
+      } catch (fetchError) { submittedId = null; } // network/API failed — fall back to local-only save
       try {
-  // FIX: always write BOTH EMRScode and schoolCode so filterFormsForUser
-  // can match the record regardless of which field it checks.
-  const credSchoolCode =
-    (user?.role === "school" ? user?.schoolCode : null) ||
-    payload.EMRScode ||
-    "";
- 
-  const recordToSave = {
-    ...payload,
-    _id:         submittedId || `local_${Date.now()}`,
-    EMRScode:    credSchoolCode || payload.EMRScode || "",
-    schoolCode:  credSchoolCode || payload.EMRScode || "",   // ← NEW: mirror field
-    createdAt:   new Date().toISOString(),
-    submittedAt: new Date().toISOString(),
-  };
- 
-  const existing = JSON.parse(
-    localStorage.getItem("emrs_submitted_forms") || "[]"
-  );
- 
-  // Match priority:
-  //   1. Exact _id (for server records being updated)
-  //   2. Same EMRScode / schoolCode
-  //   3. Same username / loginId
-  const idx = existing.findIndex((f) => {
-    // 1. exact server _id (skip local_ ids to avoid collisions)
-    if (
-      recordToSave._id &&
-      !String(recordToSave._id).startsWith("local_") &&
-      f._id === recordToSave._id
-    )
-      return true;
- 
-    // 2. same school code
-    const recCode = String(credSchoolCode || "").toLowerCase();
-    if (recCode) {
-      const fCode = String(f.EMRScode || f.schoolCode || "").toLowerCase();
-      if (fCode && fCode === recCode) return true;
-    }
- 
-    // 3. same username / loginId
-    const recUser = String(payload.username || "").toLowerCase();
-    if (recUser) {
-      const fUser = String(f.username || f.loginId || "").toLowerCase();
-      if (fUser && fUser === recUser) return true;
-    }
- 
-    return false;
-  });
- 
-  if (idx !== -1) {
-    existing[idx] = recordToSave; // update existing record
-  } else {
-    existing.push(recordToSave);  // insert new record
-  }
- 
-  localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));
-  window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
-} catch (storageError) {
-  console.warn("localStorage save failed:", storageError.message);
-}
+        const credSchoolCode =
+          (user?.role === "school" ? user?.schoolCode : null) ||
+          payload.EMRScode ||
+          "";
+
+        const uniqueLocalId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+        const recordToSave = {
+          ...payload,
+          _id:         submittedId || uniqueLocalId,
+          EMRScode:    credSchoolCode || payload.EMRScode || "",
+          schoolCode:  credSchoolCode || payload.EMRScode || "",   // mirror field
+          createdAt:   new Date().toISOString(),
+          submittedAt: new Date().toISOString(),
+        };
+
+        const existing = JSON.parse(
+          localStorage.getItem("emrs_submitted_forms") || "[]"
+        );
+        const idx = existing.findIndex(
+          (f) =>
+            recordToSave._id &&
+            !String(recordToSave._id).startsWith("local_") &&
+            f._id === recordToSave._id
+        );
+
+        if (idx !== -1) {
+          existing[idx] = recordToSave; 
+        } else {
+          existing.push(recordToSave); 
+        }
+
+        localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));
+        // Notify any listening dashboard/list component to re-read from
+        // localStorage immediately (see EMRSApplied.jsx / dashboard notes).
+        window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
+      } catch (storageError) {
+        console.warn("localStorage save failed:", storageError.message);
+      }
+
       toast.dismiss(loadingToast);
       toast.success("✅ EMRS Form Submitted Successfully!");
-      if (addSubmittedForm) addSubmittedForm({ id: submittedId, schoolname: payload.schoolname, EMRScode: payload.EMRScode, district: payload.district, submittedAt: new Date().toLocaleString(), payload });
+      if (addSubmittedForm) {
+        addSubmittedForm({
+          id: submittedId || `local_${Date.now()}`,
+          schoolname: payload.schoolname,
+          EMRScode: payload.EMRScode,
+          district: payload.district,
+          submittedAt: new Date().toLocaleString(),
+          payload,
+        });
+      }
       navigate("/emrs/dashboard");
     } catch (error) {
       toast.dismiss(loadingToast);

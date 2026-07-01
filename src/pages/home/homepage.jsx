@@ -2,40 +2,124 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA (unchanged)
+// DATA (image field added to each EMRS pin + each Asset pin for hover/preview)
 // ─────────────────────────────────────────────────────────────────────────────
+const FALLBACK_IMG = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=500";
+
 const EMRS_PINS = [
-  { name: "EMRS Dalbari, Barama", district: "Baksa", students: 220, cap: 300, classes: "6–12", status: "Active", principal: "Mr. R. Basumatary", lat: 26.4500, lng: 90.8500 },
-  { name: "EMRS Jalah, Vill. Daodhara", district: "Baksa", students: 300, cap: 340, classes: "6–12", status: "Active", principal: "Mr. K. Boro", lat: 26.4600, lng: 90.8600 },
-  { name: "EMRS Sarupeta, Vill Tatikuchi", district: "Baksa", students: 300, cap: 320, classes: "6–12", status: "Active", principal: "Mr. I. Narzary", lat: 26.4400, lng: 90.8400 },
-  { name: "EMRS Kharadhara", district: "Bajali", students: 295, cap: 320, classes: "6–12", status: "Active", principal: "Ms. P. Devi", lat: 26.6700, lng: 91.1800 },
-  { name: "EMRS Bedlangmari", district: "Kokrajhar", students: 340, cap: 380, classes: "6–12", status: "Active", principal: "Mr. A. Gogoi", lat: 26.4000, lng: 90.2600 },
-  { name: "EMRS Howraghat", district: "Karbi Anglong", students: 410, cap: 450, classes: "6–12", status: "Active", principal: "Dr. S. Terang", lat: 26.0900, lng: 93.3000 },
-  { name: "EMRS Phuloni, Donghap", district: "Karbi Anglong", students: 275, cap: 300, classes: "6–10", status: "Active", principal: "Mr. K. Hmar", lat: 25.3000, lng: 92.8000 },
-  { name: "EMRS Silonijan, Thengkur Terang", district: "Karbi Anglong", students: 380, cap: 400, classes: "6–12", status: "Active", principal: "Ms. N. Das", lat: 26.04, lng: 93.63 },
-  { name: "EMRS Donka, Taralangsho", district: "West Karbi Anglong", students: 350, cap: 400, classes: "6–12", status: "Active", principal: "Mr. B. Bora", lat: 24.90, lng: 92.69 },
-  { name: "EMRS Jonai, Purana Jhelom", district: "Dhemaji", students: 290, cap: 320, classes: "6–12", status: "Active", principal: "Ms. R. Choudhury", lat: 27.2300, lng: 94.1100 },
-  { name: "EMRS Haflong, Ardaopur", district: "Dima Hasao", students: 315, cap: 350, classes: "6–12", status: "Active", principal: "Mr. D. Phukan", lat: 25.1633, lng: 93.0128 },
-  { name: "EMRS Umrangso", district: "Dima Hasao", students: 260, cap: 300, classes: "6–10", status: "Planned", principal: "TBD", lat: 25.51, lng: 92.73 },
-  { name: "EMRS Harangajao", district: "Dima Hasao", students: 305, cap: 340, classes: "6–12", status: "Active", principal: "Ms. A. Kalita", lat: 25.09, lng: 92.84 },
-  { name: "EMRS Diyungbra", district: "Dima Hasao", students: 332, cap: 360, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 25.62, lng: 92.91 },
-  { name: "EMRS Boko", district: "Kamrup", students: 332, cap: 345, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 25.95, lng: 91.2040 },
-  { name: "EMRS Dudhnoi, Jakhuwapara", district: "Goalpara", students: 332, cap: 360, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 25.9500, lng: 90.9010 },
-  { name: "EMRS Khairabari, Malmura", district: "Udalguri", students: 332, cap: 380, classes: "6–12", status: "Active", principal: "Mr. P. Hazarika", lat: 26.6400, lng: 91.7500 },
+  { name: "EMRS Dalbari, Barama", district: "Baksa", students: 220, cap: 300, classes: "6–12", status: "Not Active", principal: "Mr. R. Basumatary", lat: 26.4500, lng: 90.8500, image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400" },
+  { name: "EMRS Jalah, Vill. Daodhara", district: "Baksa", students: 300, cap: 340, classes: "6–12", status: "Active", principal: "Mr. K. Boro", lat: 26.4600, lng: 90.8600, image: "/images/emrs-jalah-morning-assembly.png" },
+  { name: "EMRS Sarupeta, Vill Tatikuchi", district: "Baksa", students: 300, cap: 320, classes: "6–12", status: "Not Active", principal: "Mr. I. Narzary", lat: 26.4400, lng: 90.8400, image: FALLBACK_IMG },
+  { name: "EMRS Kharadhara", district: "Bajali", students: 295, cap: 320, classes: "6–12", status: "Active", principal: "Ms. P. Devi", lat: 26.6700, lng: 91.1800, image: "/images/emrs-kharadhara-inauguration.png" },
+  { name: "EMRS Bedlangmari", district: "Kokrajhar", students: 340, cap: 380, classes: "6–12", status: "Not Active", principal: "Mr. A. Gogoi", lat: 26.4000, lng: 90.2600, image: "images/emrs-bedlangmari-schoolbuilding.png" },
+  { name: "EMRS Howraghat", district: "Karbi Anglong", students: 410, cap: 450, classes: "6–12", status: "Active", principal: "Dr. S. Terang", lat: 26.0900, lng: 93.3000, image: "/images/emrs-howraghat-schoolbuilding.png" },
+  { name: "EMRS Phuloni, Donghap", district: "Karbi Anglong", students: 275, cap: 300, classes: "6–10", status: "Not Active", principal: "Mr. K. Hmar", lat: 25.3000, lng: 92.8000, image: FALLBACK_IMG },
+  { name: "EMRS Silonijan, Thengkur Terang", district: "Karbi Anglong", students: 380, cap: 400, classes: "6–12", status: "Not Active", principal: "Ms. N. Das", lat: 26.04, lng: 93.63, image: FALLBACK_IMG },
+  { name: "EMRS Donka, Taralangsho", district: "West Karbi Anglong", students: 350, cap: 400, classes: "6–12", status: " Not Active", principal: "Mr. B. Bora", lat: 24.90, lng: 92.69, image: FALLBACK_IMG },
+  { name: "EMRS Jonai, Purana Jhelom", district: "Dhemaji", students: 290, cap: 320, classes: "6–12", status: "Active", principal: "Ms. R. Choudhury", lat: 27.2300, lng: 94.1100, image: "/images/emrs-jonai-building.png" },
+  { name: "EMRS Haflong, Ardaopur", district: "Dima Hasao", students: 315, cap: 350, classes: "6–12", status: "Active", principal: "Mr. D. Phukan", lat: 25.1633, lng: 93.0128, image: "images/emrs-ardaopur-schoolbuilding.png" },
+  { name: "EMRS Umrangso", district: "Dima Hasao", students: 260, cap: 300, classes: "6–10", status: "Not Active", principal: "TBD", lat: 25.51, lng: 92.73, image: "/images/emrs-umrangsho-aerialview.png" },
+  { name: "EMRS Harangajao", district: "Dima Hasao", students: 305, cap: 340, classes: "6–12", status: "Not Active", principal: "Ms. A. Kalita", lat: 25.09, lng: 92.84, image: FALLBACK_IMG },
+  { name: "EMRS Diyungbra", district: "Dima Hasao", students: 332, cap: 360, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 25.62, lng: 92.91, image: FALLBACK_IMG },
+  { name: "EMRS Boko", district: "Kamrup", students: 332, cap: 345, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 25.95, lng: 91.2040, image: "/images/emrs-boko-schoolbuilding.png" },
+  { name: "EMRS Dudhnoi, Jakhuwapara", district: "Goalpara", students: 332, cap: 360, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 25.9500, lng: 90.9010, image: FALLBACK_IMG },
+  { name: "EMRS Khairabari, Malmura", district: "Udalguri", students: 332, cap: 380, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 26.6400, lng: 91.7500, image: FALLBACK_IMG },
 ];
 
 const ASSET_PINS = [
-  { name: "Kamrup Asset Hub", district: "Kamrup", type: "infra", value: "₹4.2Cr", status: "Active", year: 2023, lat: 26.1700, lng: 91.7700 },
-  { name: "Tezpur Road Project", district: "Sonitpur", type: "road", value: "₹2.8Cr", status: "In Progress", year: 2024, lat: 26.6300, lng: 92.7900 },
-  { name: "Jorhat Infra Store", district: "Jorhat", type: "infra", value: "₹3.1Cr", status: "Active", year: 2022, lat: 26.7500, lng: 94.2000 },
-  { name: "Dibrugarh Warehouse", district: "Dibrugarh", type: "building", value: "₹5.6Cr", status: "Active", year: 2021, lat: 27.4800, lng: 94.9100 },
-  { name: "Nagaon Construction", district: "Nagaon", type: "building", value: "₹1.9Cr", status: "In Progress", year: 2024, lat: 26.3500, lng: 92.6900 },
-  { name: "Barpeta Road Network", district: "Barpeta", type: "road", value: "₹2.2Cr", status: "Active", year: 2023, lat: 26.3200, lng: 91.0000 },
-  { name: "Cachar Asset Depot", district: "Cachar", type: "infra", value: "₹3.4Cr", status: "Active", year: 2022, lat: 24.8200, lng: 92.7800 },
-  { name: "Dhubri Bridge Project", district: "Dhubri", type: "road", value: "₹6.0Cr", status: "Planned", year: 2025, lat: 26.0200, lng: 89.9800 },
-  { name: "Sivasagar Heritage", district: "Sivasagar", type: "building", value: "₹4.8Cr", status: "Active", year: 2020, lat: 26.9800, lng: 94.6400 },
-  { name: "Kokrajhar Dev Store", district: "Kokrajhar", type: "infra", value: "₹1.5Cr", status: "Active", year: 2023, lat: 26.4000, lng: 90.2700 },
+  { name: "Kamrup Asset Hub", district: "Kamrup", type: "infra", value: "₹4.2Cr", status: "Active", year: 2023, lat: 26.1700, lng: 91.7700, image: FALLBACK_IMG },
+  { name: "Tezpur Road Project", district: "Sonitpur", type: "road", value: "₹2.8Cr", status: "In Progress", year: 2024, lat: 26.6300, lng: 92.7900, image: FALLBACK_IMG },
+  { name: "Jorhat Infra Store", district: "Jorhat", type: "infra", value: "₹3.1Cr", status: "Active", year: 2022, lat: 26.7500, lng: 94.2000, image: FALLBACK_IMG },
+  { name: "Dibrugarh Warehouse", district: "Dibrugarh", type: "building", value: "₹5.6Cr", status: "Active", year: 2021, lat: 27.4800, lng: 94.9100, image: FALLBACK_IMG },
+  { name: "Nagaon Construction", district: "Nagaon", type: "building", value: "₹1.9Cr", status: "In Progress", year: 2024, lat: 26.3500, lng: 92.6900, image: FALLBACK_IMG },
+  { name: "Barpeta Road Network", district: "Barpeta", type: "road", value: "₹2.2Cr", status: "Active", year: 2023, lat: 26.3200, lng: 91.0000, image: FALLBACK_IMG },
+  { name: "Cachar Asset Depot", district: "Cachar", type: "infra", value: "₹3.4Cr", status: "Active", year: 2022, lat: 24.8200, lng: 92.7800, image: FALLBACK_IMG },
+  { name: "Dhubri Bridge Project", district: "Dhubri", type: "road", value: "₹6.0Cr", status: "Not Active", year: 2025, lat: 26.0200, lng: 89.9800, image: FALLBACK_IMG },
+  { name: "Sivasagar Heritage", district: "Sivasagar", type: "building", value: "₹4.8Cr", status: "Active", year: 2020, lat: 26.9800, lng: 94.6400, image: FALLBACK_IMG },
+  { name: "Kokrajhar Dev Store", district: "Kokrajhar", type: "infra", value: "₹1.5Cr", status: "Active", year: 2023, lat: 26.4000, lng: 90.2700, image: FALLBACK_IMG },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEAREST-TRANSIT DATA (approximate coordinates) + DISTANCE HELPERS
+// Used to show "nearest railway station", "nearest airport", and
+// "distance to nearest EMRS school" when hovering / selecting a map pin.
+// ─────────────────────────────────────────────────────────────────────────────
+const ASSAM_RAILWAY_STATIONS = [
+  { name: "Guwahati Railway Station", lat: 26.1758, lng: 91.7086 },
+  { name: "Kamakhya Junction", lat: 26.1587, lng: 91.6417 },
+  { name: "New Bongaigaon Junction", lat: 26.4770, lng: 90.5583 },
+  { name: "Rangiya Junction", lat: 26.4362, lng: 91.6122 },
+  { name: "Kokrajhar Railway Station", lat: 26.4013, lng: 90.2723 },
+  { name: "Fakiragram Junction", lat: 26.3667, lng: 90.2333 },
+  { name: "Barpeta Road Railway Station", lat: 26.4580, lng: 90.9670 },
+  { name: "Nalbari Railway Station", lat: 26.4465, lng: 91.4384 },
+  { name: "Rangapara North Junction", lat: 26.8280, lng: 92.6580 },
+  { name: "North Lakhimpur Railway Station", lat: 27.2280, lng: 94.0930 },
+  { name: "Dibrugarh Railway Station", lat: 27.4728, lng: 94.9120 },
+  { name: "New Tinsukia Junction", lat: 27.4898, lng: 95.3597 },
+  { name: "Naharkatiya Railway Station", lat: 27.2833, lng: 95.3333 },
+  { name: "Jorhat Town Railway Station", lat: 26.7509, lng: 94.2037 },
+  { name: "Mariani Junction", lat: 26.6667, lng: 94.3167 },
+  { name: "Simaluguri Junction", lat: 26.8500, lng: 94.5833 },
+  { name: "Golaghat Railway Station", lat: 26.5100, lng: 93.9600 },
+  { name: "Lumding Junction", lat: 25.7500, lng: 93.1700 },
+  { name: "Nagaon Railway Station", lat: 26.3480, lng: 92.6840 },
+  { name: "Hojai Railway Station", lat: 26.0058, lng: 92.8564 },
+  { name: "Diphu Railway Station", lat: 25.8425, lng: 93.4290 },
+  { name: "Haflong Hill Railway Station", lat: 25.1667, lng: 93.0167 },
+  { name: "Badarpur Junction", lat: 24.8667, lng: 92.6000 },
+  { name: "Karimganj Railway Station", lat: 24.8697, lng: 92.3572 },
+  { name: "Silchar Railway Station", lat: 24.7960, lng: 92.7788 },
+  { name: "Dhubri Railway Station", lat: 26.0230, lng: 89.9850 },
+];
+
+const ASSAM_AIRPORTS = [
+  { name: "Lokpriya Gopinath Bordoloi Intl. Airport, Guwahati", lat: 26.1061, lng: 91.5859 },
+  { name: "Dibrugarh Airport (Mohanbari)", lat: 27.4839, lng: 95.0169 },
+  { name: "Jorhat Airport", lat: 26.7315, lng: 94.1754 },
+  { name: "Silchar Airport (Kumbhirgram)", lat: 24.9129, lng: 92.9787 },
+  { name: "Tezpur Airport (Salonibari)", lat: 26.7091, lng: 92.7847 },
+  { name: "Lilabari Airport (North Lakhimpur)", lat: 27.2954, lng: 94.0974 },
+];
+
+// Haversine great-circle distance in km between two lat/lng points
+function haversineKm(lat1, lng1, lat2, lng2) {
+  if ([lat1, lng1, lat2, lng2].some((v) => v === undefined || v === null)) return null;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Closest entry in `list` to a given lat/lng, with `.distance` (km) attached
+function findNearestPlace(lat, lng, list) {
+  let best = null;
+  list.forEach((p) => {
+    const d = haversineKm(lat, lng, p.lat, p.lng);
+    if (d === null) return;
+    if (!best || d < best.distance) best = { ...p, distance: d };
+  });
+  return best;
+}
+
+// Closest *other* EMRS school to a given EMRS pin
+function findNearestEMRS(pin, allPins) {
+  let best = null;
+  allPins.forEach((p) => {
+    if (p.name === pin.name) return;
+    const d = haversineKm(pin.lat, pin.lng, p.lat, p.lng);
+    if (d === null) return;
+    if (!best || d < best.distance) best = { ...p, distance: d };
+  });
+  return best;
+}
+
+const formatKm = (km) => (km == null ? "—" : `${km.toFixed(1)} km`);
 
 const STAFF_DATA = [
   { name: "Mr. R. Basumatary", school: "EMRS Dalbari", desig: "Principal", subject: "General", exp: "14 yrs", status: "Active" },
@@ -56,21 +140,20 @@ const STAFF_DATA = [
 ];
 
 const HOSTEL_WARDENS = [
-  { boys: "Mr. B. Das", girls: "Ms. P. Kalita", cap: 300, occ: 248 },
-  { boys: "Mr. K. Boro", girls: "Ms. L. Devi", cap: 340, occ: 312 },
-  { boys: "Mr. N. Baruah", girls: "Ms. G. Gogoi", cap: 320, occ: 290 },
-  { boys: "Mr. A. Mech", girls: "Ms. S. Boro", cap: 320, occ: 275 },
-  { boys: "Mr. P. Bodo", girls: "Ms. R. Nath", cap: 380, occ: 350 },
-  { boys: "Mr. S. Terang", girls: "Ms. D. Engti", cap: 450, occ: 410 },
-  { boys: "Mr. K. Hmar", girls: "Ms. A. Rongpi", cap: 300, occ: 260 },
-  { boys: "Mr. B. Timung", girls: "Ms. N. Phukan", cap: 400, occ: 368 },
-  { boys: "Mr. R. Kro", girls: "Ms. L. Tisso", cap: 400, occ: 340 },
-  { boys: "Mr. D. Pegu", girls: "Ms. T. Doley", cap: 320, occ: 280 },
+  { boys: "Mr. B. Das", girls: "Ms. P. Kalita", cap: 240, occ: 240 },
+  { boys: "Mr. K. Boro", girls: "Ms. L. Devi", cap: 240, occ: 240 },
+  { boys: "Mr. N. Baruah", girls: "Ms. G. Gogoi", cap: 240, occ: 240 },
+  { boys: "Mr. A. Mech", girls: "Ms. S. Boro", cap: 240, occ: 240 },
+  { boys: "Mr. P. Bodo", girls: "Ms. R. Nath", cap: 240, occ: 240 },
+  { boys: "Mr. S. Terang", girls: "Ms. D. Engti", cap: 240, occ: 240 },
+  { boys: "Mr. K. Hmar", girls: "Ms. A. Rongpi", cap: 240, occ: 240 },
+  { boys: "Mr. B. Timung", girls: "Ms. N. Phukan", cap: 240, occ: 240 },
+  { boys: "Mr. R. Kro", girls: "Ms. L. Tisso", cap: 240, occ: 240 },
+  { boys: "Mr. D. Pegu", girls: "Ms. T. Doley", cap: 240, occ: 240 },
 ];
 
 const ATT_RANKING = [96.2, 93.8, 92.1, 91.4, 90.7, 89.3, 88.9, 87.4, 86.1, 85.8, 85.2, 84.9, 83.7, 82.1, 81.4, 79.8, 77.2];
 
-const FALLBACK_IMG = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=500";
 const handleImgError = (e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; };
 
 const HERO_SCROLL_IMAGES = [
@@ -78,10 +161,18 @@ const HERO_SCROLL_IMAGES = [
   { src: "/images/emrs-jalah-morning-assembly.png", caption: "EMRS Jalah (Baksa)", sub: "Morning Assembly" },
   { src: "/images/emrs-kharadhara-inauguration.png", caption: "EMRS Kharadhara (Bajali)", sub: "Inauguration Day" },
   { src: "/images/emrs-howraghat-schoolbuilding.png", caption: "EMRS Howraghat (Karbi Anglong)", sub: "School Building" },
+  { src: "/images/emrs-dalbari-school.jpeg", caption: "EMRS Dalbari (Baksa)", sub: "School Building" },
+  { src: "/images/emrs-ardaopur-academic-block.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Academic Block" },
+  { src: "/images/emrs-ardaopur-assembly.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "School Assembly" },
+  { src: "/images/emrs-ardaopur-dinninghall.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Dining Hall" },
+  { src: "/images/emrs-ardaopur-hostel.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Hostel" },
+  { src: "/images/emrs-ardaopur-schoolgate.png", caption: "EMRS Ardaopur (Dima Hasao)", sub: "School Gate" },
+  
   { src: "/images/emrs-boko-schoolbuilding.png", caption: "EMRS Boko (Kamrup)", sub: "School Building" },
   { src: "/images/emrs-boko-playground.png", caption: "EMRS Boko (Kamrup)", sub: "Playground" },
   { src: "/images/emrs-umrangsho-aerialview.png", caption: "EMRS Umrangso (Dima Hasao)", sub: "Aerial View" },
-  { src: "/images/emrs-kharadhara-hostel.png", caption: "EMRS Kharadhara (Bajali)", sub: "Hostel" },
+  { src: "/images/emrs-kharadhara-boyshostel.png", caption: "EMRS Kharadhara (Bajali)", sub: "Boys Hostel" },
+{ src: "/images/emrs-kharadhara-girlshostel.png", caption: "EMRS Kharadhara (Bajali)", sub: "Girls Hostel" },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,7 +199,7 @@ const T = {
 // RESOURCES DROPDOWN DATA
 // ─────────────────────────────────────────────────────────────────────────────
 const RESOURCES_MENU = [
-  { icon: "📋", label: "EMRS Guidelines", sub: "Official operational guidelines", url: "public/pdf/EMRSguidelines2026.pdf" },
+  { icon: "📋", label: "EMRS Guidelines", sub: "Official operational guidelines", url: "/pdf/EMRSguidelines2026.pdf" },
   { icon: "📜", label: "Rules & Regulations", sub: "Governing rules for EMRS", url: "https://tribal.assam.gov.in/rules-regulations" },
   { icon: "📰", label: "Circulars", sub: "Latest circulars & orders", url: "https://tribal.assam.gov.in/circulars" },
   { icon: "📅", label: "EMRS Annual Calendar", sub: "Academic calendar 2024–25", url: "https://tribal.assam.gov.in/annual-calendar" },
@@ -386,9 +477,9 @@ function OverviewTab() {
     <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
         <MetricCard icon="🏫" label="Total EMRS" value="17" sub="Across 10 districts" accentColor={T.brown} />
-        <MetricCard icon="🎓" label="Total Students" value={totalEnrolled.toLocaleString()} sub="Classes 6–12" accentColor={T.purple} />
-        <MetricCard icon="👨‍🏫" label="Staff Strength" value="412" sub="Teaching + non-teaching" accentColor={T.green} />
-        <MetricCard icon="🏠" label="Hostel Capacity" value="6,200" sub="Occupancy: 85.7%" accentColor={T.brownLight} />
+        <MetricCard icon="🎓" label="Total Students" value="500" sub="Classes 6–12" accentColor={T.purple} />
+        <MetricCard icon="👨‍🏫" label="Staff Strength" value="50" sub="Teaching + non-teaching" accentColor={T.green} />
+        <MetricCard icon="🏠" label="Hostel Capacity" value="480" sub="Occupancy: 85.7%" accentColor={T.brownLight} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
         <ChartCard title="Enrollment by class">
@@ -511,8 +602,8 @@ function EnrollmentTab() {
   return (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
-        <MetricCard icon="🎓" label="Total Enrolled" value="500+" sub="↑ 4.2% vs last year" accentColor={T.brown} />
-        <MetricCard icon="👧" label="Girl Students" value="2,552" sub="48% of total" accentColor={T.purple} />
+        <MetricCard icon="🎓" label="Total Enrolled" value="50" sub="↑ 4.2% vs last year" accentColor={T.brown} />
+        <MetricCard icon="👧" label="Girl Students" value="20" sub="48% of total" accentColor={T.purple} />
         <MetricCard icon="📈" label="New Admissions" value="920" sub="Class 6 intake 2024–25" accentColor={T.green} />
         <MetricCard icon="🏆" label="Highest Enrolment" value="410" sub="EMRS Howraghat" accentColor={T.brownLight} />
       </div>
@@ -967,7 +1058,7 @@ function GallerySection() {
 
   const galleryData = {
     "EMRS Dalbari, Barama": [
-      { type: "photo", src: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600", caption: "School Building" },
+      { type: "photo", src: "/images/emrs-dalbari-school.jpeg", caption: "School Building" },
       { type: "photo", src: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600", caption: "Library" },
       { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600", caption: "Inauguration Ceremony" },
     ],
@@ -994,6 +1085,13 @@ function GallerySection() {
     "EMRS Ardaopur": [
       { type: "photo", src: "images/emrs-ardaopur-schoolbuilding.png", caption: "School Building" },
       { type: "photo", src: "images/emrs-ardaopur-hostel.png", caption: "Hostel" },
+      { type: "photo", src: "images/emrs-ardaopur-academic-block.jpeg", caption: "Academic Block" },
+{ type: "photo", src: "images/emrs-ardaopur-assembly.jpeg", caption: "Assembly" },
+{ type: "photo", src: "images/emrs-ardaopur-dinninghall.jpeg", caption: "Dining Hall" },
+{ type: "photo", src: "images/emrs-ardaopur-schoolgate.png", caption: "School Gate" },
+
+
+
     ]
     
   };
@@ -1138,8 +1236,37 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
         iconSize: [ring,ring], iconAnchor: [ring/2,ring],
       });
       const marker = L.marker([pin.lat,pin.lng],{ icon }).addTo(map).on("click",() => onPinClick(pin.id));
+
+      // Hover tooltip shows a small image thumbnail, name & district, plus
+      // — for EMRS pins — distance to the nearest railway station, nearest
+      // airport, and the nearest other EMRS school.
+      const tooltipImg = pin.image || FALLBACK_IMG;
+
+      let extraInfoHtml = "";
+      if (activeLayer === "emrs") {
+        const nearestStation = findNearestPlace(pin.lat, pin.lng, ASSAM_RAILWAY_STATIONS);
+        const nearestAirport = findNearestPlace(pin.lat, pin.lng, ASSAM_AIRPORTS);
+        const nearestSchool = findNearestEMRS(pin, EMRS_PINS);
+        extraInfoHtml = `<div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(139,69,19,0.15);font-size:10.5px;color:#5a3e28;line-height:1.7;">
+             <div>🚉 ${nearestStation ? nearestStation.name : "—"}: <strong>${formatKm(nearestStation?.distance)}</strong></div>
+             <div>✈️ ${nearestAirport ? nearestAirport.name : "—"}: <strong>${formatKm(nearestAirport?.distance)}</strong></div>
+             <div>🏫 Nearest EMRS — ${nearestSchool ? nearestSchool.name.replace("EMRS ","") : "—"}: <strong>${formatKm(nearestSchool?.distance)}</strong></div>
+           </div>`;
+      }
+
       marker.bindTooltip(
-        `<div style="font-weight:700;font-size:12px;color:#2d1a0e">${pin.name}</div><div style="font-size:11px;color:#7a5c3a">📍 ${pin.district}</div>`,
+        `<div style="max-width:250px;">
+           <div style="display:flex;gap:8px;align-items:center;">
+             <img src="${tooltipImg}" alt="${pin.name}"
+                  style="width:54px;height:54px;object-fit:cover;border-radius:7px;flex-shrink:0;border:1px solid rgba(139,69,19,0.2);"
+                  onerror="this.onerror=null;this.src='${FALLBACK_IMG}';" />
+             <div>
+               <div style="font-weight:700;font-size:12px;color:#2d1a0e;line-height:1.3">${pin.name}</div>
+               <div style="font-size:11px;color:#7a5c3a;margin-top:2px">📍 ${pin.district}</div>
+             </div>
+           </div>
+           ${extraInfoHtml}
+         </div>`,
         { direction: "top", offset: [0,-ring], className: "leaflet-emrs-tooltip" }
       );
       markersRef.current.push(marker);
@@ -1148,7 +1275,7 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
 
   return (
     <div style={{ position: "relative", borderRadius: "0 0 16px 16px", overflow: "hidden" }}>
-      <style>{`.leaflet-emrs-tooltip{background:#fffdf7!important;border:1px solid rgba(139,69,19,0.2)!important;border-radius:8px!important;padding:6px 10px!important;box-shadow:0 4px 20px rgba(139,69,19,0.12)!important}.leaflet-emrs-tooltip::before{display:none!important}.leaflet-container{background:#f5ede0!important}`}</style>
+      <style>{`.leaflet-emrs-tooltip{background:#fffdf7!important;border:1px solid rgba(139,69,19,0.2)!important;border-radius:10px!important;padding:8px 10px!important;box-shadow:0 6px 24px rgba(139,69,19,0.18)!important;max-width:250px!important}.leaflet-emrs-tooltip::before{display:none!important}.leaflet-container{background:#f5ede0!important}`}</style>
       <div ref={mapRef} style={{ width: "100%", height: 460, borderRadius: "0 0 16px 16px" }} />
       {activeLayer === "asset" && (
         <div style={{ position: "absolute", bottom: 36, left: 12, zIndex: 1000, background: "rgba(253,246,233,0.95)", border: `1px solid rgba(139,69,19,0.18)`, borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
@@ -1726,7 +1853,7 @@ const HomePage = () => {
                 Built to serve school administrators, district officers, and the public alike, the platform supports the Government of Assam's commitment to accountable, efficient, and accessible tribal education infrastructure across all 17 EMRS institutions and 50+ tracked assets statewide.
               </p>
               <div style={{ display: "flex", gap: 28, flexWrap: "wrap", marginBottom: 22 }}>
-                {[{ label: "Schools Managed", value: "17" },{ label: "Districts Covered", value: "10+" },{ label: "Years of Operation", value: "5+" }].map((f, i) => (
+                {[{ label: "Schools Managed", value: "17" },{ label: "Districts Covered", value: "10" },{ label: "Years of Operation", value: "5+" }].map((f, i) => (
                   <div key={i}>
                     <div style={{ fontSize: 22, fontWeight: 800, color: T.brown }}>{f.value}</div>
                     <div style={{ fontSize: 11, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5 }}>{f.label}</div>
@@ -1821,7 +1948,7 @@ const HomePage = () => {
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: T.brown, fontWeight: 700, marginBottom: 10 }}>Geographic Distribution</div>
             <h2 className="tribal-heading" style={{ fontSize: 32, fontWeight: 800, marginBottom: 8, color: T.brownDark }}>Locations Across Assam</h2>
-            <p style={{ color: T.muted, fontSize: 15, maxWidth: 500, margin: "16px auto 0" }}>Click any pin on the map to view detailed information</p>
+            <p style={{ color: T.muted, fontSize: 15, maxWidth: 500, margin: "16px auto 0" }}>Click any pin on the map to view detailed information — hover to see nearby transit distances</p>
           </div>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
             <div style={{ display: "flex", background: "#fff", border: `1px solid rgba(139,69,19,0.15)`, borderRadius: 14, padding: 4, gap: 4, boxShadow: "0 2px 12px rgba(139,69,19,0.07)" }}>
@@ -1844,7 +1971,7 @@ const HomePage = () => {
               <div style={{ margin: "12px 14px 14px", background: mapLayer==="emrs" ? "rgba(139,69,19,0.05)" : "rgba(45,106,79,0.05)", border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.12)" : "rgba(45,106,79,0.12)"}`, borderRadius: 12, padding: "10px 16px", display: "flex", justifyContent: "space-around" }}>
                 {(mapLayer==="emrs" ? [
                   { label: "Active", count: EMRS_PINS.filter(p => p.status==="Active").length, color: T.green },
-                  { label: "Planned", count: EMRS_PINS.filter(p => p.status==="Planned").length, color: T.purple },
+                  
                   { label: "Total", count: EMRS_PINS.length, color: T.brown },
                 ] : [
                   { label: "Infra", count: ASSET_PINS.filter(p => p.type==="infra").length, color: T.brownLight },
@@ -1861,6 +1988,15 @@ const HomePage = () => {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {selectedData ? (
                 <div style={{ background: "#fff", border: `2px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.35)" : "rgba(45,106,79,0.35)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(139,69,19,0.12)" }}>
+                  {/* Image preview at top of selected-pin detail card */}
+                  <div style={{ width: "100%", height: 140, overflow: "hidden" }}>
+                    <img
+                      src={selectedData.image || FALLBACK_IMG}
+                      alt={selectedData.name}
+                      onError={handleImgError}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  </div>
                   <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", overflow: "hidden" }}>
                     <BodoWeaveBackground opacity={0.1} color="#fff" />
                     <div style={{ position: "relative", zIndex: 1 }}>
@@ -1890,6 +2026,30 @@ const HomePage = () => {
                           <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor(selectedData.status) }} />
                           <span style={{ fontSize: 12, color: statusColor(selectedData.status), fontWeight: 700 }}>{selectedData.status}</span>
                         </div>
+
+                        {/* NEW: Nearest transit + nearest EMRS distances */}
+                        {(() => {
+                          const nearestStation = findNearestPlace(selectedData.lat, selectedData.lng, ASSAM_RAILWAY_STATIONS);
+                          const nearestAirport = findNearestPlace(selectedData.lat, selectedData.lng, ASSAM_AIRPORTS);
+                          const nearestSchool = findNearestEMRS(selectedData, EMRS_PINS);
+                          const distRows = [
+                            { icon: "🚉", label: "Nearest Railway Station", value: nearestStation ? `${nearestStation.name} — ${formatKm(nearestStation.distance)}` : "—" },
+                            { icon: "✈️", label: "Nearest Airport", value: nearestAirport ? `${nearestAirport.name} — ${formatKm(nearestAirport.distance)}` : "—" },
+                            { icon: "🏫", label: "Nearest EMRS School", value: nearestSchool ? `${nearestSchool.name.replace("EMRS ","")} — ${formatKm(nearestSchool.distance)}` : "—" },
+                          ];
+                          return (
+                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px dashed rgba(139,69,19,0.15)` }}>
+                              <div style={{ fontSize: 10, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, fontWeight: 700 }}>Nearby Distances</div>
+                              {distRows.map((row, i) => (
+                                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0" }}>
+                                  <span style={{ fontSize: 13, flexShrink: 0 }}>{row.icon}</span>
+                                  <span style={{ fontSize: 11.5, color: "#5a3e28", lineHeight: 1.4 }}>{row.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
                         <button onClick={() => navigate("/emrs/login")} style={{ width: "100%", marginTop: 14, padding: "10px", background: "linear-gradient(135deg,#8b4513,#c8781e)", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Access EMRS Portal →</button>
                       </>
                     ) : (
@@ -1931,7 +2091,12 @@ const HomePage = () => {
                       <div key={i} onClick={() => handlePinClick(i)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", cursor: "pointer", transition: "background 0.15s", background: selectedPin===i ? `${col}0d` : "transparent", borderLeft: `3px solid ${selectedPin===i ? col : "transparent"}`, borderBottom: i < currentPins.length-1 ? `1px solid rgba(139,69,19,0.05)` : "none" }}
                         onMouseEnter={e => { if (selectedPin!==i) e.currentTarget.style.background="rgba(139,69,19,0.03)"; }}
                         onMouseLeave={e => { if (selectedPin!==i) e.currentTarget.style.background="transparent"; }}>
-                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: col, flexShrink: 0 }} />
+                        <img
+                          src={pin.image || FALLBACK_IMG}
+                          alt={pin.name}
+                          onError={handleImgError}
+                          style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(139,69,19,0.15)" }}
+                        />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: T.brownDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pin.name}</div>
                           <div style={{ fontSize: 10, color: T.faint }}>{pin.district}</div>
@@ -1985,5 +2150,4 @@ const HomePage = () => {
     </div>
   );
 };
-
 export default HomePage;
