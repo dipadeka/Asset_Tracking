@@ -199,7 +199,7 @@ const T = {
 // RESOURCES DROPDOWN DATA
 // ─────────────────────────────────────────────────────────────────────────────
 const RESOURCES_MENU = [
-  { icon: "📋", label: "EMRS Guidelines", sub: "Official operational guidelines", url: "/pdf/EMRSguidelines2026.pdf" },
+  { icon: "📋", label: "EMRS Guidelines", sub: "Official operational guidelines", url: "/pdf/EMRSguildelines2026.pdf" },
   { icon: "📜", label: "Rules & Regulations", sub: "Governing rules for EMRS", url: "https://tribal.assam.gov.in/rules-regulations" },
   { icon: "📰", label: "Circulars", sub: "Latest circulars & orders", url: "https://tribal.assam.gov.in/circulars" },
   { icon: "📅", label: "EMRS Annual Calendar", sub: "Academic calendar 2024–25", url: "https://tribal.assam.gov.in/annual-calendar" },
