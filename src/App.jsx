@@ -19,6 +19,7 @@ import EMRSDashboard from "./pages/layouts/EMRSDashboardLayout";
 import SchoolEMRSWrapper from "./pages/EMRS/SchoolEMRSWrapper";
 import EMRSAdminDashboard from "./pages/EMRS/EMRSAdminDashboard";
 import EMRSApplied from "./pages/submitted-application/EMRSApplied";
+import MonthlyActivity from "./pages/EMRS/MonthlyActivity"; // NEW — Attendance + Operational Cost
 
 // ── Asset Portal ──────────────────────────────────────────────
 import AssetLoginPage from "./pages/auth/login/login";
@@ -58,6 +59,7 @@ function App() {
           >
             <Route path="dashboard" element={<SchoolEMRSWrapper />} />
             <Route path="submitted" element={<EMRSApplied />} />
+            <Route path="monthly-activity" element={<MonthlyActivity />} /> {/* NEW */}
           </Route>
           
           <Route

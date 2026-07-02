@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Button, Typography, Collapse, List, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
-import { ExpandLess, ExpandMore, Logout, School, CheckCircle } from "@mui/icons-material";
+import { ExpandLess, ExpandMore, Logout, School, CheckCircle, CalendarMonth } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
@@ -74,6 +74,25 @@ const EMRSSidebar = () => {
               </ListItemButton>
             </List>
           </Collapse>
+
+          {/* Monthly Activity — NEW, placed right after Schemes */}
+          <ListItemButton
+            selected={isActive("/emrs/monthly-activity")}
+            onClick={() => navigate("/emrs/monthly-activity")}
+            sx={{
+              borderRadius: 2,
+              mb: 1,
+              "&.Mui-selected": {
+                background: "#2563eb",
+              },
+              "&:hover": { background: "rgba(255,255,255,0.08)" },
+            }}
+          >
+            <ListItemIcon sx={{ color: "#fff" }}>
+              <CalendarMonth />
+            </ListItemIcon>
+            <ListItemText primary="Monthly Activity" />
+          </ListItemButton>
 
           {/* Already Applied */}
           <ListItemButton

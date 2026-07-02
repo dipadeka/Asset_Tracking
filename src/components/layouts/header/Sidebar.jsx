@@ -9,7 +9,6 @@ import {
   ListItemIcon,
   ListItemText,
 } from "@mui/material";
-
 import {
   ExpandLess,
   ExpandMore,
@@ -17,8 +16,8 @@ import {
   Assignment,
   CheckCircle,
   AccountBalance,
+  EventNote, // NEW icon for Monthly Activity
 } from "@mui/icons-material";
-
 import { toast } from "react-toastify";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from 'react-redux';
@@ -60,7 +59,6 @@ const Sidebar = () => {
         >
           Asset Portal
         </Typography>
-
         <List>
           {/* New Application */}
           <ListItemButton
@@ -99,8 +97,28 @@ const Sidebar = () => {
             </ListItemIcon>
             <ListItemText primary="Submitted Applications" />
           </ListItemButton>
+
+          {/* Monthly Activity — NEW TAB (Attendance + Operational Cost) */}
+          <ListItemButton
+            selected={isActive("/asset/dashboard/monthly-activity")}
+            onClick={() => navigate("/asset/dashboard/monthly-activity")}
+            sx={{
+              borderRadius: 2,
+              mb: 1,
+              "&.Mui-selected": {
+                background: "#2563eb",
+                "&:hover": { background: "#1d4ed8" },
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: "#fff" }}>
+              <EventNote />
+            </ListItemIcon>
+            <ListItemText primary="Monthly Activity" />
+          </ListItemButton>
         </List>
       </Box>
+
       {/* LOGOUT */}
       <Button
         variant="contained"

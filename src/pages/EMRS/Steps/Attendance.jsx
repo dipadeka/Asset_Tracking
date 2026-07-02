@@ -649,7 +649,7 @@ const StudentAttendanceSection = ({
 
   const downloadStudentAttendanceTemplate = () => {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([["Roll No","Name","Class","Section","Month","Working Days","Days Present"]]);
+    const ws = XLSX.utils.aoa_to_sheet([["Class","Section","Month","Working Days","Days Present"]]);
     [["1","Student Name","6","A",studentAttendanceMonth,"26","24"],
      ["2","Student Name","7","B",studentAttendanceMonth,"26","20"]].forEach((row, i) => {
       row.forEach((val, j) => { ws[XLSX.utils.encode_cell({ r: i+1, c: j })] = { v: val, t: "s" }; });

@@ -1,3 +1,4 @@
+// src/pages/EMRS/Steps/OperationalCost.jsx
 import React from "react";
 import {
   Box,
@@ -34,9 +35,18 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
           style={{
             width: "100%",
             borderCollapse: "collapse",
-            minWidth: 700,
+            minWidth: 650,
+            tableLayout: "fixed",
           }}
         >
+          <colgroup>
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "30%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "16%" }} />
+          </colgroup>
           <thead>
             <tr>
               {["S.No", "Year", "Month", "Cost Type", "Amount (₹)", "Action"].map(
@@ -46,10 +56,10 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                     style={{
                       background: "#1976d2",
                       color: "#fff",
-                      padding: "10px 12px",
+                      padding: "10px 8px",
                       fontSize: 13,
                       fontWeight: 600,
-                      textAlign: "left",
+                      textAlign: "center",
                       whiteSpace: "nowrap",
                       borderRight: "1px solid rgba(255,255,255,0.2)",
                     }}
@@ -68,12 +78,11 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
               >
                 <td
                   style={{
-                    padding: "8px 12px",
+                    padding: "8px 6px",
                     border: "1px solid #e2e8f0",
                     textAlign: "center",
                     color: "#94a3b8",
                     fontWeight: 700,
-                    width: 50,
                     fontSize: 13,
                   }}
                 >
@@ -84,7 +93,7 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                   style={{
                     padding: "6px 8px",
                     border: "1px solid #e2e8f0",
-                    minWidth: 130,
+                    textAlign: "center",
                   }}
                 >
                   <TextField
@@ -110,7 +119,7 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                   style={{
                     padding: "6px 8px",
                     border: "1px solid #e2e8f0",
-                    minWidth: 140,
+                    textAlign: "center",
                   }}
                 >
                   <TextField
@@ -139,7 +148,7 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                   style={{
                     padding: "6px 8px",
                     border: "1px solid #e2e8f0",
-                    minWidth: 220,
+                    textAlign: "center",
                   }}
                 >
                   <TextField
@@ -177,7 +186,7 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                   style={{
                     padding: "6px 8px",
                     border: "1px solid #e2e8f0",
-                    minWidth: 140,
+                    textAlign: "center",
                   }}
                 >
                   <TextField
@@ -186,7 +195,7 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                     type="number"
                     value={row.amount}
                     placeholder="0"
-                    inputProps={{ min: 0 }}
+                    inputProps={{ min: 0, style: { textAlign: "center" } }}
                     onKeyDown={(e) => {
                       if (e.key === "-" || e.key === "e") e.preventDefault();
                     }}
@@ -205,10 +214,9 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                     padding: "6px 8px",
                     border: "1px solid #e2e8f0",
                     textAlign: "center",
-                    width: 90,
                   }}
                 >
-                  <Box display="flex" gap={0.5} justifyContent="center">
+                  <Box display="flex" gap={0.75} justifyContent="center">
                     <Button
                       variant="contained"
                       size="small"
@@ -216,7 +224,7 @@ const OperationalCost = ({ operationalCostRows, setOperationalCostRows }) => {
                         minWidth: 0,
                         px: 1.2,
                         py: 0.3,
-                        fontSize: 16,
+                        fontSize: 15,
                         backgroundColor: "#f59e0b",
                         "&:hover": { backgroundColor: "#d97706" },
                       }}
