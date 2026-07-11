@@ -1200,9 +1200,9 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
   );
 
   return (
-    <Box sx={{ border: "1px solid #dbeafe", borderRadius: 2, overflow: "hidden", mb: 2, background: "#fff" }}>
+    <Box sx={{ border: "1px solid #dbeafe", borderRadius: 2, overflow: "hidden", mb: 1.5, background: "#fff" }}>
       {/* Header */}
-      <Box sx={{ px: 2, py: 1.5, background: "linear-gradient(135deg, #1e40af, #3b82f6)", display: "flex", alignItems: "center", gap: 1 }}>
+      <Box sx={{ px: 1.5, py: 1, background: "linear-gradient(135deg, #1e40af, #3b82f6)", display: "flex", alignItems: "center", gap: 1 }}>
         <Typography sx={{ fontWeight: 800, color: "#fff", fontSize: 13 }}>📅 Academic Calendar</Typography>
         {selectedDate && (
           <Chip
@@ -1215,7 +1215,7 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
       </Box>
 
       {/* Month / Year selectors */}
-      <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid #dbeafe", display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center", background: "#eff6ff" }}>
+      <Box sx={{ px: 1.5, py: 1, borderBottom: "1px solid #dbeafe", display: "flex", gap: 1.25, flexWrap: "wrap", alignItems: "center", background: "#eff6ff" }}>
         <TextField
           select size="small" label="Month" value={calendarMonth}
           onChange={(e) => { setCalendarMonth(e.target.value); setSelectedDate(""); }}
@@ -1235,7 +1235,7 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
       </Box>
 
       {/* Saturday chips */}
-      <Box sx={{ p: 1.5, display: "flex", gap: 1, flexWrap: "wrap" }}>
+      <Box sx={{ p: 1, display: "flex", gap: 0.75, flexWrap: "wrap" }}>
         {saturdays.length > 0 ? saturdays.map((date) => {
           const iso     = date.toISOString().slice(0, 10);
           const holiday = holidays.find((h) => h.date === iso);
@@ -1295,7 +1295,7 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
       </Box>
 
       {/* Legend */}
-      <Box sx={{ px: 2, py: 1, borderTop: "1px solid #dbeafe", background: "#f8faff", display: "flex", gap: 2, flexWrap: "wrap" }}>
+      <Box sx={{ px: 1.5, py: 0.75, borderTop: "1px solid #dbeafe", background: "#f8faff", display: "flex", gap: 1.25, flexWrap: "wrap" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#dcfce7", border: "1px solid #86efac" }} />
           <Typography sx={{ fontSize: 10, color: "#64748b" }}>Regular Saturday</Typography>
@@ -1332,7 +1332,7 @@ const ClassDropdown = ({ value, onChange }) => (
    2. Clicking a Saturday chip sets `selectedDate` which is the shared state
    3. className field in both tables now uses ClassDropdown (6 / 7 / 8)
 ───────────────────────────────────────────────────────────────────────────── */
-const SakshamSaturdayReport = () => {
+export const SakshamSaturdayReport = () => {
   const currentYear = new Date().getFullYear();
 
   // ── SHARED calendar state (used by both pre & post tables) ──
@@ -1490,12 +1490,12 @@ const SakshamSaturdayReport = () => {
   const gapRows = [...postGapRows, ...unreportedPreRows];
 
   const renderEditableTable = (headers, rows, renderRow) => (
-    <Box sx={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <Box sx={{ overflowX: "hidden", width: "100%" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} style={{ background: "#f1f5f9", color: "#334155", padding: "8px", textAlign: "left", fontSize: 12, fontWeight: 700, border: "1px solid #e2e8f0", whiteSpace: "nowrap" }}>
+              <th key={h} style={{ background: "#f1f5f9", color: "#334155", padding: "7px 6px", textAlign: "left", fontSize: 11, fontWeight: 700, border: "1px solid #e2e8f0", whiteSpace: "normal" }}>
                 {h}
               </th>
             ))}
@@ -1518,8 +1518,8 @@ const SakshamSaturdayReport = () => {
         ["studentsParticipated","Students Participated"],       
       ].map(([field, label]) => (
         <td key={field} style={{
-          padding: "6px", border: "1px solid #e2e8f0",
-          minWidth: field === "className" ? 110 : field === "studentsParticipated" ? 140 : 180,
+          padding: "6px 5px", border: "1px solid #e2e8f0",
+          minWidth: field === "className" ? 90 : field === "studentsParticipated" ? 110 : 130,
         }}>
           {field === "className" ? (
             <ClassDropdown value={row[field]} onChange={(v) => handlePrePlanningChange(row.id, field, v)} />
@@ -1540,7 +1540,7 @@ const SakshamSaturdayReport = () => {
           )}
         </td>
       ))}
-      <td style={{ padding: "6px", border: "1px solid #e2e8f0", textAlign: "center" }}>
+      <td style={{ padding: "6px 5px", border: "1px solid #e2e8f0", textAlign: "center" }}>
         <Button size="small" color="error" onClick={() => removePrePlanningRow(row.id)}>Remove</Button>
       </td>
     </tr>
@@ -1558,8 +1558,8 @@ const SakshamSaturdayReport = () => {
              
       ].map(([field, label]) => (
         <td key={field} style={{
-          padding: "6px", border: "1px solid #dbeafe",
-          minWidth: field === "className" ? 110 : field === "studentsParticipated" ? 140 : 180,
+          padding: "6px 5px", border: "1px solid #dbeafe",
+          minWidth: field === "className" ? 90 : field === "studentsParticipated" ? 110 : 130,
         }}>
           {field === "className" ? (
             <ClassDropdown value={row[field]} onChange={(v) => handlePostPlanningChange(row.id, field, v)} />
@@ -1581,7 +1581,7 @@ const SakshamSaturdayReport = () => {
         </td>
       ))}
       {/* Photos / Report column */}
-      <td style={{ padding: "6px", border: "1px solid #dbeafe", minWidth: 220 }}>
+      <td style={{ padding: "6px 5px", border: "1px solid #dbeafe", minWidth: 180 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
           <Button size="small" variant="outlined" component="label">
             Upload Photos
@@ -1601,15 +1601,15 @@ const SakshamSaturdayReport = () => {
           </Typography>
         </Box>
       </td>
-      <td style={{ padding: "6px", border: "1px solid #dbeafe", textAlign: "center" }}>
+      <td style={{ padding: "6px 5px", border: "1px solid #dbeafe", textAlign: "center" }}>
         <Button size="small" color="error" onClick={() => removePostPlanningRow(row.id)}>Remove</Button>
       </td>
     </tr>
   );
 
   return (
-    <Box>
-      <Typography sx={{ fontWeight: 800, color: "#1e3a5f", fontSize: 15, mb: 2 }}>
+    <Box sx={{ width: "100%", overflow: "hidden" }}>
+      <Typography sx={{ fontWeight: 800, color: "#1e3a5f", fontSize: 15, mb: 1.5 }}>
         Saksham Saturday Planning Report
       </Typography>
 
@@ -1627,7 +1627,7 @@ const SakshamSaturdayReport = () => {
         <Alert
           severity="info"
           icon={false}
-          sx={{ mb: 2, py: 0.75, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 2 }}
+          sx={{ mb: 1.5, py: 0.6, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 2 }}
         >
           <Typography sx={{ fontSize: 12, color: "#1e40af" }}>
             📌 <strong>{selectedWeekLabel}</strong> is selected — click <em>"Add Row"</em> in either table below to start a new entry pre-filled with this week label.
@@ -1638,7 +1638,7 @@ const SakshamSaturdayReport = () => {
       {/* ══════════════════════════════════════════════════════
           ② PRE-ACTIVITY PLANNING TABLE
          ══════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{ p: 2, border: "1px solid #cbd5e1", borderRadius: 2, mb: 2, background: "#fff" }}>
+      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: "1px solid #cbd5e1", borderRadius: 2, mb: 1.5, background: "#fff" }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
           <Box>
             <Typography sx={{ fontWeight: 700, color: "#334155", fontSize: 13 }}>Pre-Activity Planning</Typography>
@@ -1658,7 +1658,7 @@ const SakshamSaturdayReport = () => {
       {/* ══════════════════════════════════════════════════════
           ③ POST-ACTIVITY REPORT TABLE
          ══════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{ p: 2, border: "1px solid #bfdbfe", borderRadius: 2, mb: 2, background: "#f8fbff" }}>
+      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: "1px solid #bfdbfe", borderRadius: 2, mb: 1.5, background: "#f8fbff" }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
           <Box>
             <Typography sx={{ fontWeight: 700, color: "#1d4ed8", fontSize: 13 }}>Post-Activity Report</Typography>
@@ -1681,7 +1681,7 @@ const SakshamSaturdayReport = () => {
       {/* ══════════════════════════════════════════════════════
           ④ GAP ANALYSIS
          ══════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{ p: 2, border: "1px solid #fed7aa", borderRadius: 2, background: "#fff7ed" }}>
+      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: "1px solid #fed7aa", borderRadius: 2, background: "#fff7ed" }}>
         <Typography sx={{ fontWeight: 700, color: "#c2410c", fontSize: 13, mb: 1.5 }}>Gap Analysis</Typography>
         {renderEditableTable(
           ["Month / Week", "Class", "Theme Category", "Activity Name", "Gap Identified", "Status", "Action Point"],
@@ -1714,6 +1714,7 @@ const Attendance = ({
   nonTeachingAttMonth, setNonTeachingAttMonth,
   studentAttendanceData,  setStudentAttendanceData,
   studentAttendanceMonth, setStudentAttendanceMonth,
+  showSakshamSaturday = true,
 }) => {
   const teachingCount    = staffAttendanceRows.filter((r) => r.staffType === "Teaching"     && r.month === teachingAttMonth).length;
   const nonTeachingCount = staffAttendanceRows.filter((r) => r.staffType === "Non-Teaching" && r.month === nonTeachingAttMonth).length;
@@ -1739,16 +1740,17 @@ const Attendance = ({
         <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}><AssamHolidayList /></AccordionDetails>
       </Accordion>
 
-      {/* Saksham Saturday Planning Report */}
-      <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-          sx={{ background: "linear-gradient(135deg, #92400e, #f97316)", color: "#fff", minHeight: 48 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 13 }}>Saksham Saturday - Pre-Activity Planning, Post-Activity Report &amp; Gap Analysis</Typography>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
-          <SakshamSaturdayReport />
-        </AccordionDetails>
-      </Accordion>
+      {showSakshamSaturday && (
+        <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
+            sx={{ background: "linear-gradient(135deg, #92400e, #f97316)", color: "#fff", minHeight: 48 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 13 }}>Saksham Saturday - Pre-Activity Planning, Post-Activity Report &amp; Gap Analysis</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+            <SakshamSaturdayReport />
+          </AccordionDetails>
+        </Accordion>
+      )}
 
       {/* Teaching Staff */}
       <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>

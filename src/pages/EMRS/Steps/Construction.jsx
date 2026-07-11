@@ -262,7 +262,7 @@ export default function ConstructionDetails({ control, constructionRows, setCons
           borderRadius: "10px 10px 0 0", px: 2, py: 1.5,
         }}>
           <Typography sx={{ fontWeight: 700, color: "#c0392b", fontSize: 15 }}>
-            📊 Physical &amp; Financial Status of EMRS
+            📊 Physical Status of EMRS
           </Typography>
           <Box display="flex" gap={1} alignItems="center">
             <Typography sx={{ background: "#dcfce7", color: "#16a34a", px: 1.5, py: 0.3, borderRadius: 10, fontSize: 12, fontWeight: 600 }}>

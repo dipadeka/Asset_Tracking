@@ -448,7 +448,196 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
             </Table>
           </TableContainer>
         </Box>
+{/* Solar Power Infrastructure */}
+<Box sx={sectionBox("#c8e6c9", "#f4fff6")}>
+  <Typography
+    sx={{
+      fontWeight: 600,
+      color: "#2e7d32",
+      mb: 2,
+      fontSize: 14,
+    }}
+  >
+    ☀️ Solar Power Infrastructure
+  </Typography>
 
+  <Grid container spacing={2}>
+
+    <Grid item xs={12} sm={4} md={3}>
+      <Controller
+        name="solarInstalled"
+        control={control}
+        defaultValue=""
+        render={({ field }) => (
+          <TextField
+            {...field}
+            select
+            label="Solar Power Installed"
+            fullWidth
+            size="small"
+            sx={{ minWidth: 220 }}
+          >
+            <MenuItem value="Yes">Yes</MenuItem>
+            <MenuItem value="No">No</MenuItem>
+          </TextField>
+        )}
+      />
+    </Grid>
+
+    {watch("solarInstalled") === "Yes" && (
+      <>
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="solarCapacity"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type="number"
+                label="Plant Capacity (kW)"
+                fullWidth
+                size="small"
+              />
+            )}
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="solarInstallationYear"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type="number"
+                label="Installation Year"
+                fullWidth
+                size="small"
+              />
+            )}
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="solarType"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Solar Plant Type"
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="On Grid">On Grid</MenuItem>
+                <MenuItem value="Off Grid">Off Grid</MenuItem>
+                <MenuItem value="Hybrid">Hybrid</MenuItem>
+              </TextField>
+            )}
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="solarFunctional"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                select
+                label="Plant Functional"
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="Yes">Yes</MenuItem>
+                <MenuItem value="No">No</MenuItem>
+              </TextField>
+            )}
+          />
+        </Grid>
+
+       
+
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="solarCoverage"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type="number"
+                label="Campus Powered (%)"
+                fullWidth
+                size="small"
+              />
+            )}
+          />
+        </Grid>
+
+       
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="lastSolarMaintenance"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type="date"
+                label="Last Maintenance"
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+          />
+        </Grid>
+
+        <Grid item xs={12} sm={4} md={3}>
+          <Controller
+            name="nextSolarMaintenance"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type="date"
+                label="Next Maintenance"
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <Controller
+            name="solarRemarks"
+            control={control}
+            defaultValue=""
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Remarks"
+                multiline
+                rows={3}
+                fullWidth
+              />
+            )}
+          />
+        </Grid>
+      </>
+    )}
+
+  </Grid>
+</Box>
         {/* Library */}
         <Box sx={sectionBox()}>
           <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>

@@ -1,30 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import ApplyOnlineModal from "./ApplyOnline";
+import { T, EMRS_PINS, BodoWeaveBackground } from "./emrsShared";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA (image field added to each EMRS pin + each Asset pin for hover/preview)
+// EMRS_PINS, T, and BodoWeaveBackground now live in ./emrsShared.jsx instead
+// of being defined here. This avoids a circular import: this file imports
+// ApplyOnlineModal from ./ApplyOnline, and ApplyOnline.jsx needs T/EMRS_PINS/
+// BodoWeaveBackground — if it imported them back from this file we'd get
+// "Cannot access 'T' before initialization" at runtime. Pulling the shared
+// pieces into their own dependency-free module fixes that.
 // ─────────────────────────────────────────────────────────────────────────────
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=500";
-
-const EMRS_PINS = [
-  { name: "EMRS Dalbari, Barama", district: "Baksa", students: 220, cap: 300, classes: "6–12", status: "Not Active", principal: "Mr. R. Basumatary", lat: 26.4500, lng: 90.8500, image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400" },
-  { name: "EMRS Jalah, Vill. Daodhara", district: "Baksa", students: 300, cap: 340, classes: "6–12", status: "Active", principal: "Mr. K. Boro", lat: 26.4600, lng: 90.8600, image: "/images/emrs-jalah-morning-assembly.png" },
-  { name: "EMRS Sarupeta, Vill Tatikuchi", district: "Baksa", students: 300, cap: 320, classes: "6–12", status: "Not Active", principal: "Mr. I. Narzary", lat: 26.4400, lng: 90.8400, image: FALLBACK_IMG },
-  { name: "EMRS Kharadhara", district: "Bajali", students: 295, cap: 320, classes: "6–12", status: "Active", principal: "Ms. P. Devi", lat: 26.6700, lng: 91.1800, image: "/images/emrs-kharadhara-inauguration.png" },
-  { name: "EMRS Bedlangmari", district: "Kokrajhar", students: 340, cap: 380, classes: "6–12", status: "Not Active", principal: "Mr. A. Gogoi", lat: 26.4000, lng: 90.2600, image: "images/emrs-bedlangmari-schoolbuilding.png" },
-  { name: "EMRS Howraghat", district: "Karbi Anglong", students: 410, cap: 450, classes: "6–12", status: "Active", principal: "Dr. S. Terang", lat: 26.0900, lng: 93.3000, image: "/images/emrs-howraghat-schoolbuilding.png" },
-  { name: "EMRS Phuloni, Donghap", district: "Karbi Anglong", students: 275, cap: 300, classes: "6–10", status: "Not Active", principal: "Mr. K. Hmar", lat: 25.3000, lng: 92.8000, image: FALLBACK_IMG },
-  { name: "EMRS Silonijan, Thengkur Terang", district: "Karbi Anglong", students: 380, cap: 400, classes: "6–12", status: "Not Active", principal: "Ms. N. Das", lat: 26.04, lng: 93.63, image: FALLBACK_IMG },
-  { name: "EMRS Donka, Taralangsho", district: "West Karbi Anglong", students: 350, cap: 400, classes: "6–12", status: " Not Active", principal: "Mr. B. Bora", lat: 24.90, lng: 92.69, image: FALLBACK_IMG },
-  { name: "EMRS Jonai, Purana Jhelom", district: "Dhemaji", students: 290, cap: 320, classes: "6–12", status: "Active", principal: "Ms. R. Choudhury", lat: 27.2300, lng: 94.1100, image: "/images/emrs-jonai-building.png" },
-  { name: "EMRS Haflong, Ardaopur", district: "Dima Hasao", students: 315, cap: 350, classes: "6–12", status: "Active", principal: "Mr. D. Phukan", lat: 25.1633, lng: 93.0128, image: "images/emrs-ardaopur-schoolbuilding.png" },
-  { name: "EMRS Umrangso", district: "Dima Hasao", students: 260, cap: 300, classes: "6–10", status: "Not Active", principal: "TBD", lat: 25.51, lng: 92.73, image: "/images/emrs-umrangsho-aerialview.png" },
-  { name: "EMRS Harangajao", district: "Dima Hasao", students: 305, cap: 340, classes: "6–12", status: "Not Active", principal: "Ms. A. Kalita", lat: 25.09, lng: 92.84, image: FALLBACK_IMG },
-  { name: "EMRS Diyungbra", district: "Dima Hasao", students: 332, cap: 360, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 25.62, lng: 92.91, image: FALLBACK_IMG },
-  { name: "EMRS Boko", district: "Kamrup", students: 332, cap: 345, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 25.95, lng: 91.2040, image: "/images/emrs-boko-schoolbuilding.png" },
-  { name: "EMRS Dudhnoi, Jakhuwapara", district: "Goalpara", students: 332, cap: 360, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 25.9500, lng: 90.9010, image: FALLBACK_IMG },
-  { name: "EMRS Khairabari, Malmura", district: "Udalguri", students: 332, cap: 380, classes: "6–12", status: "Not Active", principal: "Mr. P. Hazarika", lat: 26.6400, lng: 91.7500, image: FALLBACK_IMG },
-];
 
 const ASSET_PINS = [
   { name: "Kamrup Asset Hub", district: "Kamrup", type: "infra", value: "₹4.2Cr", status: "Active", year: 2023, lat: 26.1700, lng: 91.7700, image: FALLBACK_IMG },
@@ -34,7 +22,7 @@ const ASSET_PINS = [
   { name: "Nagaon Construction", district: "Nagaon", type: "building", value: "₹1.9Cr", status: "In Progress", year: 2024, lat: 26.3500, lng: 92.6900, image: FALLBACK_IMG },
   { name: "Barpeta Road Network", district: "Barpeta", type: "road", value: "₹2.2Cr", status: "Active", year: 2023, lat: 26.3200, lng: 91.0000, image: FALLBACK_IMG },
   { name: "Cachar Asset Depot", district: "Cachar", type: "infra", value: "₹3.4Cr", status: "Active", year: 2022, lat: 24.8200, lng: 92.7800, image: FALLBACK_IMG },
-  { name: "Dhubri Bridge Project", district: "Dhubri", type: "road", value: "₹6.0Cr", status: "Not Active", year: 2025, lat: 26.0200, lng: 89.9800, image: FALLBACK_IMG },
+  { name: "Dhubri Bridge Project", district: "Dhubri", type: "road", value: "₹6.0Cr", status: "Non-Functional", year: 2025, lat: 26.0200, lng: 89.9800, image: FALLBACK_IMG },
   { name: "Sivasagar Heritage", district: "Sivasagar", type: "building", value: "₹4.8Cr", status: "Active", year: 2020, lat: 26.9800, lng: 94.6400, image: FALLBACK_IMG },
   { name: "Kokrajhar Dev Store", district: "Kokrajhar", type: "infra", value: "₹1.5Cr", status: "Active", year: 2023, lat: 26.4000, lng: 90.2700, image: FALLBACK_IMG },
 ];
@@ -121,6 +109,131 @@ function findNearestEMRS(pin, allPins) {
 
 const formatKm = (km) => (km == null ? "—" : `${km.toFixed(1)} km`);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LOCAL CIVIC DETAILS PER EMRS SCHOOL
+// Pincode, district HQ, nearest police station, nearest post office, and
+// nearest well-known tourist spot for each EMRS school. Keyed by school name
+// so it stays easy to look up from EMRS_PINS without reshaping that array.
+// NOTE: this is illustrative reference data in the same spirit as the other
+// mock fields in this file (principal names, student counts, etc.) — please
+// verify against official records before treating it as authoritative.
+// ─────────────────────────────────────────────────────────────────────────────
+const EMRS_CIVIC_INFO = {
+  "EMRS Dalbari, Barama": {
+    pincode: "781360",
+    districtHQ: "Mushalpur",
+    policeStation: "Barama Police Station",
+    postOffice: "Barama Post Office",
+  },
+  "EMRS Jalah, Vill. Daodhara": {
+    pincode: "781372",
+    districtHQ: "Mushalpur",
+    policeStation: "Baksa Police Station",
+    postOffice: "Jalah Post Office",
+  },
+  "EMRS Sarupeta, Vill Tatikuchi": {
+    pincode: "781317",
+    districtHQ: "Mushalpur",
+    policeStation: "Sarupeta Police Station",
+    postOffice: "Sarupeta Post Office",
+  },
+  "EMRS Kharadhara": {
+    pincode: "781348",
+    districtHQ: "Pathsala",
+    policeStation: "Bajali Police Station",
+    postOffice: "Pathsala Post Office",
+  },
+  "EMRS Bedlangmari": {
+    pincode: "783335",
+    districtHQ: "Kokrajhar",
+    policeStation: "Kokrajhar Police Station",
+    postOffice: "Kokrajhar Head Post Office",
+  },
+  "EMRS Howraghat": {
+    pincode: "782446",
+    districtHQ: "Diphu",
+    policeStation: "Howraghat Police Station",
+    postOffice: "Howraghat Post Office",
+  },
+  "EMRS Phuloni, Donghap": {
+    pincode: "782447",
+    districtHQ: "Diphu",
+    policeStation: "Donghap Police Outpost",
+    postOffice: "Diphu Head Post Office",
+  },
+  "EMRS Silonijan, Thengkur Terang": {
+    pincode: "782480",
+    districtHQ: "Diphu",
+    policeStation: "Silonijan Police Station",
+    postOffice: "Silonijan Post Office",
+  },
+  "EMRS Donka, Taralangsho": {
+    pincode: "782490",
+    districtHQ: "Hamren",
+    policeStation: "Hamren Police Station",
+    postOffice: "Hamren Post Office",
+  },
+  "EMRS Jonai, Purana Jonai": {
+    pincode: "787060",
+    districtHQ: "Dhemaji",
+    policeStation: "Jonai Police Station",
+    postOffice: "Jonai Post Office",
+  },
+  "EMRS Haflong, Ardaopur": {
+    pincode: "788819",
+    districtHQ: "Haflong",
+    policeStation: "Haflong Police Station",
+    postOffice: "Haflong Head Post Office",
+  },
+  "EMRS Umrangso": {
+    pincode: "788931",
+    districtHQ: "Haflong",
+    policeStation: "Umrangso Police Station",
+    postOffice: "Umrangso Post Office",
+  },
+  "EMRS Harangajao": {
+    pincode: "788815",
+    districtHQ: "Haflong",
+    policeStation: "Harangajao Police Outpost",
+    postOffice: "Harangajao Post Office",
+  },
+  "EMRS Diyungbra": {
+    pincode: "788830",
+    districtHQ: "Haflong",
+    policeStation: "Diyungbra Police Outpost",
+    postOffice: "Diyungbra Post Office",
+  },
+  "EMRS Boko": {
+    pincode: "781123",
+    districtHQ: "Amingaon",
+    policeStation: "Boko Police Station",
+    postOffice: "Boko Post Office",
+  },
+  "EMRS Dudhnoi, Jakhuwapara": {
+    pincode: "783124",
+    districtHQ: "Goalpara",
+    policeStation: "Dudhnoi Police Station",
+    postOffice: "Dudhnoi Post Office",
+  },
+  "EMRS Khairabari, Malmura": {
+    pincode: "784509",
+    districtHQ: "Udalguri",
+    policeStation: "Khairabari Police Station",
+    postOffice: "Khairabari Post Office",
+  },
+};
+
+function getCivicInfo(pinName) {
+  return (
+    EMRS_CIVIC_INFO[pinName] || {
+      pincode: "—",
+      districtHQ: "—",
+      policeStation: "—",
+      postOffice: "—",
+    }
+  );
+}
+
 const STAFF_DATA = [
   { name: "Mr. R. Basumatary", school: "EMRS Dalbari", desig: "Principal", subject: "General", exp: "14 yrs", status: "Active" },
   { name: "Ms. P. Devi", school: "EMRS Kharadhara", desig: "Principal", subject: "General", exp: "11 yrs", status: "Active" },
@@ -167,7 +280,7 @@ const HERO_SCROLL_IMAGES = [
   { src: "/images/emrs-ardaopur-dinninghall.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Dining Hall" },
   { src: "/images/emrs-ardaopur-hostel.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Hostel" },
   { src: "/images/emrs-ardaopur-schoolgate.png", caption: "EMRS Ardaopur (Dima Hasao)", sub: "School Gate" },
-  
+
   { src: "/images/emrs-boko-schoolbuilding.png", caption: "EMRS Boko (Kamrup)", sub: "School Building" },
   { src: "/images/emrs-boko-playground.png", caption: "EMRS Boko (Kamrup)", sub: "Playground" },
   { src: "/images/emrs-umrangsho-aerialview.png", caption: "EMRS Umrangso (Dima Hasao)", sub: "Aerial View" },
@@ -175,28 +288,19 @@ const HERO_SCROLL_IMAGES = [
 { src: "/images/emrs-kharadhara-girlshostel.png", caption: "EMRS Kharadhara (Bajali)", sub: "Girls Hostel" },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DESIGN TOKENS
-// ─────────────────────────────────────────────────────────────────────────────
-const T = {
-  brown: "#8b4513",
-  brownLight: "#c8781e",
-  brownDark: "#2d1a0e",
-  cream: "#fdf8f0",
-  creamDark: "#fdf3e3",
-  purple: "#6b3fa0",
-  green: "#2d6a4f",
-  gold: "#e8a020",
-  muted: "#7a5c3a",
-  faint: "#8a6a3a",
-  border: "rgba(139,69,19,0.12)",
-  gamosaRed: "#c0392b",
-  mugaGold: "#c8a84b",
-  bodoTeal: "#1a6b6b",
-};
+// NOTE: T (design tokens) now comes from ./emrsShared — see the import at
+// the top of this file. Defining it here again would just shadow the
+// imported one, so it has been removed.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RESOURCES DROPDOWN DATA
+// FIX: the Student Admission Form URL previously pointed to
+// "/public/documents/EMRS student admission form.docx" — this is wrong on
+// two counts: (1) Vite serves everything under the `public/` folder from
+// the site ROOT, so the correct path never includes "/public"; and (2) the
+// raw space in the filename makes the link fragile across browsers. The
+// filename below assumes the actual file on disk has been renamed to
+// "EMRS-student-admission-form.docx" inside public/documents/.
 // ─────────────────────────────────────────────────────────────────────────────
 const RESOURCES_MENU = [
   { icon: "📋", label: "EMRS Guidelines", sub: "Official operational guidelines", url: "/pdf/EMRSguildelines2026.pdf" },
@@ -207,8 +311,9 @@ const RESOURCES_MENU = [
   { icon: "🏆", label: "Cultural & Sports Meet", sub: "Events & achievements", url: "https://tribal.assam.gov.in/cultural-sports" },
   { icon: "📁", label: "Other Reports", sub: "Miscellaneous documents", url: "https://tribal.assam.gov.in/other-reports" },
   { icon: "🎓", label: "Admission Guidelines", sub: "Class 6 admission process", url: "https://tribal.assam.gov.in/admission-guidelines" },
+  { icon: "🧾", label: "Student Admission Form", sub: "Downloadable application form (.docx)", url: "/pdf/EMRS student admission form.pdf" },
+  { icon: "🖊️", label: "Apply Online", sub: "Fill form, sign & upload — submit online", action: "apply-online" },
 ];
-
 // ─────────────────────────────────────────────────────────────────────────────
 // TRIBAL SVG BACKGROUNDS — inline encoders
 // ─────────────────────────────────────────────────────────────────────────────
@@ -240,19 +345,11 @@ function makeKarbiZigzag(color = "#c8a84b", w = 20, h = 10) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TRIBAL BACKGROUND COMPONENTS
+// NOTE: BodoWeaveBackground now comes from ./emrsShared (imported at the top
+// of this file) so it can be shared with ApplyOnline.jsx without a circular
+// import. makeBodoWeave stays here because TribalStatCard still calls it
+// directly for its texture layers.
 // ─────────────────────────────────────────────────────────────────────────────
-function BodoWeaveBackground({ opacity = 0.045, color = "#8b4513" }) {
-  const size = 32;
-  return (
-    <div style={{
-      position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
-      backgroundImage: makeBodoWeave(color, size),
-      backgroundSize: `${size}px ${size}px`,
-      opacity,
-    }} />
-  );
-}
-
 function MugaStripeBackground({ opacity = 0.06 }) {
   return (
     <div style={{
@@ -477,14 +574,14 @@ function OverviewTab() {
     <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
         <MetricCard icon="🏫" label="Total EMRS" value="17" sub="Across 10 districts" accentColor={T.brown} />
-        <MetricCard icon="🎓" label="Total Students" value="500" sub="Classes 6–12" accentColor={T.purple} />
+        <MetricCard icon="🎓" label="Total Students" value="480" sub="Classes 6–12" accentColor={T.purple} />
         <MetricCard icon="👨‍🏫" label="Staff Strength" value="50" sub="Teaching + non-teaching" accentColor={T.green} />
         <MetricCard icon="🏠" label="Hostel Capacity" value="480" sub="Occupancy: 85.7%" accentColor={T.brownLight} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
         <ChartCard title="Enrollment by class">
           <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-            {[{ color: T.brown, label: "Junior (6–8)" },{ color: T.brownLight, label: "Middle (9–10)" },{ color: T.purple, label: "Senior (11–12)" }].map(l => (
+            {[{ color: T.brown, label: "Junior (VI–VIII)" },{ color: T.brownLight, label: "Middle (IX–X)" },{ color: T.purple, label: "Senior (XI–XII)" }].map(l => (
               <span key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#7a5c3a" }}>
                 <span style={{ width: 9, height: 9, borderRadius: 2, background: l.color, display: "inline-block" }} />{l.label}
               </span>
@@ -497,10 +594,10 @@ function OverviewTab() {
             <div style={{ position: "relative", flex: 1, height: "100%" }}><canvas ref={genderRef} /></div>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#5a3e28", marginBottom: 8 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: T.brown, display: "inline-block" }} />Boys — 2,764 (52%)
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: T.brown, display: "inline-block" }} />Boys — 240 (50%)
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#5a3e28" }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: T.gold, display: "inline-block" }} />Girls — 2,552 (48%)
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: T.gold, display: "inline-block" }} />Girls — 240 (50%)
               </div>
             </div>
           </div>
@@ -513,7 +610,7 @@ function OverviewTab() {
           <div style={{ display: "flex", gap: 12, alignItems: "center", height: 150 }}>
             <div style={{ position: "relative", flex: 1, height: "100%" }}><canvas ref={staffRef} /></div>
             <div style={{ fontSize: 12 }}>
-              {[{ color: T.brown, label: "Teaching — 228" },{ color: T.brownLight, label: "Admin — 96" },{ color: T.purple, label: "Support — 88" }].map(l => (
+              {[{ color: T.brown, label: "Teaching — 228" },{ color: T.brownLight, label: "Non-Teaching — 96" },{ color: T.purple, label: "Support — 88" }].map(l => (
                 <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, color: "#5a3e28" }}>
                   <span style={{ width: 10, height: 10, borderRadius: 2, background: l.color, display: "inline-block" }} />{l.label}
                 </div>
@@ -527,7 +624,7 @@ function OverviewTab() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
             <thead>
               <tr>
-                {["School","District","Enrolled","Capacity","Fill Rate","Status"].map(h => (
+                {["School","District","Capacity","Enrolled","Fill Rate","Status"].map(h => (
                   <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: `1px solid ${T.border}` }}>{h}</th>
                 ))}
               </tr>
@@ -660,10 +757,10 @@ function HostelTab() {
   return (
     <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
-        <MetricCard icon="🏠" label="Total Capacity" value="6,200" sub="Across 17 schools" accentColor={T.brown} />
-        <MetricCard icon="🛏️" label="Occupied Beds" value="500" sub="85.7% occupancy" accentColor={T.purple} />
-        <MetricCard icon="👦" label="Boys' Hostels" value="17" sub="Avg 64% occupancy" accentColor={T.green} />
-        <MetricCard icon="👧" label="Girls' Hostels" value="17" sub="Avg 72% occupancy" accentColor={T.brownLight} />
+        <MetricCard icon="🏠" label="Total Capacity" value="480" sub="Across 17 schools" accentColor={T.brown} />
+        <MetricCard icon="🛏️" label="Occupied Beds" value="480" sub="50% occupancy" accentColor={T.purple} />
+        <MetricCard icon="👦" label="Boys' Hostels" value="240" sub="Avg 50% occupancy" accentColor={T.green} />
+        <MetricCard icon="👧" label="Girls' Hostels" value="240" sub="Avg 50% occupancy" accentColor={T.brownLight} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }}>
         <ChartCard title="Capacity vs occupancy (top 8 schools)">
@@ -837,7 +934,7 @@ function AttendanceTab() {
     <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
         <MetricCard icon="📅" label="Avg Attendance" value="88.4%" sub="June 2025" accentColor={T.brown} />
-        <MetricCard icon="✅" label="Present Today" value="4,697" sub="Of 500+ students" accentColor={T.green} />
+        <MetricCard icon="✅" label="Present Today" value="400" sub="Of 480 students" accentColor={T.green} />
         <MetricCard icon="⚠️" label="Below 75%" value="214" sub="Students flagged" accentColor="#a32d2d" />
         <MetricCard icon="🏆" label="Best School" value="96.2%" sub="EMRS Boko" accentColor={T.purple} />
       </div>
@@ -1059,8 +1156,6 @@ function GallerySection() {
   const galleryData = {
     "EMRS Dalbari, Barama": [
       { type: "photo", src: "/images/emrs-dalbari-school.jpeg", caption: "School Building" },
-      { type: "photo", src: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600", caption: "Library" },
-      { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600", caption: "Inauguration Ceremony" },
     ],
     "EMRS Kharadhara": [
       { type: "photo", src: "/images/emrs-kharadhara-girlshostel.png", caption: "Girls Hostel" },
@@ -1074,13 +1169,10 @@ function GallerySection() {
     "EMRS Bedlangmari": [
       { type: "photo", src: "images/emrs-bedlangmari-schoolbuilding.png", caption: "School Building" },
       { type: "photo", src: "images/emrs-bedlangmari-hostel.png", caption: "Hostel" }],
-      "EMRS Jhelom, Dhemaji": [
+      "EMRS Jonai, Dhemaji": [
       { type: "photo", src: "images/emrs-jonai-building2.png", caption: " Building" },
       { type: "photo", src: "images/emrs-jonai-schoolbuilding.png",  caption: "School Building" },
-    ],
-    "EMRS Boko": [
-      { type: "photo", src: "https://images.unsplash.com/photo-1588072432836-e10032774350?w=600", caption: "Smart Classroom" },
-      { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1588072432836-e10032774350?w=600", caption: "Science Fair 2024" },
+      { type: "photo", src: "images/emrs-jonai-aerialview.png", caption: "Aerial View" },
     ],
     "EMRS Ardaopur": [
       { type: "photo", src: "images/emrs-ardaopur-schoolbuilding.png", caption: "School Building" },
@@ -1089,11 +1181,11 @@ function GallerySection() {
 { type: "photo", src: "images/emrs-ardaopur-assembly.jpeg", caption: "Assembly" },
 { type: "photo", src: "images/emrs-ardaopur-dinninghall.jpeg", caption: "Dining Hall" },
 { type: "photo", src: "images/emrs-ardaopur-schoolgate.png", caption: "School Gate" },
-
-
-
+    ],   
+"EMRS Phuloni Karbi Anglong": [
+      { type: "photo", src: "images/emrs-phuloni-schoolbuilding.png", caption: "School Building" },
+      { type: "photo", src: "images/emrs-phuloni-hostel.png", caption: "Hostel" },
     ]
-    
   };
 
   const allItems = Object.entries(galleryData).flatMap(([school, items]) => items.map(item => ({ ...item, school })));
@@ -1239,7 +1331,9 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
 
       // Hover tooltip shows a small image thumbnail, name & district, plus
       // — for EMRS pins — distance to the nearest railway station, nearest
-      // airport, and the nearest other EMRS school.
+      // airport, the nearest other EMRS school, and local civic details
+      // (pincode, district HQ, nearest police station, nearest post office,
+      // and the nearest well-known tourist spot).
       const tooltipImg = pin.image || FALLBACK_IMG;
 
       let extraInfoHtml = "";
@@ -1247,15 +1341,23 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
         const nearestStation = findNearestPlace(pin.lat, pin.lng, ASSAM_RAILWAY_STATIONS);
         const nearestAirport = findNearestPlace(pin.lat, pin.lng, ASSAM_AIRPORTS);
         const nearestSchool = findNearestEMRS(pin, EMRS_PINS);
+        const civic = getCivicInfo(pin.name);
         extraInfoHtml = `<div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(139,69,19,0.15);font-size:10.5px;color:#5a3e28;line-height:1.7;">
              <div>🚉 ${nearestStation ? nearestStation.name : "—"}: <strong>${formatKm(nearestStation?.distance)}</strong></div>
              <div>✈️ ${nearestAirport ? nearestAirport.name : "—"}: <strong>${formatKm(nearestAirport?.distance)}</strong></div>
              <div>🏫 Nearest EMRS — ${nearestSchool ? nearestSchool.name.replace("EMRS ","") : "—"}: <strong>${formatKm(nearestSchool?.distance)}</strong></div>
+           </div>
+           <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(139,69,19,0.15);font-size:10.5px;color:#5a3e28;line-height:1.7;">
+             <div>📮 Pincode: <strong>${civic.pincode}</strong></div>
+             <div>🏢 District HQ: <strong>${civic.districtHQ}</strong></div>
+             <div>👮 ${civic.policeStation}</div>
+             <div>✉️ ${civic.postOffice}</div>
+             <div>🗺️ ${civic.touristSpot}</div>
            </div>`;
       }
 
       marker.bindTooltip(
-        `<div style="max-width:250px;">
+        `<div style="max-width:260px;">
            <div style="display:flex;gap:8px;align-items:center;">
              <img src="${tooltipImg}" alt="${pin.name}"
                   style="width:54px;height:54px;object-fit:cover;border-radius:7px;flex-shrink:0;border:1px solid rgba(139,69,19,0.2);"
@@ -1275,7 +1377,7 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
 
   return (
     <div style={{ position: "relative", borderRadius: "0 0 16px 16px", overflow: "hidden" }}>
-      <style>{`.leaflet-emrs-tooltip{background:#fffdf7!important;border:1px solid rgba(139,69,19,0.2)!important;border-radius:10px!important;padding:8px 10px!important;box-shadow:0 6px 24px rgba(139,69,19,0.18)!important;max-width:250px!important}.leaflet-emrs-tooltip::before{display:none!important}.leaflet-container{background:#f5ede0!important}`}</style>
+      <style>{`.leaflet-emrs-tooltip{background:#fffdf7!important;border:1px solid rgba(139,69,19,0.2)!important;border-radius:10px!important;padding:8px 10px!important;box-shadow:0 6px 24px rgba(139,69,19,0.18)!important;max-width:260px!important}.leaflet-emrs-tooltip::before{display:none!important}.leaflet-container{background:#f5ede0!important}`}</style>
       <div ref={mapRef} style={{ width: "100%", height: 460, borderRadius: "0 0 16px 16px" }} />
       {activeLayer === "asset" && (
         <div style={{ position: "absolute", bottom: 36, left: 12, zIndex: 1000, background: "rgba(253,246,233,0.95)", border: `1px solid rgba(139,69,19,0.18)`, borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
@@ -1297,6 +1399,7 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
 function ResourcesDropdown() {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(null);
+  const [applyOpen, setApplyOpen] = useState(false);
   const dropRef = useRef(null);
 
   useEffect(() => {
@@ -1306,6 +1409,41 @@ function ResourcesDropdown() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  const handleResourceClick = (item) => {
+    setOpen(false);
+
+    if (item.action === "apply-online") {
+      setApplyOpen(true);
+      return;
+    }
+
+    if (!item.url) return;
+
+    const isExternal = /^https?:\/\//i.test(item.url);
+    if (isExternal) {
+      window.open(item.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // Local file served from /public (pdf, docx, etc.) — build a real
+    // anchor and click it. This is far more reliable than window.open
+    // for same-origin binary files: some browsers/popup-blockers just
+    // no-op a window.open() to a download URL, especially when it's
+    // triggered from inside a menu that's already closing.
+    // encodeURI is applied defensively in case a filename ever contains
+    // spaces or special characters — raw spaces in an href silently
+    // break navigation/downloads in some browsers.
+    const safeUrl = encodeURI(item.url);
+    const link = document.createElement("a");
+    link.href = safeUrl;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.download = item.url.split("/").pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div ref={dropRef} style={{ position: "relative" }}>
@@ -1368,16 +1506,11 @@ function ResourcesDropdown() {
               <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>Guidelines, circulars & reports</div>
             </div>
           </div>
-          <div style={{ padding: "6px 0" }}>
+          <div style={{ padding: "6px 0", maxHeight: 380, overflowY: "auto" }}>
             {RESOURCES_MENU.map((item, i) => (
   <button
     key={i}
-    onClick={() => {
-  setOpen(false);
-  if (item.url) {
-    window.open(item.url, "_blank", "noopener,noreferrer");
-  }
-}}
+    onClick={() => handleResourceClick(item)}
     onMouseEnter={() => setHovered(i)}
     onMouseLeave={() => setHovered(null)}
     style={{
@@ -1422,7 +1555,7 @@ function ResourcesDropdown() {
       transition: "all 0.15s",
       whiteSpace: "nowrap",
       flexShrink: 0,
-    }}>↗ Open</span>
+    }}>{item.action === "apply-online" ? "📝 Open" : "↗ Open"}</span>
   </button>
 
             ))}
@@ -1440,6 +1573,8 @@ function ResourcesDropdown() {
           </div>
         </div>
       )}
+
+      {applyOpen && <ApplyOnlineModal onClose={() => setApplyOpen(false)} />}
     </div>
   );
 }
@@ -1537,7 +1672,7 @@ const HomePage = () => {
   const notifications = [
     { icon: "🏫", title: "EMRS Kampur infrastructure data updated", time: "Just now", color: T.brown },
     { icon: "📋", title: "New asset entry submitted — Block A, Jorhat", time: "5 min ago", color: T.brownLight },
-    { icon: "🎓", title: "Enrollment data for Class 9 approved", time: "20 min ago", color: T.purple },
+    { icon: "🎓", title: "Enrollment data for Class IX approved", time: "20 min ago", color: T.purple },
     { icon: "👨‍🏫", title: "Staff record added — EMRS Howraghat", time: "1 hr ago", color: T.green },
     { icon: "📸", title: "New photos uploaded — EMRS Boko", time: "2 hrs ago", color: "#c8a84b" },
     { icon: "🏗️", title: "Construction status: EMRS Dalbari Phase 2 complete", time: "3 hrs ago", color: "#a83232" },
@@ -1548,7 +1683,7 @@ const HomePage = () => {
   ];
 
   const newsFlashItems = [
-    "Admission notice 2025–26 for Class 6 now open across all EMRS",
+    "Admission notice 2025–26 for Class VI now open across all EMRS",
     "Asset audit submission deadline extended to 30th June",
     "EMRS Boko science fair registrations closing soon",
     "Staff recruitment drive — apply through the EMRS Portal",
@@ -1559,7 +1694,7 @@ const HomePage = () => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", handleScroll);
     const timer = setInterval(() => setTime(new Date()), 1000);
-    const targets = { schools: 17, students: 500, assets: 50, districts: 10 };
+    const targets = { schools: 17, students: 480, assets: 50, districts: 10 };
     let step = 0;
     const counterTimer = setInterval(() => {
       step++;
@@ -1602,7 +1737,6 @@ const HomePage = () => {
       icon: "🏗️", gradient: "linear-gradient(135deg,#1a3d2e,#2d6a4f)", accent: "#52b788", glowColor: "rgba(45,106,79,0.2)",
       features: [
         { icon: "📊", text: "Project Details" },{ icon: "🏛️", text: "Asset Tracking" },
-        { icon: "💰", text: "Financial Records" },{ icon: "🔨", text: "Construction Status" },
         { icon: "📍", text: "GPS Location Tagging" },
       ],
       path: "/asset/login", badge: "50+ Assets",
@@ -1619,7 +1753,7 @@ const HomePage = () => {
   const assetTypeColor = { infra: T.brownLight, road: T.green, building: T.purple };
   const assetTypeLabel = { infra: "Infrastructure", road: "Road Project", building: "Building" };
   const assetTypeEmoji = { infra: "🏗️", road: "🛣️", building: "🏛️" };
-  const statusColor = s => s === "Active" ? T.green : s === "In Progress" ? T.brownLight : T.purple;
+  const statusColor = s => s === "Functional" ? T.green : s === "In Progress" ? T.brownLight : T.purple;
 
   const currentPins = mapLayer === "emrs" ? EMRS_PINS : ASSET_PINS;
   const selectedData = selectedPin !== null ? currentPins[selectedPin] : null;
@@ -1649,7 +1783,7 @@ const HomePage = () => {
       value: counters.students.toLocaleString(),
       suffix: "",
       label: "Students Enrolled",
-      sub: "Classes 6–12",
+      sub: "Classes VI–XII",
       valueColor: "#6b3fa0",
       labelColor: "#4a2d70",
       subColor: "#7a5ca0",
@@ -1847,7 +1981,7 @@ const HomePage = () => {
               <SectionLabel>About Us</SectionLabel>
               <h2 style={{ fontSize: 24, fontWeight: 800, color: T.brownDark, margin: "0 0 14px" }}>EMRS Management System</h2>
               <p style={{ fontSize: 14, color: "#5a3e28", lineHeight: 1.85, margin: "0 0 14px" }}>
-                The Directorate of Tribal Affairs (Plain), Government of Assam, established this unified digital platform to streamline governance of Eklavya Model Residential Schools (EMRS) and government assets across the state. The system brings school administration, student records, staff data, hostel management, and infrastructure tracking onto a single, transparent platform.
+                The Department of Tribal Affairs (Plain), Government of Assam, established this unified digital platform to streamline governance of Eklavya Model Residential Schools (EMRS) and government assets across the state. The system brings school administration, student records, staff data, hostel management, and infrastructure tracking onto a single, transparent platform.
               </p>
               <p style={{ fontSize: 14, color: "#5a3e28", lineHeight: 1.85, margin: "0 0 20px" }}>
                 Built to serve school administrators, district officers, and the public alike, the platform supports the Government of Assam's commitment to accountable, efficient, and accessible tribal education infrastructure across all 17 EMRS institutions and 50+ tracked assets statewide.
@@ -1957,7 +2091,14 @@ const HomePage = () => {
               ))}
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" }}>
+
+          {/* ── Map + right sidebar row ──────────────────────────────────
+              Sidebar now stretches to match the map card's height
+              (alignItems:"stretch") and is a flex column so both the
+              selected-pin detail card and the "All Schools/Assets" list
+              scroll internally instead of pushing extra blank space
+              below the map. */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "stretch" }}>
             <div style={{ background: "#fff", borderRadius: 20, border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.2)" : "rgba(45,106,79,0.2)"}`, overflow: "hidden", boxShadow: "0 4px 24px rgba(139,69,19,0.08)", transition: "border-color 0.3s" }}>
               <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", overflow: "hidden" }}>
                 <BodoWeaveBackground opacity={0.08} color="#fff" />
@@ -1971,7 +2112,7 @@ const HomePage = () => {
               <div style={{ margin: "12px 14px 14px", background: mapLayer==="emrs" ? "rgba(139,69,19,0.05)" : "rgba(45,106,79,0.05)", border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.12)" : "rgba(45,106,79,0.12)"}`, borderRadius: 12, padding: "10px 16px", display: "flex", justifyContent: "space-around" }}>
                 {(mapLayer==="emrs" ? [
                   { label: "Active", count: EMRS_PINS.filter(p => p.status==="Active").length, color: T.green },
-                  
+
                   { label: "Total", count: EMRS_PINS.length, color: T.brown },
                 ] : [
                   { label: "Infra", count: ASSET_PINS.filter(p => p.type==="infra").length, color: T.brownLight },
@@ -1985,11 +2126,14 @@ const HomePage = () => {
                 ))}
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* RIGHT SIDEBAR — flex column that stretches to the map's
+                height; the detail card and list each scroll internally. */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
               {selectedData ? (
-                <div style={{ background: "#fff", border: `2px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.35)" : "rgba(45,106,79,0.35)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(139,69,19,0.12)" }}>
+                <div style={{ background: "#fff", border: `2px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.35)" : "rgba(45,106,79,0.35)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(139,69,19,0.12)", flexShrink: 0, maxHeight: "58%", display: "flex", flexDirection: "column" }}>
                   {/* Image preview at top of selected-pin detail card */}
-                  <div style={{ width: "100%", height: 140, overflow: "hidden" }}>
+                  <div style={{ width: "100%", height: 140, overflow: "hidden", flexShrink: 0 }}>
                     <img
                       src={selectedData.image || FALLBACK_IMG}
                       alt={selectedData.name}
@@ -1997,7 +2141,7 @@ const HomePage = () => {
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     />
                   </div>
-                  <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", overflow: "hidden" }}>
+                  <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", overflow: "hidden", flexShrink: 0 }}>
                     <BodoWeaveBackground opacity={0.1} color="#fff" />
                     <div style={{ position: "relative", zIndex: 1 }}>
                       <div style={{ fontSize: 22, marginBottom: 4 }}>{mapLayer==="emrs" ? "🏫" : assetTypeEmoji[selectedData.type]}</div>
@@ -2006,7 +2150,10 @@ const HomePage = () => {
                     </div>
                     <button onClick={() => setSelectedPin(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 28, height: 28, borderRadius: 8, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative", zIndex: 1 }}>×</button>
                   </div>
-                  <div style={{ padding: "16px 18px" }}>
+
+                  {/* Scrollable body so long civic-details content never
+                      forces the sidebar taller than the map. */}
+                  <div style={{ padding: "16px 18px", overflowY: "auto", flex: 1, minHeight: 0 }}>
                     {mapLayer==="emrs" ? (
                       <>
                         {[
@@ -2027,7 +2174,7 @@ const HomePage = () => {
                           <span style={{ fontSize: 12, color: statusColor(selectedData.status), fontWeight: 700 }}>{selectedData.status}</span>
                         </div>
 
-                        {/* NEW: Nearest transit + nearest EMRS distances */}
+                        {/* Nearest transit + nearest EMRS distances */}
                         {(() => {
                           const nearestStation = findNearestPlace(selectedData.lat, selectedData.lng, ASSAM_RAILWAY_STATIONS);
                           const nearestAirport = findNearestPlace(selectedData.lat, selectedData.lng, ASSAM_AIRPORTS);
@@ -2044,6 +2191,29 @@ const HomePage = () => {
                                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0" }}>
                                   <span style={{ fontSize: 13, flexShrink: 0 }}>{row.icon}</span>
                                   <span style={{ fontSize: 11.5, color: "#5a3e28", lineHeight: 1.4 }}>{row.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Civic details — pincode, district HQ, nearest police
+                            station, nearest post office, nearest tourist spot */}
+                        {(() => {
+                          const civic = getCivicInfo(selectedData.name);
+                          const civicRows = [
+                            { icon: "📮", label: "Pincode", value: civic.pincode },
+                            { icon: "🏢", label: "District HQ", value: civic.districtHQ },
+                            { icon: "👮", label: "Nearest Police Station", value: civic.policeStation },
+                            { icon: "✉️", label: "Nearest Post Office", value: civic.postOffice },
+                          ];
+                          return (
+                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px dashed rgba(139,69,19,0.15)` }}>
+                              <div style={{ fontSize: 10, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, fontWeight: 700 }}>Local Civic Details</div>
+                              {civicRows.map((row, i) => (
+                                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0" }}>
+                                  <span style={{ fontSize: 13, flexShrink: 0 }}>{row.icon}</span>
+                                  <span style={{ fontSize: 11.5, color: "#5a3e28", lineHeight: 1.4 }}><strong>{row.label}:</strong> {row.value}</span>
                                 </div>
                               ))}
                             </div>
@@ -2077,14 +2247,17 @@ const HomePage = () => {
                   </div>
                 </div>
               ) : (
-                <div style={{ background: "#fff", border: "1px dashed rgba(139,69,19,0.18)", borderRadius: 18, padding: "36px 24px", textAlign: "center" }}>
+                <div style={{ background: "#fff", border: "1px dashed rgba(139,69,19,0.18)", borderRadius: 18, padding: "36px 24px", textAlign: "center", flexShrink: 0 }}>
                   <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>{mapLayer==="emrs" ? "🏫" : "🏗️"}</div>
                   <div style={{ fontSize: 14, color: "#b89a78", lineHeight: 1.6 }}>Click any pin on the map<br />to view details here</div>
                 </div>
               )}
-              <div style={{ background: "#fff", border: `1px solid rgba(139,69,19,0.1)`, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 12px rgba(139,69,19,0.06)" }}>
-                <div style={{ padding: "12px 16px", borderBottom: `1px solid rgba(139,69,19,0.08)`, fontSize: 12, fontWeight: 700, color: T.muted, letterSpacing: 1, textTransform: "uppercase" }}>All {mapLayer==="emrs" ? "Schools" : "Assets"}</div>
-                <div style={{ maxHeight: 300, overflowY: "auto" }}>
+
+              {/* All-items list — fills remaining sidebar height and
+                  scrolls independently instead of using a fixed maxHeight. */}
+              <div style={{ background: "#fff", border: `1px solid rgba(139,69,19,0.1)`, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 12px rgba(139,69,19,0.06)", display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+                <div style={{ padding: "12px 16px", borderBottom: `1px solid rgba(139,69,19,0.08)`, fontSize: 12, fontWeight: 700, color: T.muted, letterSpacing: 1, textTransform: "uppercase", flexShrink: 0 }}>All {mapLayer==="emrs" ? "Schools" : "Assets"}</div>
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                   {currentPins.map((pin, i) => {
                     const col = mapLayer==="emrs" ? T.brown : assetTypeColor[pin.type];
                     return (

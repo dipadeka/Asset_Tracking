@@ -197,7 +197,7 @@ const EMRSDashboard = () => {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
               <div style={{ fontSize: 10, letterSpacing: 3, color: "#c8a84b", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>
-                Directorate of Tribal Affairs (Plain) · Govt. of Assam
+                Department of Tribal Affairs (Plain) · Govt. of Assam
               </div>
               <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>📊 EMRS Schools Dashboard</h1>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "4px 0 0" }}>

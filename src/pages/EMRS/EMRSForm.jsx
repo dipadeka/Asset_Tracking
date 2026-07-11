@@ -3,9 +3,9 @@ import SchoolDetails from "./Steps/SchoolDetails";
 import InfrastructureDetails from "./Steps/Infrastructure";
 import ConstructionDetails from "./Steps/Construction";
 import ExtraCurricular from "./Steps/ExtraCurricular";
-import OperationalCost from "./Steps/OperationalCost";
+;
 import FinancialProcurement from "./Steps/FinancialProcurement";
-import Attendance from "./Steps/Attendance";
+
 import {
   emrsBasicFields,
   emrsLocationFields,
@@ -1192,6 +1192,313 @@ const StudentAttendanceSection = ({
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   WATER HYGIENE, SANITATION & CLEANLINESS MONITORING SECTION (UPDATED)
+   - Water quality testing status + report upload
+   - Corrective action details if water quality is poor
+   - UPDATED: Essential Water & Sanitation Facilities (Marks-based) table now
+     has its own Yes/No dropdowns edited directly inside the table (the old
+     separate "Cleanliness & Hygiene Monitoring" block has been removed —
+     those same conditions are now controlled from this single table),
+     with the Marking Criteria table below.
+───────────────────────────────────────────────────────────────────────────── */
+const blankSanitationFacilityRows = () => ([
+  { facility: "Boys Toilets", total: "", functional: "", nonFunctional: "", remarks: "" },
+  { facility: "Girls Toilets", total: "", functional: "", nonFunctional: "", remarks: "" },
+  { facility: "Staff Toilets", total: "", functional: "", nonFunctional: "", remarks: "" },
+  { facility: "Drinking Water Supply Points", total: "", functional: "", nonFunctional: "", remarks: "" },
+  { facility: "Handwashing Stations", total: "", functional: "", nonFunctional: "", remarks: "" },
+]);
+
+// Marking criteria for the 5-condition Essential Water & Sanitation Facilities table
+const getWaterHygieneMarks = (yesCount) => {
+  if (yesCount === 5) return 5;
+  if (yesCount >= 3) return 3;
+  if (yesCount >= 1) return 1;
+  return 0;
+};
+
+const WaterHygieneSanitation = ({
+  waterHygieneData,
+  setWaterHygieneData,
+  sanitationFacilities,
+  setSanitationFacilities,
+}) => {
+  const handleField = (field, value) => {
+    setWaterHygieneData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleReportUpload = (file) => {
+    if (!file) return;
+    setWaterHygieneData((prev) => ({ ...prev, testReportFile: file, testReportFileName: file.name }));
+  };
+
+  const removeReportFile = () => {
+    setWaterHygieneData((prev) => ({ ...prev, testReportFile: null, testReportFileName: "" }));
+  };
+
+  const isBadQuality = waterHygieneData.waterQualityStatus === "Bad" || waterHygieneData.waterQualityStatus === "Poor";
+
+  /* ── Essential Water & Sanitation Facilities — 5 Yes/No conditions ──
+     Each condition is now directly editable via a dropdown inside the
+     table itself (see the "Essential Water & Sanitation Facilities"
+     table below). "waterQualityGood" stays in sync with the
+     Water Quality Testing result above; the other four are stored
+     directly on waterHygieneData. */
+  const essentialConditions = [
+    {
+      key: "waterQualityGood",
+      label: "Safe Drinking Water Quality Tested & Good (Yes/No)",
+      value: waterHygieneData.waterQualityStatus === "Good" ? "Yes" : "No",
+    },
+    {
+      key: "dailyCleaningLog",
+      label: "Daily Cleaning Log Maintained (Yes/No)",
+      value: waterHygieneData.dailyCleaningLog || "No",
+    },
+    {
+      key: "toiletCleaningSchedule",
+      label: "Toilet Cleaning Schedule Displayed (Yes/No)",
+      value: waterHygieneData.toiletCleaningSchedule || "No",
+    },
+    {
+      key: "soapAvailable",
+      label: "Soap / Handwash Available (Yes/No)",
+      value: waterHygieneData.soapAvailable || "No",
+    },
+    {
+      key: "wasteDisposalSystem",
+      label: "Proper Waste Disposal System (Yes/No)",
+      value: waterHygieneData.wasteDisposalSystem || "No",
+    },
+  ];
+
+  // Handles edits made directly from the dropdowns in the Essential
+  // Water & Sanitation Facilities table.
+  const handleConditionChange = (key, value) => {
+    if (key === "waterQualityGood") {
+      // Keep this in sync with the Water Quality Testing result above.
+      handleField("waterQualityStatus", value === "Yes" ? "Good" : "Bad");
+    } else {
+      handleField(key, value);
+    }
+  };
+
+  const yesCount = essentialConditions.filter((c) => c.value === "Yes").length;
+  const marksObtained = getWaterHygieneMarks(yesCount);
+
+  return (
+    <Box>
+      {/* Header */}
+      <Box sx={{ background: "linear-gradient(135deg, #0369a1, #38bdf8)", borderRadius: 2, px: 3, py: 2, mb: 3, display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Typography sx={{ fontSize: 22 }}>💧</Typography>
+        <Box>
+          <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 16 }}> Sanitation &amp; Cleanliness Monitoring</Typography>
+          <Typography sx={{ color: "#e0f2fe", fontSize: 12 }}>
+            Water quality testing status, corrective action, and essential water &amp; sanitation facilities
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* ── Water Quality Testing ── */}
+      <Box sx={{ border: "1px solid #bae6fd", borderRadius: 2, p: 3, mb: 3, background: "#f0f9ff" }}>
+        <Typography sx={{ fontWeight: 700, color: "#0369a1", fontSize: 14, mb: 2 }}>🧪 Water Quality Testing</Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <TextField select fullWidth size="small" sx={{ minWidth: 220 }} label="Water Quality Test Conducted?"
+              value={waterHygieneData.waterQualityTestConducted}
+              onChange={(e) => handleField("waterQualityTestConducted", e.target.value)}>
+              <MenuItem value="No">No</MenuItem>
+              <MenuItem value="Yes">Yes</MenuItem>
+            </TextField>
+          </Grid>
+
+          {waterHygieneData.waterQualityTestConducted === "Yes" && (
+            <>
+              <Grid item xs={12} sm={4}>
+                <TextField fullWidth size="small" type="date" label="Date of Testing" InputLabelProps={{ shrink: true }}
+                  value={waterHygieneData.testDate}
+                  onChange={(e) => handleField("testDate", e.target.value)} />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField select fullWidth size="small" sx={{ minWidth: 220 }}  label="Tested By / Agency"
+                  value={waterHygieneData.testingAgencyType || ""}
+                  onChange={(e) => handleField("testingAgencyType", e.target.value)}>
+                  <MenuItem value="">Select</MenuItem>
+                  <MenuItem value="PHED">PHE Department</MenuItem>
+                  <MenuItem value="District Health Lab">District Health Lab</MenuItem>
+                  <MenuItem value="Private Lab">Private / Empanelled Lab</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField select fullWidth size="small" sx={{ minWidth: 220 }} label="Water Quality Result"
+                  value={waterHygieneData.waterQualityStatus}
+                  onChange={(e) => handleField("waterQualityStatus", e.target.value)}>
+                  <MenuItem value="">Select</MenuItem>
+                  <MenuItem value="Good">Good / Potable</MenuItem>
+                  <MenuItem value="Bad">Bad / Not Potable</MenuItem>
+                </TextField>
+              </Grid>
+
+              {/* Upload report */}
+              <Grid item xs={12} sm={8}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
+                  <Button variant="contained" size="small" component="label"
+                    sx={{ background: "#0369a1", "&:hover": { background: "#075985" }, fontWeight: 600 }}>
+                    📄 Upload Test Report
+                    <input type="file" hidden accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => handleReportUpload(e.target.files[0])} />
+                  </Button>
+                  {waterHygieneData.testReportFileName && (
+                    <Chip label={waterHygieneData.testReportFileName} onDelete={removeReportFile}
+                      sx={{ background: "#dbeafe", color: "#1d4ed8", fontWeight: 600 }} />
+                  )}
+                  {!waterHygieneData.testReportFileName && (
+                    <Typography sx={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>No report uploaded yet (PDF/Image).</Typography>
+                  )}
+                </Box>
+              </Grid>
+            </>
+          )}
+        </Grid>
+
+        {waterHygieneData.waterQualityTestConducted === "No" && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            Water quality testing has not been conducted. Please arrange testing through the district PHE / health department at the earliest.
+          </Alert>
+        )}
+
+        {/* ── Corrective Action (only if Bad quality) ── */}
+        {isBadQuality && (
+          <Box sx={{ mt: 3, border: "1px solid #fecaca", borderRadius: 2, p: 2.5, background: "#fef2f2" }}>
+            <Typography sx={{ fontWeight: 700, color: "#dc2626", fontSize: 13, mb: 1.5 }}>
+              ⚠️ Water Quality Reported Bad — Corrective Action Details
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField fullWidth size="small" type="date" label="Date Action Initiated" InputLabelProps={{ shrink: true }}
+                  value={waterHygieneData.actionDate}
+                  onChange={(e) => handleField("actionDate", e.target.value)} />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField select fullWidth size="small" label="Action Status"
+                  value={waterHygieneData.actionStatus || ""}
+                  onChange={(e) => handleField("actionStatus", e.target.value)}>
+                  <MenuItem value="">Select</MenuItem>
+                  <MenuItem value="Initiated">Initiated</MenuItem>
+                  <MenuItem value="In Progress">In Progress</MenuItem>
+                  <MenuItem value="Resolved">Resolved</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth size="small" multiline minRows={2} label="Action Initiated by School (details)"
+                  placeholder="e.g. RO/purification unit installed, alternate water source arranged, re-testing scheduled, PHED notified, etc."
+                  value={waterHygieneData.actionInitiated}
+                  onChange={(e) => handleField("actionInitiated", e.target.value)} />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth size="small" multiline minRows={2} label="Corrective / Preventive Measures Taken"
+                  value={waterHygieneData.correctiveMeasures}
+                  onChange={(e) => handleField("correctiveMeasures", e.target.value)} />
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+      </Box>
+
+      {/* ── Essential Water & Sanitation Facilities (5 Marks) ──
+          Each condition below is now a live Yes/No dropdown — editing
+          it here updates waterHygieneData directly (the old separate
+          "Cleanliness & Hygiene Monitoring" section has been removed). */}
+      <Box sx={{ border: "1px solid #bae6fd", borderRadius: 2, overflow: "hidden", mb: 3 }}>
+        <Box sx={{ background: "linear-gradient(135deg, #0f766e, #14b8a6)", px: 3, py: 1.5 }}>
+          <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+            💧 Essential Water &amp; Sanitation Facilities (5 Marks)
+          </Typography>
+        </Box>
+        <Box sx={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {essentialConditions.map((c) => (
+                  <th key={c.key} style={{ ...thStyle, background: "#f0fdfa", fontSize: 12, minWidth: 200 }}>
+                    {c.label}
+                  </th>
+                ))}
+                <th style={{ ...thStyle, background: "#f0fdfa", fontSize: 12, minWidth: 120 }}>Marks Obtained*</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {essentialConditions.map((c) => (
+                  <td key={c.key} style={{ ...tdStyle, textAlign: "center" }}>
+                    <TextField
+                      select
+                      size="small"
+                      fullWidth
+                      sx={{ minWidth: 100 }}
+                      value={c.value}
+                      onChange={(e) => handleConditionChange(c.key, e.target.value)}
+                      SelectProps={{
+                        renderValue: (val) => (
+                          <Chip
+                            label={val}
+                            size="small"
+                            sx={{
+                              fontWeight: 700,
+                              background: val === "Yes" ? "#dcfce7" : "#fee2e2",
+                              color: val === "Yes" ? "#16a34a" : "#dc2626",
+                            }}
+                          />
+                        ),
+                      }}
+                    >
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </TextField>
+                  </td>
+                ))}
+                <td style={{ ...tdStyle, textAlign: "center", fontWeight: 800, fontSize: 15, color: "#0f766e" }}>
+                  {marksObtained}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </Box>
+      </Box>
+
+      {/* ── Marking Criteria (Out of 5) ── */}
+      <Box sx={{ mb: 3 }}>
+        <Typography sx={{ fontWeight: 700, color: "#374151", fontSize: 13, mb: 1 }}>*Marking Criteria (Out of 5)</Typography>
+        <Box sx={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", maxWidth: 480 }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Condition</th>
+                <th style={thStyle}>Marks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { cond: "All 5 conditions fulfilled", marks: 5 },
+                { cond: "3 or 4 conditions fulfilled", marks: 3 },
+                { cond: "1 or 2 conditions fulfilled", marks: 1 },
+                { cond: "None fulfilled", marks: 0 },
+              ].map((row, i) => (
+                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                  <td style={tdStyle}>{row.cond}</td>
+                  <td style={{ ...tdStyle, textAlign: "center", fontWeight: 700 }}>{row.marks}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
    MAIN EMRS FORM
 ───────────────────────────────────────────────────────────────────────────── */
 const EMRSForm = ({ addSubmittedForm }) => {
@@ -1248,14 +1555,15 @@ const EMRSForm = ({ addSubmittedForm }) => {
   const STEPS = [
     { label: "School Details", icon: "🏫" },
     { label: "Infrastructure", icon: "🔬" },
+    { label: "Water Hygiene & Sanitation", icon: "💧" },
     { label: "Construction", icon: "🏗️" },
     { label: "Hostel", icon: "🏠" },
     { label: "Enrollment", icon: "🎓" },
     { label: "Extra Curricular", icon: "🎭" },
     { label: "Hospitalization", icon: "🏥" },
     { label: "Staff Details", icon: "👨‍🏫" },
-    { label: "Attendance", icon: "📅" },
-    { label: "Operational Cost", icon: "💰" },
+    
+   
     { label: "Financial & Procurement Compliance", icon: "📊" },
     { label: "EMRS Image Upload", icon: "📸" },
      { label: "Preview & Submit", icon: "👁️" },
@@ -1480,6 +1788,27 @@ const EMRSForm = ({ addSubmittedForm }) => {
   });
 
   /* ─────────────────────────────────────────────────────────────────
+     WATER HYGIENE / SANITATION STATE
+  ───────────────────────────────────────────────────────────────── */
+  const [waterHygieneData, setWaterHygieneData] = useState({
+    waterQualityTestConducted: "No",
+    testDate: "",
+    testingAgencyType: "",
+    waterQualityStatus: "",
+    testReportFile: null,
+    testReportFileName: "",
+    actionDate: "",
+    actionStatus: "",
+    actionInitiated: "",
+    correctiveMeasures: "",
+    dailyCleaningLog: "No",
+    toiletCleaningSchedule: "No",
+    soapAvailable: "No",
+    wasteDisposalSystem: "No",
+  });
+  const [sanitationFacilities, setSanitationFacilities] = useState(blankSanitationFacilityRows());
+
+  /* ─────────────────────────────────────────────────────────────────
      INDEPENDENT ATTENDANCE STATE (decoupled from Staff Details)
   ───────────────────────────────────────────────────────────────── */
   // Single shared array for ALL staff attendance rows (Teaching + Non-Teaching)
@@ -1628,6 +1957,41 @@ const EMRSForm = ({ addSubmittedForm }) => {
     electricalSafetyInspection: data.electricalSafetyInspection || "", fireSafetyDrill: data.fireSafetyDrill || "",
   });
 
+  const prepareWaterHygieneSanitation = (waterHygieneData, sanitationFacilities, waterTestReportBase64) => ({
+    waterHygieneSanitation: {
+      waterQualityTestConducted: waterHygieneData.waterQualityTestConducted,
+      testDate: waterHygieneData.testDate,
+      testingAgencyType: waterHygieneData.testingAgencyType,
+      waterQualityStatus: waterHygieneData.waterQualityStatus,
+      testReport: waterTestReportBase64 || null,
+      actionDate: waterHygieneData.actionDate,
+      actionStatus: waterHygieneData.actionStatus,
+      actionInitiated: waterHygieneData.actionInitiated,
+      correctiveMeasures: waterHygieneData.correctiveMeasures,
+      dailyCleaningLog: waterHygieneData.dailyCleaningLog,
+      toiletCleaningSchedule: waterHygieneData.toiletCleaningSchedule,
+      soapAvailable: waterHygieneData.soapAvailable,
+      wasteDisposalSystem: waterHygieneData.wasteDisposalSystem,
+      // marksObtained for the new Essential Water & Sanitation Facilities table
+      waterHygieneMarksObtained: getWaterHygieneMarks(
+        [
+          waterHygieneData.waterQualityStatus === "Good",
+          waterHygieneData.dailyCleaningLog === "Yes",
+          waterHygieneData.toiletCleaningSchedule === "Yes",
+          waterHygieneData.soapAvailable === "Yes",
+          waterHygieneData.wasteDisposalSystem === "Yes",
+        ].filter(Boolean).length
+      ),
+      sanitationFacilities: sanitationFacilities.map((r) => ({
+        facility: r.facility,
+        total: toSafeNumber(r.total),
+        functional: toSafeNumber(r.functional),
+        nonFunctional: toSafeNumber(r.nonFunctional),
+        remarks: r.remarks || "",
+      })),
+    },
+  });
+
   const prepareConstructionDetails = (data, constructionRows) => ({
     projectStartDate: data.projectStartDate || "", expectedEndDate: data.projectEndDate || "",
     totalBudget: toSafeNumber(data.totalProjectBudget),
@@ -1763,12 +2127,14 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
     try {
       const emrsImagesBase64 = await convertUploadedImages(uploadedImages);
+      const waterTestReportBase64 = await fileToBase64(waterHygieneData.testReportFile);
 
       const payload = {
         userId: "1",
         ...prepareBasicDetails(data),
         ...prepareLocationDetails(data),
         ...prepareInfrastructureDetails(data),
+        ...prepareWaterHygieneSanitation(waterHygieneData, sanitationFacilities, waterTestReportBase64),
         constructionStatus: prepareConstructionDetails(data, constructionRows),
         ...prepareHostelAdministration(data),
         ...prepareMessCompliance(data),
@@ -1904,11 +2270,19 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
             {currentStep === 0 && <SchoolDetails control={control} watch={watch} setValue={setValue} emrsBasicFields={emrsBasicFields} onPincodeChange={onPincodeChange} />}
             {currentStep === 1 && <InfrastructureDetails control={control} watch={watch} syncInfraToConstruction={syncInfraToConstruction} />}
-            {currentStep === 2 && <ConstructionDetails control={control} constructionRows={constructionRows} setConstructionRows={setConstructionRows} />}
-            {currentStep === 3 && <HostelDetails control={control} watch={watch} messData={messData} setMessData={setMessData} addItem={addItem} removeItem={removeItem} handleItemChange={handleItemChange} calculateGrandTotal={calculateGrandTotal} />}
-            {currentStep === 4 && <Enrollment enrollmentRows={enrollmentRows} setEnrollmentRows={setEnrollmentRows} />}
-            {currentStep === 5 && <ExtraCurricular extraCurricularRows={extraCurricularRows} setExtraCurricularRows={setExtraCurricularRows} control={control} watch={watch} />}
-            {currentStep === 6 && (
+            {currentStep === 2 && (
+              <WaterHygieneSanitation
+                waterHygieneData={waterHygieneData}
+                setWaterHygieneData={setWaterHygieneData}
+                sanitationFacilities={sanitationFacilities}
+                setSanitationFacilities={setSanitationFacilities}
+              />
+            )}
+            {currentStep === 3 && <ConstructionDetails control={control} constructionRows={constructionRows} setConstructionRows={setConstructionRows} />}
+            {currentStep === 4 && <HostelDetails control={control} watch={watch} messData={messData} setMessData={setMessData} addItem={addItem} removeItem={removeItem} handleItemChange={handleItemChange} calculateGrandTotal={calculateGrandTotal} />}
+            {currentStep === 5 && <Enrollment enrollmentRows={enrollmentRows} setEnrollmentRows={setEnrollmentRows} />}
+            {currentStep === 6 && <ExtraCurricular extraCurricularRows={extraCurricularRows} setExtraCurricularRows={setExtraCurricularRows} control={control} watch={watch} />}
+            {currentStep === 7 && (
               <HospitalizationSection
                 hospitalizationRows={hospitalizationRows} setHospitalizationRows={setHospitalizationRows}
                 eyeDateErrors={eyeDateErrors} setEyeDateErrors={setEyeDateErrors}
@@ -1919,8 +2293,8 @@ const EMRSForm = ({ addSubmittedForm }) => {
               />
             )}
 
-            {/* ── Step 7: Staff Details ── */}
-            {currentStep === 7 && (
+            {/* ── Step 8: Staff Details ── */}
+            {currentStep === 8 && (
               <>
                 {/* ══════════ TEACHING STAFF ══════════ */}
                 <Typography variant="h6" sx={{ background: "linear-gradient(to right, #1976d2, #42a5f5)", color: "#fff", padding: "8px 16px", borderRadius: 2, fontWeight: 600, mb: 2 }}>Teaching Staff Details</Typography>
@@ -1929,7 +2303,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                   <Grid container spacing={2}>
                     {teachingStaffSummaryFields.filter((f) => ["total", "filled", "vacant"].includes(f.name)).map((field) => (
                       <Grid item xs={12} sm={4} key={field.name}>
-                        <TextField fullWidth size="small" type={field.type || "text"} label={field.label}
+                        <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label}
                           value={field.name === "vacant" ? Number(teachingRows[0]?.total || 0) - Number(teachingRows[0]?.filled || 0) || "" : teachingRows[0]?.[field.name] ?? ""}
                           inputProps={{ min: 0 }} InputProps={{ readOnly: field.readOnly }}
                           onChange={(e) => { const u = [...teachingRows]; if (!u.length) return; u[0][field.name] = e.target.value; setteachingRows(u); }} />
@@ -1949,13 +2323,13 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         {teachingStaffSummaryFields.filter((f) => !["total", "filled", "vacant"].includes(f.name)).map((field) => (
                           <Grid item xs={12} sm={6} md={4} key={field.name}>
                             {field.type === "select" ? (
-                              <TextField select fullWidth size="small" label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: true }}
+                              <TextField select fullWidth size="small" sx={{ minWidth: 220 }} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: true }}
                                 onChange={(e) => { const u = [...teachingRows]; u[index][field.name] = e.target.value; setteachingRows(u); }}>
                                 <MenuItem value="">Select</MenuItem>
                                 {field.options?.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                               </TextField>
                             ) : (
-                              <TextField fullWidth size="small" type={field.type || "text"} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: field.type === "date" || undefined }}
+                              <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: field.type === "date" || undefined }}
                                 onChange={(e) => { const u = [...teachingRows]; u[index][field.name] = e.target.value; setteachingRows(u); }} />
                             )}
                           </Grid>
@@ -1981,7 +2355,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
                   <Grid container spacing={2}>
                     {nonTeachingStaffDetailFields.filter((f) => ["total", "filled", "vacant"].includes(f.name)).map((field) => (
                       <Grid item xs={12} sm={4} key={field.name}>
-                        <TextField fullWidth size="small" type={field.type || "text"} label={field.label}
+                        <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label}
                           value={field.name === "vacant" ? Number(nonTeachingRows[0]?.total || 0) - Number(nonTeachingRows[0]?.filled || 0) || "" : nonTeachingRows[0]?.[field.name] ?? ""}
                           InputProps={{ readOnly: field.readOnly }}
                           onChange={(e) => { const u = [...nonTeachingRows]; if (!u.length) return; u[0][field.name] = e.target.value; setnonTeachingRows(u); }} />
@@ -2001,13 +2375,13 @@ const EMRSForm = ({ addSubmittedForm }) => {
                         {nonTeachingStaffDetailFields.filter((f) => !["total", "filled", "vacant"].includes(f.name)).map((field) => (
                           <Grid item xs={12} sm={6} md={4} key={field.name}>
                             {field.type === "select" ? (
-                              <TextField select fullWidth size="small" label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: true }}
+                              <TextField select fullWidth size="small" sx={{ minWidth: 220 }} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: true }}
                                 onChange={(e) => { const u = [...nonTeachingRows]; u[index][field.name] = e.target.value; setnonTeachingRows(u); }}>
                                 <MenuItem value="">Select</MenuItem>
                                 {field.options?.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                               </TextField>
                             ) : (
-                              <TextField fullWidth size="small" type={field.type || "text"} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: field.type === "date" || undefined }}
+                              <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: field.type === "date" || undefined }}
                                 onChange={(e) => { const u = [...nonTeachingRows]; u[index][field.name] = e.target.value; setnonTeachingRows(u); }} />
                             )}
                           </Grid>
@@ -2028,28 +2402,9 @@ const EMRSForm = ({ addSubmittedForm }) => {
               </>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════
-                ── Step 8: Attendance — FULLY DECOUPLED ──
-            ═══════════════════════════════════════════════════════════ */}
-           {currentStep === 8 && (
-  <Attendance
-    staffAttendanceRows={staffAttendanceRows}
-    setStaffAttendanceRows={setStaffAttendanceRows}
-    teachingAttMonth={teachingAttMonth}
-    setTeachingAttMonth={setTeachingAttMonth}
-    nonTeachingAttMonth={nonTeachingAttMonth}
-    setNonTeachingAttMonth={setNonTeachingAttMonth}
-    studentAttendanceData={studentAttendanceData}
-    setStudentAttendanceData={setStudentAttendanceData}
-    studentAttendanceMonth={studentAttendanceMonth}
-    setStudentAttendanceMonth={setStudentAttendanceMonth}
-    
-  />
-)}
-
-            {currentStep === 9 && <OperationalCost operationalCostRows={operationalCostRows} setOperationalCostRows={setOperationalCostRows} />}
-            {/* ── STEP 10: Financial & Procurement ── */}           
-{currentStep === 10 && (
+           
+            {/* ── STEP 9: Financial & Procurement ── */}           
+{currentStep === 9 && (
   <FinancialProcurement
     procurements={procurements}
     setProcurements={setProcurements}
@@ -2066,14 +2421,14 @@ const EMRSForm = ({ addSubmittedForm }) => {
   />
 )}
             
-          {currentStep === 11 && (
+          {currentStep === 10 && (
   <EMRSImageUpload
     uploadedImages={uploadedImages}
     setUploadedImages={setUploadedImages}
   />
 )}
 
-{currentStep === 12 && (
+{currentStep === 11 && (
   <EMRSFormPreview
     formValues={watch()}
     enrollmentRows={enrollmentRows}
@@ -2089,6 +2444,8 @@ const EMRSForm = ({ addSubmittedForm }) => {
     procurements={procurements}
     financialData={financialData}
     recurringBreakup={recurringBreakup}
+    waterHygieneData={waterHygieneData}
+    sanitationFacilities={sanitationFacilities}
   />
 )}
 

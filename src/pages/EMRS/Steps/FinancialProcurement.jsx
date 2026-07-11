@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Grid,
@@ -37,6 +37,50 @@ const FinancialProcurement = ({
   gemMarks,
   getGemMarks,
 }) => {
+  // ── Sub-breakup of "Direct Expenditure on Students" ──
+  // Same column structure (A, B=A×300, C, D, E, Remarks) as the parent
+  // Component-wise Breakup table, so it nests as sub-rows under item 2.
+  const [directExpenditure, setDirectExpenditure] = useState([
+    { sno: "2a", component: "Mess Expenditure", colA: "", colC: "", colD: "", colE: "", remarks: "" },
+    { sno: "2b", component: "Uniform", colA: "", colC: "", colD: "", colE: "", remarks: "" },
+    { sno: "2c", component: "Text Books", colA: "", colC: "", colD: "", colE: "", remarks: "" },
+    { sno: "2d", component: "Toilet Items", colA: "", colC: "", colD: "", colE: "", remarks: "" },
+    {
+      sno: "2e",
+      component: "Students Misc. Items (Medical expenses on students, CBSE fee, Students stationery, School bags, etc)",
+      colA: "",
+      colC: "",
+      colD: "",
+      colE: "",
+      remarks: "",
+    },
+  ]);
+
+  const handleDirectExpenditureChange = (index, field, value) => {
+    setDirectExpenditure((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+    );
+  };
+
+  // Helper: is this the "Direct Expenditure on Students" row from recurringBreakup?
+  const isDirectExpenditureRow = (row) =>
+    typeof row.component === "string" &&
+    row.component.toLowerCase().includes("direct expenditure on students");
+
+  // Sums of the 2a–2e sub-rows — these become the values for row 2 itself.
+  const directTotals = {
+    colA: directExpenditure.reduce((sum, r) => sum + (Number(r.colA) || 0), 0),
+    colC: directExpenditure.reduce((sum, r) => sum + (Number(r.colC) || 0), 0),
+    colD: directExpenditure.reduce((sum, r) => sum + (Number(r.colD) || 0), 0),
+    colE: directExpenditure.reduce((sum, r) => sum + (Number(r.colE) || 0), 0),
+  };
+
+  // Effective value for a recurringBreakup row/field: for the Direct Expenditure
+  // row this is the computed sub-row total; for every other row it's just the
+  // value the user typed in.
+  const getEffectiveValue = (row, field) =>
+    isDirectExpenditureRow(row) ? directTotals[field] : Number(row[field]) || 0;
+
   return (
     <>
       {/* ── Header ── */}
@@ -76,7 +120,7 @@ const FinancialProcurement = ({
         </Typography>
         <Button
           variant="contained"
-          size="small"
+          size="small" 
           onClick={() => setProcurementDialogOpen(true)}
           sx={{ mb: 2, backgroundColor: "#1976d2" }}
         >
@@ -112,7 +156,7 @@ const FinancialProcurement = ({
                     <td style={tdStyle}>{rowMarks}</td>
                     <td style={tdStyle}>
                       <Button
-                        size="small"
+                        size="small" 
                         color="error"
                         variant="outlined"
                         onClick={() => setProcurements((prev) => prev.filter((_, idx) => idx !== i))}
@@ -279,78 +323,232 @@ const FinancialProcurement = ({
         </thead>
         <tbody>
           {recurringBreakup.map((row, index) => (
-            <tr
-              key={index}
-              style={{ background: index % 2 === 0 ? "#fafafa" : "#fff", verticalAlign: "middle" }}
-            >
-              <td style={{ border: "1px solid #e0e0e0", padding: "8px", textAlign: "center" }}>
-                {row.sno}
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "8px", fontWeight: "500", color: "#333" }}>
-                {row.component}
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 0, style: { textAlign: "right" } }}
-                  value={row.colA}
-                  onChange={(e) => handleBreakupChange(index, "colA", e.target.value)}
-                  sx={{ width: "130px" }}
-                />
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  value={(Number(row.colA) || 0) * 300}
-                  InputProps={{ readOnly: true }}
-                  inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
-                  sx={{ width: "140px" }}
-                />
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 0, style: { textAlign: "right" } }}
-                  value={row.colC}
-                  onChange={(e) => handleBreakupChange(index, "colC", e.target.value)}
-                  sx={{ width: "130px" }}
-                />
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 0, style: { textAlign: "right" } }}
-                  value={row.colD}
-                  onChange={(e) => handleBreakupChange(index, "colD", e.target.value)}
-                  sx={{ width: "130px" }}
-                />
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  inputProps={{ min: 0, style: { textAlign: "right" } }}
-                  value={row.colE}
-                  onChange={(e) => handleBreakupChange(index, "colE", e.target.value)}
-                  sx={{ width: "140px" }}
-                />
-              </td>
-              <td style={{ border: "1px solid #e0e0e0", padding: "4px" }}>
-                <TextField
-                  size="small"
-                  placeholder="Remarks"
-                  value={row.remarks}
-                  onChange={(e) => handleBreakupChange(index, "remarks", e.target.value)}
-                  sx={{ width: "150px" }}
-                />
-              </td>
-            </tr>
+            <React.Fragment key={`recurring-${index}`}>
+              <tr style={{ background: index % 2 === 0 ? "#fafafa" : "#fff", verticalAlign: "middle" }}>
+                <td style={{ border: "1px solid #e0e0e0", padding: "8px", textAlign: "center" }}>
+                  {index + 1}
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "8px", fontWeight: "500", color: "#333" }}>
+                  {row.component}
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                  {isDirectExpenditureRow(row) ? (
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={directTotals.colA}
+                      InputProps={{ readOnly: true }}
+                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
+                      sx={{ width: "130px" }}
+                    />
+                  ) : (
+                    <TextField
+                      size="small"
+                      type="number"
+                      inputProps={{ min: 0, style: { textAlign: "right" } }}
+                      value={row.colA}
+                      onChange={(e) => handleBreakupChange(index, "colA", e.target.value)}
+                      sx={{ width: "130px" }}
+                    />
+                  )}
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                  <TextField
+                    size="small"
+                    type="number"
+                    value={getEffectiveValue(row, "colA") * 300}
+                    InputProps={{ readOnly: true }}
+                    inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
+                    sx={{ width: "140px" }}
+                  />
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                  {isDirectExpenditureRow(row) ? (
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={directTotals.colC}
+                      InputProps={{ readOnly: true }}
+                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
+                      sx={{ width: "130px" }}
+                    />
+                  ) : (
+                    <TextField
+                      size="small"
+                      type="number"
+                      inputProps={{ min: 0, style: { textAlign: "right" } }}
+                      value={row.colC}
+                      onChange={(e) => handleBreakupChange(index, "colC", e.target.value)}
+                      sx={{ width: "130px" }}
+                    />
+                  )}
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                  {isDirectExpenditureRow(row) ? (
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={directTotals.colD}
+                      InputProps={{ readOnly: true }}
+                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
+                      sx={{ width: "130px" }}
+                    />
+                  ) : (
+                    <TextField
+                      size="small"
+                      type="number"
+                      inputProps={{ min: 0, style: { textAlign: "right" } }}
+                      value={row.colD}
+                      onChange={(e) => handleBreakupChange(index, "colD", e.target.value)}
+                      sx={{ width: "130px" }}
+                    />
+                  )}
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                  {isDirectExpenditureRow(row) ? (
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={directTotals.colE}
+                      InputProps={{ readOnly: true }}
+                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
+                      sx={{ width: "140px" }}
+                    />
+                  ) : (
+                    <TextField
+                      size="small"
+                      type="number"
+                      inputProps={{ min: 0, style: { textAlign: "right" } }}
+                      value={row.colE}
+                      onChange={(e) => handleBreakupChange(index, "colE", e.target.value)}
+                      sx={{ width: "140px" }}
+                    />
+                  )}
+                </td>
+                <td style={{ border: "1px solid #e0e0e0", padding: "4px" }}>
+                  <TextField
+                    size="small"
+                    placeholder="Remarks"
+                    value={row.remarks}
+                    onChange={(e) => handleBreakupChange(index, "remarks", e.target.value)}
+                    sx={{ width: "150px" }}
+                  />
+                </td>
+              </tr>
+
+              {/* ── Sub-heading + sub-rows nested under "Direct Expenditure on Students" ── */}
+              {isDirectExpenditureRow(row) && (
+                <>
+                  <tr>
+                    <td
+                      colSpan={8}
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        padding: "6px 8px 6px 32px",
+                        fontWeight: 600,
+                        fontStyle: "italic",
+                        background: "#eef4fd",
+                        color: "#1976d2",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Detailed Breakup — Direct Expenditure on Students
+                    </td>
+                  </tr>
+                  {directExpenditure.map((subRow, subIndex) => (
+                    <tr key={`direct-${subIndex}`} style={{ background: "#f7fafd" }}>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "8px", textAlign: "center" }}>
+                        {subRow.sno}
+                      </td>
+                      <td
+                        style={{
+                          border: "1px solid #e0e0e0",
+                          padding: "8px 8px 8px 32px",
+                          fontWeight: 400,
+                          color: "#555",
+                        }}
+                      >
+                        {subRow.component}
+                      </td>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 0, style: { textAlign: "right" } }}
+                          value={subRow.colA}
+                          onChange={(e) =>
+                            handleDirectExpenditureChange(subIndex, "colA", e.target.value)
+                          }
+                          sx={{ width: "130px" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={(Number(subRow.colA) || 0) * 300}
+                          InputProps={{ readOnly: true }}
+                          inputProps={{
+                            style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" },
+                          }}
+                          sx={{ width: "140px" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 0, style: { textAlign: "right" } }}
+                          value={subRow.colC}
+                          onChange={(e) =>
+                            handleDirectExpenditureChange(subIndex, "colC", e.target.value)
+                          }
+                          sx={{ width: "130px" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 0, style: { textAlign: "right" } }}
+                          value={subRow.colD}
+                          onChange={(e) =>
+                            handleDirectExpenditureChange(subIndex, "colD", e.target.value)
+                          }
+                          sx={{ width: "130px" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 0, style: { textAlign: "right" } }}
+                          value={subRow.colE}
+                          onChange={(e) =>
+                            handleDirectExpenditureChange(subIndex, "colE", e.target.value)
+                          }
+                          sx={{ width: "140px" }}
+                        />
+                      </td>
+                      <td style={{ border: "1px solid #e0e0e0", padding: "4px" }}>
+                        <TextField
+                          size="small"
+                          placeholder="Remarks"
+                          value={subRow.remarks}
+                          onChange={(e) =>
+                            handleDirectExpenditureChange(subIndex, "remarks", e.target.value)
+                          }
+                          sx={{ width: "150px" }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              )}
+            </React.Fragment>
           ))}
-          {/* Total Row */}
+
+          {/* Total Row — sums rows 1-6 only; row 2's value is its computed sub-row total */}
           <tr style={{ background: "#e3f2fd" }}>
             <td colSpan={2} style={{ border: "1px solid #e0e0e0", padding: "8px", fontWeight: "bold" }}>
               TOTAL
@@ -368,10 +566,10 @@ const FinancialProcurement = ({
                 ₹
                 {col === "colA*300"
                   ? recurringBreakup
-                      .reduce((sum, r) => sum + (Number(r.colA) || 0) * 300, 0)
+                      .reduce((sum, r) => sum + getEffectiveValue(r, "colA") * 300, 0)
                       .toLocaleString("en-IN")
                   : recurringBreakup
-                      .reduce((sum, r) => sum + (Number(r[col]) || 0), 0)
+                      .reduce((sum, r) => sum + getEffectiveValue(r, col), 0)
                       .toLocaleString("en-IN")}
               </td>
             ))}
@@ -379,6 +577,10 @@ const FinancialProcurement = ({
           </tr>
         </tbody>
       </table>
+      <Typography variant="caption" sx={{ display: "block", color: "#666", mb: 3, mt: -2 }}>
+        Note: Procurement of food articles, raw material, food tenders, manpower (other than
+        sanctioned staff), fuel charges etc. are to be done from mess expenditures.
+      </Typography>
 
       {/* ── Add Procurement Dialog ── */}
       <Dialog
@@ -393,7 +595,7 @@ const FinancialProcurement = ({
         <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
-              <FormControl fullWidth size="small">
+              <FormControl fullWidth size="small" sx={{ minWidth: 220 }}>
                 <InputLabel>Type of Procurement</InputLabel>
                 <Select
                   value={currentProcurement.type}
