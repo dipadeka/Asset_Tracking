@@ -2175,17 +2175,36 @@ const EMRSForm = ({ addSubmittedForm }) => {
         if (response.ok) submittedId = result.data?._id || result._id;
         else submittedId = null; // let the local-save block assign a unique local id below
       } catch (fetchError) { submittedId = null; } // network/API failed — fall back to local-only save
+
+      // ─────────────────────────────────────────────────────────────
+      // FIX: Every submission — regardless of school — must get its own
+      // permanent, globally-unique id that is NEVER derived from (or
+      // matched against) the backend `_id`. Previously this block used
+      // `submittedId` (the backend's returned _id) as the localStorage
+      // dedup key. If the backend performs an upsert keyed by school
+      // (EMRScode), every submission from the SAME school comes back
+      // with the SAME `_id`, so each new submission silently
+      // overwrote the previous one in localStorage instead of being
+      // added — meaning only schools whose API calls happened to fail
+      // (and therefore fell into the `local_...` unique-id branch)
+      // ever ended up with more than one visible submission.
+      //
+      // `clientSubmissionId` is generated fresh on every single submit,
+      // for every school, and is what we now use to decide whether a
+      // record is an update of an existing entry or a brand-new one.
+      // ─────────────────────────────────────────────────────────────
       try {
         const credSchoolCode =
           (user?.role === "school" ? user?.schoolCode : null) ||
           payload.EMRScode ||
           "";
 
-        const uniqueLocalId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const clientSubmissionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
         const recordToSave = {
           ...payload,
-          _id:         submittedId || uniqueLocalId,
+          _id:         submittedId || clientSubmissionId, // used for server delete calls when available
+          clientSubmissionId,                              // stable, always-unique key — use this for dedup
           EMRScode:    credSchoolCode || payload.EMRScode || "",
           schoolCode:  credSchoolCode || payload.EMRScode || "",   // mirror field
           createdAt:   new Date().toISOString(),
@@ -2195,17 +2214,19 @@ const EMRSForm = ({ addSubmittedForm }) => {
         const existing = JSON.parse(
           localStorage.getItem("emrs_submitted_forms") || "[]"
         );
+
+        // Only treat this as an "update" if it's literally the same
+        // client submission being re-saved (e.g. a retry) — never merge
+        // two different submissions just because the backend happened
+        // to return a matching _id.
         const idx = existing.findIndex(
-          (f) =>
-            recordToSave._id &&
-            !String(recordToSave._id).startsWith("local_") &&
-            f._id === recordToSave._id
+          (f) => f.clientSubmissionId && f.clientSubmissionId === clientSubmissionId
         );
 
         if (idx !== -1) {
-          existing[idx] = recordToSave; 
+          existing[idx] = recordToSave;
         } else {
-          existing.push(recordToSave); 
+          existing.push(recordToSave);
         }
 
         localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));

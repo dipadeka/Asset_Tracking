@@ -52,7 +52,7 @@ const SectionTable = ({ title, rows }) => (
 );
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   NEW: EMRS IMAGES SECTION
+   EMRS IMAGES SECTION
    Renders every image stored under form.emrsImages (base64 data URLs saved
    from Step 11 "EMRS Image Upload" during submission). Supports both a
    single value per key and an array of values per key.
@@ -124,9 +124,9 @@ const EMRSImagesSection = ({ images }) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   FIX 1: filterFormsForUser — match on ANY identifier field
-   Previously only matched schoolCode OR username, missing cases where the
-   form was saved with EMRScode / loginId / email instead.
+   filterFormsForUser — match on ANY identifier field
+   Matches on schoolCode / username / loginId / id / email / emailid so a form
+   saved under any of these identifiers is still found for the current user.
 ───────────────────────────────────────────────────────────────────────────── */
 const filterFormsForUser = (forms, currentUser) => {
   if (!currentUser) return [];
@@ -166,6 +166,40 @@ const filterFormsForUser = (forms, currentUser) => {
   });
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   FIX: dedupeForms — merge/dedup keyed on clientSubmissionId FIRST.
+   Previously this dashboard (and the writer in EMRSForm.jsx) relied on the
+   backend-returned `_id` to decide whether a record was "already present."
+   If the backend performs an upsert keyed by school (EMRScode), every
+   submission from the SAME school comes back with the SAME `_id`, so two
+   genuinely different submissions collapse into one entry everywhere except
+   for schools whose API call happened to fail (which fell into a always-
+   unique `local_...` id and therefore looked correct by accident — this is
+   exactly the "only Emrs Jalah shows multiple forms" symptom).
+
+   `clientSubmissionId` is generated fresh in EMRSForm.jsx on every submit,
+   for every school, and is guaranteed unique per submission. We use it here
+   as the primary key for merging/deduping so every submission from every
+   school is preserved and displayed.
+───────────────────────────────────────────────────────────────────────────── */
+const dedupeForms = (forms) => {
+  const map = new Map();
+  forms.forEach((f) => {
+    const key = f.clientSubmissionId || getFormId(f) || JSON.stringify(f);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, f);
+    } else {
+      // Keep whichever copy is newer, in case both a cached and a fresh
+      // copy of the same submission are present.
+      const existingTime = new Date(existing.submittedAt || existing.createdAt || 0).getTime();
+      const currentTime = new Date(f.submittedAt || f.createdAt || 0).getTime();
+      map.set(key, currentTime >= existingTime ? f : existing);
+    }
+  });
+  return Array.from(map.values());
+};
+
 const EMRSApplied = () => {
   const { user } = useAuth();
   const [submittedForms, setSubmittedForms] = useState([]);
@@ -177,30 +211,41 @@ const EMRSApplied = () => {
   const [deleting, setDeleting] = useState(false);
 
   /* ─────────────────────────────────────────────────────────────────────────
-     FIX 2: loadForms — merge local_* records with API so a freshly-submitted
-     form (saved to localStorage while the API call may have failed) is always
-     visible immediately without needing a separate offline-fallback path.
+     loadForms — merge ALL local records with the API so every submission —
+     for every school — is always visible immediately, even ones saved to
+     localStorage while the API call failed. Merging/deduping is done via
+     dedupeForms(), keyed on clientSubmissionId (see note above), instead of
+     relying on the backend's `_id`.
   ───────────────────────────────────────────────────────────────────────── */
   const loadForms = useCallback(async () => {
     setLoading(true);
     setError(null);
     setUsingCache(false);
 
-    // Always load localStorage first — local_* records must never be lost
-    const localRecords = deduplicate(readLS());
+    // Always load localStorage first — no submission must ever be lost
+    const localRecords = dedupeForms(readLS());
 
     try {
       const fromApi = await fetchEmrsFromBackend();
 
-      // Keep any local_* entries that the server doesn't have yet
-      const apiIds = new Set(fromApi.map((f) => String(getFormId(f) || "")));
-      const localOnly = localRecords.filter(
-        (f) =>
-          String(getFormId(f) || "").startsWith("local_") &&
-          !apiIds.has(String(getFormId(f) || ""))
+      // Figure out which local records the backend doesn't have yet.
+      // Match on clientSubmissionId (unique per submission) first, since
+      // the backend may upsert/reuse `_id` values per school.
+      const apiClientIds = new Set(
+        fromApi.map((f) => f.clientSubmissionId).filter(Boolean)
       );
+      const apiIds = new Set(fromApi.map((f) => String(getFormId(f) || "")));
 
-      const allForms = deduplicate([...fromApi, ...localOnly]);
+      const localOnly = localRecords.filter((f) => {
+        if (f.clientSubmissionId) {
+          return !apiClientIds.has(f.clientSubmissionId);
+        }
+        // Legacy records saved before clientSubmissionId existed
+        const fid = String(getFormId(f) || "");
+        return fid.startsWith("local_") && !apiIds.has(fid);
+      });
+
+      const allForms = dedupeForms([...fromApi, ...localOnly]);
       writeLS(allForms); // update cache with merged result
 
       const visibleForms = filterFormsForUser(allForms, user);
@@ -247,7 +292,7 @@ const EMRSApplied = () => {
 
     setDeleting(true);
     try {
-      if (!formId.startsWith("local_")) {
+      if (!formId.startsWith("local_") && !formId.startsWith("sub_")) {
         const res = await fetch(`${EMRS_API_BASE}/${formId}`, { method: "DELETE" });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -318,7 +363,7 @@ const EMRSApplied = () => {
       ) : (
         submittedForms.map((form, index) => (
           <Accordion
-            key={getFormId(form) || index}
+            key={form.clientSubmissionId || getFormId(form) || index}
             sx={{ mb: 2, borderRadius: "12px !important", boxShadow: 2 }}
           >
             <AccordionSummary
@@ -374,7 +419,7 @@ const EMRSApplied = () => {
                 <SectionTable key={sec.title} title={sec.title} rows={sec.rows} />
               ))}
 
-              {/* NEW: Uploaded EMRS images (Step 11), if present on the record */}
+              {/* Uploaded EMRS images (Step 11), if present on the record */}
               <EMRSImagesSection images={form.emrsImages} />
 
               {form.classStrength?.length > 0 && (

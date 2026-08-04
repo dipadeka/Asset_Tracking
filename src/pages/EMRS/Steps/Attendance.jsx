@@ -20,6 +20,72 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   SHARED "TRIBAL" DESIGN TOKENS
+   Same palette + type scale as MonthlyActivity.jsx, kept local here so this
+   file has no circular import back to the page that renders it. Every
+   heading in this file now uses the same Poppins/Inter pairing and the same
+   terracotta / ochre / clay / brown palette, so the two files read as one
+   consistent product instead of two different UI styles.
+───────────────────────────────────────────────────────────────────────────── */
+const PAL = {
+  sand: "#F4E9D7",
+  sandDark: "#EADCC0",
+  clay: "#B4451F",
+  clayDark: "#8C3416",
+  ochre: "#DDA23A",
+  ochreLight: "#EFC777",
+  brown: "#5B3A24",
+  brownDark: "#3A2415",
+  cream: "#FBF4E8",
+  ink: "#2E1D10",
+  slate: "#57534e",
+  slateDark: "#3f3c39",
+};
+
+const FONT_DISPLAY = "'Poppins', sans-serif";
+const FONT_BODY = "'Inter', sans-serif";
+
+/** Section-heading style used everywhere a card/panel needs a title. */
+const headingSx = (size = 13) => ({
+  fontFamily: FONT_DISPLAY,
+  fontWeight: 700,
+  letterSpacing: 0.3,
+  fontSize: size,
+});
+
+/** Small decorative diamond used as a bullet before headings, matching MonthlyActivity. */
+const DiamondBullet = ({ size = 8, color = PAL.ochre }) => (
+  <Box
+    aria-hidden
+    sx={{
+      width: size,
+      height: size,
+      bgcolor: color,
+      transform: "rotate(45deg)",
+      flexShrink: 0,
+      borderRadius: "2px",
+      boxShadow: `0 0 0 2px ${PAL.cream}`,
+    }}
+  />
+);
+
+/** Thin woven zig-zag divider, matching MonthlyActivity. */
+const ZigZagDivider = ({ color = PAL.ochre, height = 10 }) => (
+  <Box
+    aria-hidden
+    sx={{
+      width: "100%",
+      height,
+      backgroundImage: `linear-gradient(135deg, ${color} 25%, transparent 25%), linear-gradient(225deg, ${color} 25%, transparent 25%), linear-gradient(45deg, ${color} 25%, transparent 25%), linear-gradient(315deg, ${color} 25%, transparent 25%)`,
+      backgroundPosition: `${height}px 0, ${height}px 0, 0 0, 0 0`,
+      backgroundSize: `${height * 2}px ${height * 2}px`,
+      backgroundRepeat: "repeat-x",
+      opacity: 0.9,
+    }}
+  />
+);
+
+/* ─────────────────────────────────────────────────────────────────────────────
    CONSTANTS
 ───────────────────────────────────────────────────────────────────────────── */
 const MONTHS = [
@@ -110,10 +176,10 @@ const normaliseKeys = (obj) => {
 };
 
 const pctColor = (pct) => {
-  if (pct >= 90) return { color: "#16a34a", bg: "#dcfce7" };
-  if (pct >= 75) return { color: "#0f766e", bg: "#ccfbf1" };
-  if (pct >= 50) return { color: "#d97706", bg: "#fef3c7" };
-  return { color: "#dc2626", bg: "#fee2e2" };
+  if (pct >= 90) return { color: "#3f7d3a", bg: "#e3efd8" };
+  if (pct >= 75) return { color: PAL.brown, bg: PAL.sand };
+  if (pct >= 50) return { color: PAL.ochre, bg: "#fbf0dc" };
+  return { color: PAL.clay, bg: "#f7e2d8" };
 };
 
 const detectPostType = (postStr) => {
@@ -137,8 +203,8 @@ const AssamHolidayList = () => {
   });
 
   return (
-    <Box sx={{ border: "1px solid #bfdbfe", borderRadius: 2, overflow: "hidden" }}>
-      <Box sx={{ px: 2, py: 1.5, background: "#f0f7ff", display: "flex", gap: 2, flexWrap: "wrap", borderBottom: "1px solid #bfdbfe", alignItems: "center" }}>
+    <Box sx={{ border: `1px solid ${PAL.ochre}`, borderRadius: 2, overflow: "hidden" }}>
+      <Box sx={{ px: 2, py: 1.5, background: PAL.sand, display: "flex", gap: 2, flexWrap: "wrap", borderBottom: `1px solid ${PAL.ochre}`, alignItems: "center" }}>
         <TextField select size="small" label="Month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} sx={{ minWidth: 130 }}>
           <MenuItem value="All">All Months</MenuItem>
           {MONTHS.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
@@ -148,7 +214,7 @@ const AssamHolidayList = () => {
           <MenuItem value="National">National</MenuItem>
           <MenuItem value="State">State (Assam)</MenuItem>
         </TextField>
-        <Typography sx={{ fontSize: 12, color: "#64748b", ml: "auto" }}>
+        <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: PAL.brown, opacity: 0.8, ml: "auto" }}>
           Showing <strong>{filtered.length}</strong> of {ASSAM_HOLIDAYS.length} holidays
         </Typography>
       </Box>
@@ -157,7 +223,7 @@ const AssamHolidayList = () => {
           <thead style={{ position: "sticky", top: 0 }}>
             <tr>
               {["#", "Date", "Day", "Holiday Name", "Type"].map((h) => (
-                <th key={h} style={{ background: "#e0f2fe", color: "#0c4a6e", padding: "8px 12px", textAlign: "left", fontSize: 12, fontWeight: 700, border: "1px solid #bae6fd" }}>{h}</th>
+                <th key={h} style={{ background: PAL.ochreLight, color: PAL.brownDark, padding: "8px 12px", textAlign: "left", fontSize: 12, fontWeight: 700, fontFamily: FONT_BODY, border: `1px solid ${PAL.ochre}` }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -165,20 +231,20 @@ const AssamHolidayList = () => {
             {filtered.map((h, i) => {
               const d = new Date(h.date);
               return (
-                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#f0f9ff" : "#fff" }}>
-                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontSize: 12, color: "#94a3b8" }}>{i + 1}</td>
-                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 600, color: "#1e40af" }}>
+                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? PAL.cream : "#fff" }}>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e7d9bd", fontSize: 12, fontFamily: FONT_BODY, color: "#9c8b6f" }}>{i + 1}</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e7d9bd", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: PAL.clayDark }}>
                     {d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                   </td>
-                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontSize: 12, color: "#475569" }}>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e7d9bd", fontSize: 12, fontFamily: FONT_BODY, color: PAL.brown }}>
                     {d.toLocaleDateString("en-IN", { weekday: "long" })}
                   </td>
-                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 500 }}>{h.name}</td>
-                  <td style={{ padding: "6px 12px", border: "1px solid #e2e8f0" }}>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e7d9bd", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 500, color: PAL.ink }}>{h.name}</td>
+                  <td style={{ padding: "6px 12px", border: "1px solid #e7d9bd" }}>
                     <Chip
                       label={h.type === "National" ? "🇮🇳 National" : "🏛️ State"}
                       size="small"
-                      sx={{ background: h.type === "National" ? "#dbeafe" : "#dcfce7", color: h.type === "National" ? "#1d4ed8" : "#16a34a", fontWeight: 700, fontSize: 11 }}
+                      sx={{ background: h.type === "National" ? PAL.sandDark : "#e3efd8", color: h.type === "National" ? PAL.clayDark : "#3f7d3a", fontWeight: 700, fontFamily: FONT_BODY, fontSize: 11 }}
                     />
                   </td>
                 </tr>
@@ -201,8 +267,8 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
   const [showAddForm,  setShowAddForm]  = useState(false);
 
   const postOptions  = staffType === "Teaching" ? TEACHING_POSTS : NON_TEACHING_POSTS;
-  const accent       = staffType === "Teaching" ? "#1976d2" : "#7c3aed";
-  const accentLight  = staffType === "Teaching" ? "#eff6ff" : "#f5f3ff";
+  const accent       = staffType === "Teaching" ? PAL.clay : PAL.brown;
+  const accentLight  = staffType === "Teaching" ? PAL.sand : PAL.sandDark;
   const sectionLabel = staffType === "Teaching" ? "Teaching Staff" : "Non-Teaching Staff";
 
   const blankRow = useCallback(() => ({
@@ -305,14 +371,20 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 
         setRows((prev) => {
           const updated = [...prev];
-          accepted.forEach((incoming) => {
-            const idx = updated.findIndex(
-              (x) => x.staffType === staffType &&
-                     x.name.trim().toLowerCase() === incoming.name.trim().toLowerCase() &&
-                     x.month === incoming.month
-            );
+          accepted.forEach((incoming, i) => {
+            // Match on staffType + month + a stable identity. If the name is
+            // blank (bad upload data), fall back to a unique per-row key
+            // instead of colliding every blank-name row into a single entry.
+            const incomingName = incoming.name.trim().toLowerCase();
+            const idx = incomingName
+              ? updated.findIndex(
+                  (x) => x.staffType === staffType &&
+                         x.month === incoming.month &&
+                         x.name.trim().toLowerCase() === incomingName
+                )
+              : -1;
             if (idx !== -1) updated[idx] = { ...incoming, id: updated[idx].id };
-            else updated.push(incoming);
+            else updated.push({ ...incoming, id: incoming.id ?? Date.now() + Math.random() + i });
           });
           return updated;
         });
@@ -366,30 +438,33 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
         <Box sx={{ px: 1.5, py: 0.5, borderRadius: 2, background: accentLight, border: `1px solid ${accent}33` }}>
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: accent }}>
+          <Typography sx={{ ...headingSx(12), color: accent }}>
             {staffType === "Teaching" ? "👨‍🏫" : "🧹"} {sectionLabel} — valid posts only
           </Typography>
         </Box>
       </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Month:</Typography>
+        <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, color: PAL.brown, mr: 0.5 }}>Month:</Typography>
         {MONTHS.map((m) => (
           <Chip key={m} label={m.slice(0, 3)} size="small" onClick={() => setActiveMonth(m)}
-            color={activeMonth === m ? "primary" : "default"}
-            variant={activeMonth === m ? "filled" : "outlined"}
-            sx={{ fontWeight: activeMonth === m ? 700 : 400, cursor: "pointer", fontSize: 11 }}
+            sx={{
+              fontFamily: FONT_BODY, fontWeight: activeMonth === m ? 700 : 400, cursor: "pointer", fontSize: 11,
+              background: activeMonth === m ? accent : "transparent",
+              color: activeMonth === m ? PAL.cream : PAL.brown,
+              border: `1px solid ${activeMonth === m ? accent : PAL.ochre}`,
+            }}
           />
         ))}
       </Box>
 
       {monthHolidays.length > 0 && (
-        <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {activeMonth}:</Typography>
+        <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5, background: PAL.sand, color: PAL.brownDark, border: `1px solid ${PAL.ochre}` }}>
+          <Typography sx={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {activeMonth}:</Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
             {monthHolidays.map((h, i) => (
               <Chip key={i} label={`${new Date(h.date).getDate()} – ${h.name}`} size="small"
-                sx={{ fontSize: 11, background: h.type === "National" ? "#dbeafe" : "#dcfce7", color: h.type === "National" ? "#1d4ed8" : "#16a34a", fontWeight: 600 }} />
+                sx={{ fontFamily: FONT_BODY, fontSize: 11, background: h.type === "National" ? PAL.sandDark : "#e3efd8", color: h.type === "National" ? PAL.clayDark : "#3f7d3a", fontWeight: 600 }} />
             ))}
           </Box>
         </Alert>
@@ -398,16 +473,16 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
       {totalStaff > 0 && (
         <Grid container spacing={1.5} sx={{ mb: 2 }}>
           {[
-            { label: "Total Staff",    val: totalStaff,   color: accent,    icon: "👤" },
-            { label: "Avg Attendance", val: `${avgPct}%`, color: "#0f766e", icon: "📊" },
-            { label: "≥ 75%",          val: above75,      color: "#16a34a", icon: "🟢" },
-            { label: "< 75%",          val: below75,      color: "#dc2626", icon: "🔴" },
+            { label: "Total Staff",    val: totalStaff,   color: accent,      icon: "👤" },
+            { label: "Avg Attendance", val: `${avgPct}%`, color: PAL.brown,   icon: "📊" },
+            { label: "≥ 75%",          val: above75,      color: "#3f7d3a",   icon: "🟢" },
+            { label: "< 75%",          val: below75,      color: PAL.clay,    icon: "🔴" },
           ].map(({ label, val, color, icon }) => (
             <Grid item xs={6} sm={3} key={label}>
-              <Paper elevation={0} sx={{ p: 1.5, textAlign: "center", border: "1px solid #e2e8f0", borderRadius: 2 }}>
+              <Paper elevation={0} sx={{ p: 1.5, textAlign: "center", border: `1px solid ${PAL.ochre}`, borderRadius: 2, background: PAL.cream }}>
                 <Typography sx={{ fontSize: 16 }}>{icon}</Typography>
-                <Typography sx={{ fontSize: 18, fontWeight: 800, color }}>{val}</Typography>
-                <Typography sx={{ fontSize: 11, color: "#64748b" }}>{label}</Typography>
+                <Typography sx={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 800, color }}>{val}</Typography>
+                <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.8 }}>{label}</Typography>
               </Paper>
             </Grid>
           ))}
@@ -415,42 +490,42 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
       )}
 
       <Box sx={{ background: accentLight, border: `1px solid ${accent}33`, borderRadius: 2, p: 2, mb: 2 }}>
-        <Typography sx={{ fontSize: 11, fontWeight: 700, color: accent, mb: 1 }}>
+        <Typography sx={{ ...headingSx(11), color: accent, mb: 1 }}>
           📁 Excel Import / Export — {sectionLabel}
         </Typography>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
           <Button variant="outlined" size="small" onClick={downloadTemplate}
-            sx={{ borderColor: accent, color: accent, fontSize: 12, fontWeight: 600 }}>
+            sx={{ borderColor: accent, color: accent, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
             ⬇ Template
           </Button>
           <Button variant="contained" size="small" component="label" disabled={uploading}
-            sx={{ background: accent, "&:hover": { filter: "brightness(0.9)" }, fontSize: 12, fontWeight: 600 }}>
+            sx={{ background: accent, "&:hover": { filter: "brightness(0.9)" }, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
             {uploading ? "Importing…" : "📤 Import Excel"}
             <input type="file" hidden accept=".xlsx,.xls" key={Date.now()}
               onChange={(e) => { const f = e.target.files[0]; if (f) handleExcelUpload(f); e.target.value = ""; }} />
           </Button>
           {filteredRows.length > 0 && (
             <Button variant="outlined" size="small" onClick={exportData}
-              sx={{ borderColor: accent, color: accent, fontSize: 12, fontWeight: 600 }}>
+              sx={{ borderColor: accent, color: accent, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
               📥 Export
             </Button>
           )}
           <Button variant="outlined" size="small" onClick={() => setShowAddForm((v) => !v)}
-            sx={{ borderColor: "#64748b", color: "#374151", fontSize: 12, fontWeight: 600, ml: "auto" }}>
+            sx={{ borderColor: PAL.brown, color: PAL.brownDark, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, ml: "auto" }}>
             {showAddForm ? "✕ Cancel" : "✏️ Add Manually"}
           </Button>
         </Box>
-        <Typography sx={{ fontSize: 11, color: "#64748b", mt: 1 }}>
+        <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.8, mt: 1 }}>
           ⚠️ Only <strong>{sectionLabel}</strong> posts will be accepted. Rows with wrong posts are automatically rejected.
         </Typography>
       </Box>
 
-      {excelError  && <Alert severity="error"   sx={{ mb: 2, borderRadius: 2 }} onClose={() => setExcelError("")}>{excelError}</Alert>}
-      {uploadWarn  && <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setUploadWarn("")}>{uploadWarn}</Alert>}
+      {excelError  && <Alert severity="error"   sx={{ mb: 2, borderRadius: 2, fontFamily: FONT_BODY }} onClose={() => setExcelError("")}>{excelError}</Alert>}
+      {uploadWarn  && <Alert severity="warning" sx={{ mb: 2, borderRadius: 2, fontFamily: FONT_BODY }} onClose={() => setUploadWarn("")}>{uploadWarn}</Alert>}
 
       {showAddForm && (
-        <Box sx={{ border: `1px solid ${accent}33`, borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 13, color: accent, mb: 1.5 }}>
+        <Box sx={{ border: `1px solid ${accent}33`, borderRadius: 2, p: 2, mb: 2, background: PAL.cream }}>
+          <Typography sx={{ ...headingSx(13), color: accent, mb: 1.5 }}>
             ✏️ Add {sectionLabel} Manually
           </Typography>
           <Grid container spacing={1.5} alignItems="flex-end">
@@ -480,16 +555,16 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
             ))}
             <Grid item xs={12} sm={2}>
               <Button fullWidth variant="contained" size="small" onClick={addManualRow}
-                sx={{ background: accent, "&:hover": { filter: "brightness(0.9)" }, height: 40, fontWeight: 700 }}>
+                sx={{ background: accent, "&:hover": { filter: "brightness(0.9)" }, height: 40, fontWeight: 700, fontFamily: FONT_BODY }}>
                 + Add
               </Button>
             </Grid>
           </Grid>
           {newRow.workingDays && (
             <Box sx={{ mt: 1.5, display: "flex", gap: 2, p: 1.5, background: accentLight, borderRadius: 1.5 }}>
-              <Typography sx={{ fontSize: 12, color: "#16a34a" }}>✅ Present: <strong>{newRow.daysPresent}</strong></Typography>
-              <Typography sx={{ fontSize: 12, color: "#dc2626" }}>❌ Absent: <strong>{newRow.daysAbsent}</strong></Typography>
-              <Typography sx={{ fontSize: 12, color: accent }}>📊 <strong>{newRow.percentage}%</strong></Typography>
+              <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: "#3f7d3a" }}>✅ Present: <strong>{newRow.daysPresent}</strong></Typography>
+              <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: PAL.clay }}>❌ Absent: <strong>{newRow.daysAbsent}</strong></Typography>
+              <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: accent }}>📊 <strong>{newRow.percentage}%</strong></Typography>
             </Box>
           )}
         </Box>
@@ -497,14 +572,14 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 
       {filteredRows.length > 0 ? (
         <>
-          <Box sx={{ overflowX: "auto", borderRadius: 2, border: "1px solid #e2e8f0", mb: 3 }}>
+          <Box sx={{ overflowX: "auto", borderRadius: 2, border: `1px solid ${PAL.ochre}`, mb: 3 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
               <thead>
                 <tr>
                   {["#", "Post", "Name", "Days", "CL", "EL", "ML", "Mat", "Pat", "Present", "Absent", "Att %", "Status", ""].map((h) => (
                     <th key={h} style={{
-                      background: accent, color: "#fff", padding: "9px 8px",
-                      fontSize: 11, fontWeight: 700, border: "1px solid rgba(255,255,255,0.2)",
+                      background: accent, color: PAL.cream, padding: "9px 8px",
+                      fontSize: 11, fontFamily: FONT_BODY, fontWeight: 700, border: "1px solid rgba(255,255,255,0.2)",
                       whiteSpace: "nowrap", textAlign: "center",
                     }}>{h}</th>
                   ))}
@@ -514,49 +589,48 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
                 {filteredRows.map((r, i) => {
                   const tc = pctColor(r.percentage);
                   return (
-                    <tr key={r.id} style={{ backgroundColor: i % 2 === 0 ? "#f8fafc" : "#fff" }}>
-                      <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center", fontSize: 12, color: "#94a3b8" }}>{i + 1}</td>
-                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
+                    <tr key={r.id} style={{ backgroundColor: i % 2 === 0 ? PAL.cream : "#fff" }}>
+                      <td style={{ padding: "6px 8px", border: "1px solid #e7d9bd", textAlign: "center", fontSize: 12, fontFamily: FONT_BODY, color: "#9c8b6f" }}>{i + 1}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e7d9bd" }}>
                         <TextField select size="small" value={r.post} sx={{ minWidth: 140 }}
                           onChange={(e) => handleFieldChange(r.id, "post", e.target.value)}
                           inputProps={{ style: { fontSize: 12 } }}>
                           {postOptions.map((opt) => <MenuItem key={opt} value={opt} sx={{ fontSize: 12 }}>{opt}</MenuItem>)}
                         </TextField>
                       </td>
-                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e7d9bd" }}>
                         <TextField size="small" value={r.name} sx={{ minWidth: 120 }}
                           onChange={(e) => handleFieldChange(r.id, "name", e.target.value)}
                           inputProps={{ style: { fontSize: 12 } }} />
                       </td>
-                      <td style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "4px 6px", border: "1px solid #e7d9bd" }}>
                         <TextField size="small" type="number" value={r.workingDays} sx={{ minWidth: 60 }}
                           inputProps={{ min: 0, max: 31, style: { fontSize: 12, textAlign: "center" } }}
                           onChange={(e) => handleFieldChange(r.id, "workingDays", e.target.value)} />
                       </td>
                       {leaveFields.map(({ key }) => (
-                        <td key={key} style={{ padding: "4px 6px", border: "1px solid #e2e8f0" }}>
+                        <td key={key} style={{ padding: "4px 6px", border: "1px solid #e7d9bd" }}>
                           <TextField size="small" type="number" value={r[key]} sx={{ minWidth: 52 }}
                             inputProps={{ min: 0, style: { fontSize: 12, textAlign: "center" } }}
                             onChange={(e) => handleFieldChange(r.id, key, e.target.value)} />
                         </td>
                       ))}
-                      <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center" }}>
-                        <Chip label={r.daysPresent} color="success" size="small" sx={{ fontWeight: 700, minWidth: 34 }} />
+                      <td style={{ padding: "6px 8px", border: "1px solid #e7d9bd", textAlign: "center" }}>
+                        <Chip label={r.daysPresent} size="small" sx={{ fontWeight: 700, minWidth: 34, background: "#e3efd8", color: "#3f7d3a" }} />
                       </td>
-                      <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center" }}>
-                        <Chip label={r.daysAbsent} color={r.daysAbsent > 0 ? "error" : "success"} size="small" sx={{ fontWeight: 700, minWidth: 34 }} />
+                      <td style={{ padding: "6px 8px", border: "1px solid #e7d9bd", textAlign: "center" }}>
+                        <Chip label={r.daysAbsent} size="small" sx={{ fontWeight: 700, minWidth: 34, background: r.daysAbsent > 0 ? "#f7e2d8" : "#e3efd8", color: r.daysAbsent > 0 ? PAL.clay : "#3f7d3a" }} />
                       </td>
-                      <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center" }}>
-                        <Box sx={{ px: 1.2, py: 0.3, borderRadius: 10, background: tc.bg, color: tc.color, fontSize: 12, fontWeight: 800, display: "inline-block", minWidth: 48 }}>
+                      <td style={{ padding: "6px 8px", border: "1px solid #e7d9bd", textAlign: "center" }}>
+                        <Box sx={{ px: 1.2, py: 0.3, borderRadius: 10, background: tc.bg, color: tc.color, fontSize: 12, fontFamily: FONT_BODY, fontWeight: 800, display: "inline-block", minWidth: 48 }}>
                           {r.percentage}%
                         </Box>
                       </td>
-                      <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center", fontSize: 14 }}>
+                      <td style={{ padding: "6px 8px", border: "1px solid #e7d9bd", textAlign: "center", fontSize: 14 }}>
                         {r.percentage >= 90 ? "🟢" : r.percentage >= 75 ? "🔵" : r.percentage >= 50 ? "🟡" : "🔴"}
                       </td>
-                      <td style={{ padding: "6px 8px", border: "1px solid #e2e8f0", textAlign: "center" }}>
-                        <Button size="small" color="error" variant="text"
-                          sx={{ minWidth: 0, px: 0.5, py: 0, fontSize: 14 }}
+                      <td style={{ padding: "6px 8px", border: "1px solid #e7d9bd", textAlign: "center" }}>
+                        <Button size="small" sx={{ minWidth: 0, px: 0.5, py: 0, fontSize: 14, color: PAL.clay }}
                           onClick={() => removeRow(r.id)}>✕</Button>
                       </td>
                     </tr>
@@ -566,7 +640,7 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
             </table>
           </Box>
 
-          <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#374151", mb: 1.5 }}>
+          <Typography sx={{ ...headingSx(13), color: PAL.brownDark, mb: 1.5 }}>
             Individual Summary — {activeMonth}
           </Typography>
           <Grid container spacing={2}>
@@ -574,20 +648,20 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
               const tc = pctColor(r.percentage);
               return (
                 <Grid item xs={12} sm={6} md={4} key={r.id}>
-                  <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: `1px solid ${tc.color}33`, borderLeft: `4px solid ${tc.color}` }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: 12, color: accent }}>{r.post || "—"}</Typography>
-                    <Typography sx={{ fontSize: 13, color: "#1e3a5f", fontWeight: 700 }}>{r.name || "—"}</Typography>
-                    <Divider sx={{ my: 0.8 }} />
-                    <Typography sx={{ fontSize: 12 }}>Working Days: <strong>{r.workingDays || "—"}</strong></Typography>
+                  <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: `1px solid ${tc.color}33`, borderLeft: `4px solid ${tc.color}`, background: PAL.cream }}>
+                    <Typography sx={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, color: accent }}>{r.post || "—"}</Typography>
+                    <Typography sx={{ fontFamily: FONT_DISPLAY, fontSize: 13, color: PAL.ink, fontWeight: 700 }}>{r.name || "—"}</Typography>
+                    <Divider sx={{ my: 0.8, borderColor: PAL.ochre }} />
+                    <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: PAL.brown }}>Working Days: <strong>{r.workingDays || "—"}</strong></Typography>
                     <Box sx={{ display: "flex", gap: 2, mb: 1, mt: 0.5 }}>
-                      <Typography sx={{ fontSize: 12, color: "#16a34a" }}>✅ <strong>{r.daysPresent}</strong> Present</Typography>
-                      <Typography sx={{ fontSize: 12, color: "#dc2626" }}>❌ <strong>{r.daysAbsent}</strong> Absent</Typography>
+                      <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: "#3f7d3a" }}>✅ <strong>{r.daysPresent}</strong> Present</Typography>
+                      <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: PAL.clay }}>❌ <strong>{r.daysAbsent}</strong> Absent</Typography>
                     </Box>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Box sx={{ flex: 1, height: 6, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+                      <Box sx={{ flex: 1, height: 6, background: PAL.sandDark, borderRadius: 3, overflow: "hidden" }}>
                         <Box sx={{ height: "100%", width: `${Math.min(r.percentage, 100)}%`, background: tc.color, borderRadius: 3 }} />
                       </Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 800, color: tc.color, minWidth: 42 }}>{r.percentage}%</Typography>
+                      <Typography sx={{ fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 800, color: tc.color, minWidth: 42 }}>{r.percentage}%</Typography>
                     </Box>
                   </Paper>
                 </Grid>
@@ -596,10 +670,10 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
           </Grid>
         </>
       ) : (
-        <Box sx={{ textAlign: "center", py: 5, border: `2px dashed ${accent}44`, borderRadius: 3, color: "#94a3b8", background: accentLight }}>
+        <Box sx={{ textAlign: "center", py: 5, border: `2px dashed ${accent}44`, borderRadius: 3, color: PAL.brown, background: accentLight }}>
           <Typography sx={{ fontSize: 28, mb: 1 }}>{staffType === "Teaching" ? "👨‍🏫" : "🧹"}</Typography>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, color: accent }}>No {sectionLabel} records for {activeMonth}</Typography>
-          <Typography sx={{ fontSize: 12, mt: 0.5 }}>Download the template, fill it, and import — or click "Add Manually".</Typography>
+          <Typography sx={{ ...headingSx(14), color: accent }}>No {sectionLabel} records for {activeMonth}</Typography>
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, mt: 0.5 }}>Download the template, fill it, and import — or click "Add Manually".</Typography>
         </Box>
       )}
     </Box>
@@ -608,6 +682,8 @@ const StaffAttendanceSection = ({ staffType, rows, setRows, activeMonth, setActi
 
 /* ─────────────────────────────────────────────────────────────────────────────
    STUDENT ATTENDANCE SECTION
+   (Roll No and Name have been removed — students are now tracked at the
+   Class / Section level only.)
 ───────────────────────────────────────────────────────────────────────────── */
 const normalizeMonth = (raw) => {
   if (raw == null || raw === "") return "";
@@ -621,6 +697,21 @@ const normalizeMonth = (raw) => {
   return found || "";
 };
 
+/**
+ * Stable identity key for a student attendance row: Class + Section + Month.
+ * Since Roll No / Name are no longer tracked, a row is uniquely identified
+ * by which class/section it belongs to in a given month. Any new entry
+ * (manual or imported) that matches an existing key is treated as an
+ * update to that row rather than a new duplicate row.
+ */
+const studentRowKey = (r) =>
+  [r.class, r.section, r.month]
+    .map((v) => String(v ?? "").trim().toLowerCase())
+    .join("|");
+
+const STUDENT_ACCENT = PAL.brown;
+const STUDENT_ACCENT_DARK = PAL.brownDark;
+
 const StudentAttendanceSection = ({
   studentAttendanceData, setStudentAttendanceData,
   studentAttendanceMonth, setStudentAttendanceMonth,
@@ -628,11 +719,12 @@ const StudentAttendanceSection = ({
   const [activeTab,             setActiveTab]             = useState("attendance");
   const [filterClass,           setFilterClass]           = useState("All");
   const [studentExcelError,     setStudentExcelError]     = useState("");
+  const [studentDuplicateWarn,  setStudentDuplicateWarn]  = useState("");
   const [studentExcelUploading, setStudentExcelUploading] = useState(false);
   const [showAddForm,           setShowAddForm]           = useState(false);
 
   const [newRow, setNewRow] = useState({
-    rollNo: "", name: "", class: "", section: "",
+    class: "", section: "",
     month: studentAttendanceMonth, workingDays: "", daysPresent: "",
     daysAbsent: 0, percentage: 0,
   });
@@ -649,12 +741,12 @@ const StudentAttendanceSection = ({
 
   const downloadStudentAttendanceTemplate = () => {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([["Class","Section","Month","Working Days","Days Present"]]);
-    [["1","Student Name","6","A",studentAttendanceMonth,"26","24"],
-     ["2","Student Name","7","B",studentAttendanceMonth,"26","20"]].forEach((row, i) => {
+    const ws = XLSX.utils.aoa_to_sheet([["Class", "Section", "Month", "Working Days", "Days Present"]]);
+    [["6","A",studentAttendanceMonth,"26","24"],
+     ["7","B",studentAttendanceMonth,"26","20"]].forEach((row, i) => {
       row.forEach((val, j) => { ws[XLSX.utils.encode_cell({ r: i+1, c: j })] = { v: val, t: "s" }; });
     });
-    ws["!cols"] = [10,24,8,10,12,14,14].map((w) => ({ wch: w }));
+    ws["!cols"] = [8,10,12,14,14].map((w) => ({ wch: w }));
     XLSX.utils.book_append_sheet(wb, ws, "Student Attendance");
     XLSX.writeFile(wb, "Student_Attendance_Template.xlsx");
     toast.success("Template downloaded!");
@@ -662,7 +754,7 @@ const StudentAttendanceSection = ({
 
   const handleStudentExcelUpload = (file) => {
     if (!file) return;
-    setStudentExcelError(""); setStudentExcelUploading(true);
+    setStudentExcelError(""); setStudentDuplicateWarn(""); setStudentExcelUploading(true);
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -670,15 +762,13 @@ const StudentAttendanceSection = ({
         const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
         if (!raw.length) { setStudentExcelError("File is empty."); setStudentExcelUploading(false); return; }
 
-        const parsed = raw.map((row) => {
+        const parsed = raw.map((row, i) => {
           const r = normaliseKeys(row);
           const rawMonth  = r["month"] ?? "";
           const normMonth = normalizeMonth(rawMonth) || studentAttendanceMonth;
-          const rollNo = String(r["rollno"] ?? r["roll"] ?? "").trim();
 
           return computeStudentRow({
-            rollNo,
-            name:        String(r["name"]   ?? r["studentname"] ?? "").trim(),
+            id: Date.now() + Math.random() + i,
             class:       String(r["class"]  ?? r["grade"] ?? "").trim(),
             section:     String(r["section"] ?? r["sec"] ?? "").trim(),
             month:       normMonth,
@@ -688,17 +778,33 @@ const StudentAttendanceSection = ({
           });
         });
 
+        // Each row is identified by Class + Section + Month. If the sheet
+        // (or a previous upload) already has an entry for that combination,
+        // it is updated in place with the latest values instead of adding
+        // a duplicate row — whether the duplicate came from within this
+        // same file or from data already in the table.
+        const duplicateKeys = new Set();
+
         setStudentAttendanceData((prev) => {
           const updated = [...prev];
-          parsed.forEach((inc) => {
-            const idx = updated.findIndex(
-              (x) => String(x.rollNo).trim() === String(inc.rollNo).trim() &&
-                     x.month === inc.month
-            );
-            if (idx !== -1) updated[idx] = inc; else updated.push(inc);
+          parsed.forEach((incoming) => {
+            const key = studentRowKey(incoming);
+            const idx = updated.findIndex((x) => studentRowKey(x) === key);
+            if (idx !== -1) {
+              updated[idx] = { ...incoming, id: updated[idx].id };
+              duplicateKeys.add(key);
+            } else {
+              updated.push(incoming);
+            }
           });
           return updated;
         });
+
+        if (duplicateKeys.size > 0) {
+          setStudentDuplicateWarn(
+            `⚠️ ${duplicateKeys.size} row(s) matched a Class/Section/Month that already existed and were updated with the latest values instead of being added as duplicates.`
+          );
+        }
 
         toast.success(`✅ Imported ${parsed.length} student record(s).`);
       } catch (err) {
@@ -714,7 +820,7 @@ const StudentAttendanceSection = ({
     if (!data.length) { toast.error("No data to export."); return; }
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data.map((r) => ({
-      "Roll No": r.rollNo, "Name": r.name, "Class": r.class, "Section": r.section,
+      "Class": r.class, "Section": r.section,
       "Month": r.month, "Working Days": r.workingDays, "Days Present": r.daysPresent,
       "Days Absent": r.daysAbsent, "Attendance %": r.percentage,
     })));
@@ -745,29 +851,35 @@ const StudentAttendanceSection = ({
   });
 
   const addManualRow = () => {
-    if (!newRow.name.trim()) { toast.error("Please enter student name."); return; }
-    const computed = computeStudentRow({ ...newRow, month: studentAttendanceMonth });
+    if (!newRow.class.trim()) { toast.error("Please select a class."); return; }
+    const computed = computeStudentRow({ ...newRow, month: studentAttendanceMonth, id: Date.now() + Math.random() });
+    const key = studentRowKey(computed);
+
     setStudentAttendanceData((prev) => {
-      const idx = prev.findIndex(
-        (x) => String(x.rollNo).trim() === String(computed.rollNo).trim() && x.month === computed.month
-      );
-      const updated = [...prev];
-      if (idx !== -1) updated[idx] = computed; else updated.push(computed);
-      return updated;
+      const idx = prev.findIndex((x) => studentRowKey(x) === key);
+      if (idx !== -1) {
+        const updated = [...prev];
+        updated[idx] = { ...computed, id: prev[idx].id };
+        toast(
+          `⚠️ Class ${computed.class}${computed.section ? ` - ${computed.section}` : ""} already has a record for ${studentAttendanceMonth}. Updated it with the latest values instead of adding a duplicate.`,
+          { icon: "⚠️" }
+        );
+        return updated;
+      }
+      toast.success("✅ Student record added.");
+      return [...prev, computed];
     });
+
     setNewRow({
-      rollNo: "", name: "", class: "", section: "",
+      class: "", section: "",
       month: studentAttendanceMonth, workingDays: "", daysPresent: "",
       daysAbsent: 0, percentage: 0,
     });
     setShowAddForm(false);
-    toast.success("✅ Student added.");
   };
 
-  const removeRow = (rollNo, month) =>
-    setStudentAttendanceData((prev) =>
-      prev.filter((r) => !(String(r.rollNo).trim() === String(rollNo).trim() && r.month === month))
-    );
+  const removeRow = (rowId) =>
+    setStudentAttendanceData((prev) => prev.filter((r) => r.id !== rowId));
 
   const totalStudents = filteredData.length;
   const avgAttendance = totalStudents > 0
@@ -776,9 +888,9 @@ const StudentAttendanceSection = ({
   const below50 = filteredData.filter((r) => r.percentage < 50).length;
 
   const attColor = (pct) => {
-    if (pct >= 75) return { color: "#16a34a", bg: "#dcfce7" };
-    if (pct >= 50) return { color: "#d97706", bg: "#fef3c7" };
-    return { color: "#dc2626", bg: "#fee2e2" };
+    if (pct >= 75) return { color: "#3f7d3a", bg: "#e3efd8" };
+    if (pct >= 50) return { color: PAL.ochre, bg: "#fbf0dc" };
+    return { color: PAL.clay, bg: "#f7e2d8" };
   };
 
   const monthHolidays = getHolidaysForMonth(studentAttendanceMonth);
@@ -788,29 +900,37 @@ const StudentAttendanceSection = ({
       <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
         {[{ id: "attendance", label: "📋 Attendance" }, { id: "classwise", label: "🏫 Class-wise" }, { id: "performance", label: "📊 Performance" }].map((tab) => (
           <Button key={tab.id} size="small" variant={activeTab === tab.id ? "contained" : "outlined"} onClick={() => setActiveTab(tab.id)}
-            sx={{ borderRadius: 2, fontWeight: 600, fontSize: 12, ...(activeTab === tab.id ? { background: "#0f766e", "&:hover": { background: "#0d5f58" } } : { borderColor: "#0f766e", color: "#0f766e" }) }}>
+            sx={{
+              borderRadius: 2, fontWeight: 700, fontFamily: FONT_BODY, fontSize: 12,
+              ...(activeTab === tab.id
+                ? { background: STUDENT_ACCENT, "&:hover": { background: STUDENT_ACCENT_DARK } }
+                : { borderColor: STUDENT_ACCENT, color: STUDENT_ACCENT }),
+            }}>
             {tab.label}
           </Button>
         ))}
       </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Month:</Typography>
+        <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, color: PAL.brown, mr: 0.5 }}>Month:</Typography>
         {MONTHS.map((m) => (
           <Chip key={m} label={m.slice(0,3)} size="small" onClick={() => setStudentAttendanceMonth(m)}
-            color={studentAttendanceMonth === m ? "success" : "default"}
-            variant={studentAttendanceMonth === m ? "filled" : "outlined"}
-            sx={{ fontWeight: studentAttendanceMonth === m ? 700 : 400, cursor: "pointer", fontSize: 11 }} />
+            sx={{
+              fontFamily: FONT_BODY, fontWeight: studentAttendanceMonth === m ? 700 : 400, cursor: "pointer", fontSize: 11,
+              background: studentAttendanceMonth === m ? STUDENT_ACCENT : "transparent",
+              color: studentAttendanceMonth === m ? PAL.cream : PAL.brown,
+              border: `1px solid ${studentAttendanceMonth === m ? STUDENT_ACCENT : PAL.ochre}`,
+            }} />
         ))}
       </Box>
 
       {monthHolidays.length > 0 && (
-        <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {studentAttendanceMonth}:</Typography>
+        <Alert severity="info" icon={false} sx={{ mb: 2, py: 0.5, background: PAL.sand, color: PAL.brownDark, border: `1px solid ${PAL.ochre}` }}>
+          <Typography sx={{ fontFamily: FONT_BODY, fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Holidays in {studentAttendanceMonth}:</Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
             {monthHolidays.map((h, i) => (
               <Chip key={i} label={`${new Date(h.date).getDate()} – ${h.name}`} size="small"
-                sx={{ fontSize: 11, background: h.type === "National" ? "#dbeafe" : "#dcfce7", color: h.type === "National" ? "#1d4ed8" : "#16a34a", fontWeight: 600 }} />
+                sx={{ fontFamily: FONT_BODY, fontSize: 11, background: h.type === "National" ? PAL.sandDark : "#e3efd8", color: h.type === "National" ? PAL.clayDark : "#3f7d3a", fontWeight: 600 }} />
             ))}
           </Box>
         </Alert>
@@ -821,64 +941,63 @@ const StudentAttendanceSection = ({
           {totalStudents > 0 && (
             <Grid container spacing={1.5} sx={{ mb: 2 }}>
               {[
-                { label: "Total Students", val: totalStudents,       color: "#1976d2", icon: "👨‍🎓" },
-                { label: "Avg Attendance", val: `${avgAttendance}%`, color: "#0f766e", icon: "📊" },
-                { label: "≥ 75%",          val: above75,             color: "#16a34a", icon: "🟢" },
-                { label: "< 50%",          val: below50,             color: "#dc2626", icon: "🔴" },
+              
+                { label: "Avg Attendance", val: `${avgAttendance}%`, color: STUDENT_ACCENT, icon: "📊" },
+                { label: "≥ 75%",          val: above75,             color: "#3f7d3a",  icon: "🟢" },
+                { label: "< 50%",          val: below50,             color: PAL.clay,   icon: "🔴" },
               ].map(({ label, val, color, icon }) => (
                 <Grid item xs={6} sm={3} key={label}>
-                  <Paper elevation={0} sx={{ p: 1.5, textAlign: "center", border: "1px solid #e2e8f0", borderRadius: 2 }}>
+                  <Paper elevation={0} sx={{ p: 1.5, textAlign: "center", border: `1px solid ${PAL.ochre}`, borderRadius: 2, background: PAL.cream }}>
                     <Typography sx={{ fontSize: 16 }}>{icon}</Typography>
-                    <Typography sx={{ fontSize: 18, fontWeight: 800, color }}>{val}</Typography>
-                    <Typography sx={{ fontSize: 11, color: "#64748b" }}>{label}</Typography>
+                    <Typography sx={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 800, color }}>{val}</Typography>
+                    <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.8 }}>{label}</Typography>
                   </Paper>
                 </Grid>
               ))}
             </Grid>
           )}
 
-          <Box sx={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 2, p: 2, mb: 2 }}>
-            <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#0f766e", mb: 1 }}>📁 Excel Import / Export — Student Attendance</Typography>
+          <Box sx={{ background: PAL.sand, border: `1px solid ${PAL.ochre}`, borderRadius: 2, p: 2, mb: 2 }}>
+            <Typography sx={{ ...headingSx(11), color: STUDENT_ACCENT, mb: 1 }}>📁 Excel Import / Export — Student Attendance</Typography>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
               <Button variant="outlined" size="small" onClick={downloadStudentAttendanceTemplate}
-                sx={{ borderColor: "#0f766e", color: "#0f766e", fontSize: 12, fontWeight: 600 }}>
+                sx={{ borderColor: STUDENT_ACCENT, color: STUDENT_ACCENT, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
                 ⬇ Template
               </Button>
               <Button variant="contained" size="small" component="label" disabled={studentExcelUploading}
-                sx={{ background: "#0f766e", "&:hover": { background: "#0d5f58" }, fontSize: 12, fontWeight: 600 }}>
+                sx={{ background: STUDENT_ACCENT, "&:hover": { background: STUDENT_ACCENT_DARK }, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
                 {studentExcelUploading ? "Importing…" : "📤 Import Excel"}
                 <input type="file" hidden accept=".xlsx,.xls"
                   onChange={(e) => { if (e.target.files[0]) handleStudentExcelUpload(e.target.files[0]); e.target.value = ""; }} />
               </Button>
               {filteredData.length > 0 && (
                 <Button variant="outlined" size="small" onClick={exportStudentAttendance}
-                  sx={{ borderColor: "#0f766e", color: "#0f766e", fontSize: 12, fontWeight: 600 }}>
+                  sx={{ borderColor: STUDENT_ACCENT, color: STUDENT_ACCENT, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600 }}>
                   📥 Export
                 </Button>
               )}
               <Button variant="outlined" size="small" onClick={() => setShowAddForm((v) => !v)}
-                sx={{ borderColor: "#64748b", color: "#374151", fontSize: 12, fontWeight: 600, ml: "auto" }}>
+                sx={{ borderColor: PAL.brown, color: PAL.brownDark, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, ml: "auto" }}>
                 {showAddForm ? "✕ Cancel" : "✏️ Add Manually"}
               </Button>
             </Box>
-            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 1 }}>
-              Columns: Roll No · Name · Class · Section · Month · Working Days · Days Present
+            <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.8, mt: 1 }}>
+              Columns: Class · Section · Month · Working Days · Days Present
             </Typography>
           </Box>
 
-          {studentExcelError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setStudentExcelError("")}>{studentExcelError}</Alert>}
+          {studentExcelError && <Alert severity="error" sx={{ mb: 2, fontFamily: FONT_BODY }} onClose={() => setStudentExcelError("")}>{studentExcelError}</Alert>}
+          {studentDuplicateWarn && <Alert severity="warning" sx={{ mb: 2, fontFamily: FONT_BODY }} onClose={() => setStudentDuplicateWarn("")}>{studentDuplicateWarn}</Alert>}
 
           {showAddForm && (
-            <Box sx={{ border: "1px solid #0f766e33", borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
-              <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#0f766e", mb: 1.5 }}>✏️ Add Student Manually</Typography>
+            <Box sx={{ border: `1px solid ${STUDENT_ACCENT}33`, borderRadius: 2, p: 2, mb: 2, background: PAL.cream }}>
+              <Typography sx={{ ...headingSx(13), color: STUDENT_ACCENT, mb: 1.5 }}>✏️ Add Student Record Manually</Typography>
               <Grid container spacing={1.5} alignItems="center">
                 {[
-                  { key: "rollNo",      label: "Roll No",      xs: 6,  sm: 2 },
-                  { key: "name",        label: "Name",         xs: 12, sm: 3 },
-                  { key: "class",       label: "Class",        xs: 4,  sm: 1 },
-                  { key: "section",     label: "Section",      xs: 4,  sm: 1 },
-                  { key: "workingDays", label: "Working Days", xs: 4,  sm: 2, type: "number" },
-                  { key: "daysPresent", label: "Days Present", xs: 6,  sm: 2, type: "number" },
+                  { key: "class",       label: "Class",        xs: 4,  sm: 2 },
+                  { key: "section",     label: "Section",      xs: 4,  sm: 2 },
+                  { key: "workingDays", label: "Working Days", xs: 4,  sm: 3, type: "number" },
+                  { key: "daysPresent", label: "Days Present", xs: 6,  sm: 3, type: "number" },
                 ].map(({ key, label, xs, sm, type = "text" }) => (
                   <Grid item xs={xs} sm={sm} key={key}>
                     <TextField fullWidth size="small" label={label} type={type} value={newRow[key]}
@@ -886,18 +1005,18 @@ const StudentAttendanceSection = ({
                       onChange={(e) => setNewRow((p) => computeStudentRow({ ...p, [key]: e.target.value }))} />
                   </Grid>
                 ))}
-                <Grid item xs={6} sm={1}>
+                <Grid item xs={6} sm={2}>
                   <Button fullWidth variant="contained" size="small" onClick={addManualRow}
-                    sx={{ background: "#0f766e", "&:hover": { background: "#0d5f58" }, height: 40 }}>
+                    sx={{ background: STUDENT_ACCENT, "&:hover": { background: STUDENT_ACCENT_DARK }, height: 40, fontFamily: FONT_BODY }}>
                     + Add
                   </Button>
                 </Grid>
               </Grid>
               {(newRow.workingDays || newRow.daysPresent) && (
-                <Box sx={{ mt: 1.5, display: "flex", gap: 2, p: 1.5, background: "#f0fdf4", borderRadius: 1.5 }}>
-                  <Typography sx={{ fontSize: 12, color: "#16a34a" }}>✅ Present: <strong>{newRow.daysPresent}</strong></Typography>
-                  <Typography sx={{ fontSize: 12, color: "#dc2626" }}>❌ Absent: <strong>{newRow.daysAbsent}</strong></Typography>
-                  <Typography sx={{ fontSize: 12, color: "#0f766e" }}>📊 <strong>{newRow.percentage}%</strong></Typography>
+                <Box sx={{ mt: 1.5, display: "flex", gap: 2, p: 1.5, background: PAL.sand, borderRadius: 1.5 }}>
+                  <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: "#3f7d3a" }}>✅ Present: <strong>{newRow.daysPresent}</strong></Typography>
+                  <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: PAL.clay }}>❌ Absent: <strong>{newRow.daysAbsent}</strong></Typography>
+                  <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: STUDENT_ACCENT }}>📊 <strong>{newRow.percentage}%</strong></Typography>
                 </Box>
               )}
             </Box>
@@ -905,24 +1024,27 @@ const StudentAttendanceSection = ({
 
           {allClasses.length > 0 && (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, mb: 2, alignItems: "center" }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", mr: 0.5 }}>Class:</Typography>
+              <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, color: PAL.brown, mr: 0.5 }}>Class:</Typography>
               {["All", ...allClasses].map((cls) => (
                 <Chip key={cls} label={cls === "All" ? "All" : `Class ${cls}`} size="small"
                   onClick={() => setFilterClass(cls)}
-                  color={filterClass === cls ? "success" : "default"}
-                  variant={filterClass === cls ? "filled" : "outlined"}
-                  sx={{ fontWeight: filterClass === cls ? 700 : 400, cursor: "pointer", fontSize: 11 }} />
+                  sx={{
+                    fontFamily: FONT_BODY, fontWeight: filterClass === cls ? 700 : 400, cursor: "pointer", fontSize: 11,
+                    background: filterClass === cls ? STUDENT_ACCENT : "transparent",
+                    color: filterClass === cls ? PAL.cream : PAL.brown,
+                    border: `1px solid ${filterClass === cls ? STUDENT_ACCENT : PAL.ochre}`,
+                  }} />
               ))}
             </Box>
           )}
 
           {filteredData.length > 0 ? (
-            <Box sx={{ overflowX: "auto", borderRadius: 2, border: "1px solid #e2e8f0" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
+            <Box sx={{ overflowX: "auto", borderRadius: 2, border: `1px solid ${PAL.ochre}` }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
                 <thead>
                   <tr>
-                    {["#","Roll No","Name","Class","Sec","Days","Present","Absent","Att %","Status",""].map((h) => (
-                      <th key={h} style={{ background: "#0f766e", color: "#fff", padding: "8px 10px", fontSize: 11, fontWeight: 700, border: "1px solid #0d5f58", whiteSpace: "nowrap", textAlign: "center" }}>{h}</th>
+                    {["Sl. No","Class","Sec","Days","Present","Absent","Att %","Status",""].map((h) => (
+                      <th key={h} style={{ background: STUDENT_ACCENT, color: PAL.cream, padding: "8px 10px", fontSize: 11, fontFamily: FONT_BODY, fontWeight: 700, border: `1px solid ${STUDENT_ACCENT_DARK}`, whiteSpace: "nowrap", textAlign: "center" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -930,27 +1052,25 @@ const StudentAttendanceSection = ({
                   {filteredData.map((r, i) => {
                     const tc = attColor(r.percentage);
                     return (
-                      <tr key={`${r.rollNo}-${r.month}-${i}`} style={{ backgroundColor: i % 2 === 0 ? "#f0fdfa" : "#fff" }}>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center", fontSize:12, color:"#94a3b8" }}>{i+1}</td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:12, fontWeight:600 }}>{r.rollNo}</td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:13, fontWeight:600 }}>{r.name}</td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:12, textAlign:"center" }}>{r.class}</td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:12, textAlign:"center" }}>{r.section}</td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", fontSize:12, textAlign:"center" }}>{r.workingDays}</td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center" }}>
-                          <Chip label={r.daysPresent} color="success" size="small" sx={{ fontWeight:700, minWidth:34 }} />
+                      <tr key={r.id ?? `${r.class}-${r.section}-${r.month}-${i}`} style={{ backgroundColor: i % 2 === 0 ? PAL.cream : "#fff" }}>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, textAlign:"center", fontSize:12, fontFamily: FONT_BODY, color:"#9c8b6f" }}>{i+1}</td>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, fontSize:12, fontFamily: FONT_BODY, textAlign:"center" }}>{r.class}</td>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, fontSize:12, fontFamily: FONT_BODY, textAlign:"center" }}>{r.section}</td>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, fontSize:12, fontFamily: FONT_BODY, textAlign:"center" }}>{r.workingDays}</td>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, textAlign:"center" }}>
+                          <Chip label={r.daysPresent} size="small" sx={{ fontWeight:700, minWidth:34, background:"#e3efd8", color:"#3f7d3a" }} />
                         </td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center" }}>
-                          <Chip label={r.daysAbsent} color={r.daysAbsent > 0 ? "error" : "success"} size="small" sx={{ fontWeight:700, minWidth:34 }} />
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, textAlign:"center" }}>
+                          <Chip label={r.daysAbsent} size="small" sx={{ fontWeight:700, minWidth:34, background: r.daysAbsent > 0 ? "#f7e2d8" : "#e3efd8", color: r.daysAbsent > 0 ? PAL.clay : "#3f7d3a" }} />
                         </td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center" }}>
-                          <Box sx={{ px:1.2, py:0.3, borderRadius:10, background:tc.bg, color:tc.color, fontSize:12, fontWeight:800, display:"inline-block" }}>{r.percentage}%</Box>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, textAlign:"center" }}>
+                          <Box sx={{ px:1.2, py:0.3, borderRadius:10, background:tc.bg, color:tc.color, fontSize:12, fontFamily: FONT_BODY, fontWeight:800, display:"inline-block" }}>{r.percentage}%</Box>
                         </td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center", fontSize:14 }}>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, textAlign:"center", fontSize:14 }}>
                           {r.percentage >= 75 ? "🟢" : r.percentage >= 50 ? "🟡" : "🔴"}
                         </td>
-                        <td style={{ padding:"6px 10px", border:"1px solid #d1fae5", textAlign:"center" }}>
-                          <Button size="small" color="error" variant="text" sx={{ minWidth:0, px:0.5, fontSize:14 }} onClick={() => removeRow(r.rollNo, r.month)}>✕</Button>
+                        <td style={{ padding:"6px 10px", border:`1px solid ${PAL.sandDark}`, textAlign:"center" }}>
+                          <Button size="small" sx={{ minWidth:0, px:0.5, fontSize:14, color: PAL.clay }} onClick={() => removeRow(r.id)}>✕</Button>
                         </td>
                       </tr>
                     );
@@ -959,10 +1079,10 @@ const StudentAttendanceSection = ({
               </table>
             </Box>
           ) : (
-            <Box sx={{ textAlign:"center", py:5, border:"2px dashed #e2e8f0", borderRadius:3, color:"#94a3b8" }}>
+            <Box sx={{ textAlign:"center", py:5, border:`2px dashed ${PAL.ochre}`, borderRadius:3, color: PAL.brown }}>
               <Typography sx={{ fontSize:28, mb:1 }}>📋</Typography>
-              <Typography sx={{ fontSize:14, fontWeight:600 }}>No records for {studentAttendanceMonth}</Typography>
-              <Typography sx={{ fontSize:12, mt:0.5 }}>Import Excel or click "Add Manually".</Typography>
+              <Typography sx={{ ...headingSx(14), color: PAL.brownDark }}>No records for {studentAttendanceMonth}</Typography>
+              <Typography sx={{ fontFamily: FONT_BODY, fontSize:12, mt:0.5 }}>Import Excel or click "Add Manually".</Typography>
             </Box>
           )}
         </>
@@ -970,9 +1090,9 @@ const StudentAttendanceSection = ({
 
       {activeTab === "classwise" && (
         <Box>
-          <Typography sx={{ fontWeight:700, color:"#0f766e", fontSize:14, mb:2 }}>🏫 Class-wise Average — {studentAttendanceMonth}</Typography>
+          <Typography sx={{ ...headingSx(14), color: STUDENT_ACCENT, mb: 2 }}>🏫 Class-wise Average — {studentAttendanceMonth}</Typography>
           {allClasses.length === 0 ? (
-            <Typography sx={{ color:"#94a3b8", fontStyle:"italic" }}>No data available.</Typography>
+            <Typography sx={{ fontFamily: FONT_BODY, color: PAL.brown, opacity: 0.7, fontStyle: "italic" }}>No data available.</Typography>
           ) : (
             <Grid container spacing={2}>
               {allClasses.map((cls) => {
@@ -983,18 +1103,15 @@ const StudentAttendanceSection = ({
                 const tc   = attColor(avg);
                 return (
                   <Grid item xs={12} sm={6} md={4} key={cls}>
-                    <Paper elevation={0} sx={{ p:2, borderRadius:2, border:"1px solid #e2e8f0", borderTop:`4px solid ${tc.color}` }}>
+                    <Paper elevation={0} sx={{ p:2, borderRadius:2, border: `1px solid ${PAL.ochre}`, borderTop:`4px solid ${tc.color}`, background: PAL.cream }}>
                       <Box sx={{ display:"flex", justifyContent:"space-between", alignItems:"center", mb:1 }}>
-                        <Typography sx={{ fontWeight:800, color:"#1e3a5f", fontSize:15 }}>Class {cls}</Typography>
-                        <Box sx={{ px:1.5, py:0.3, borderRadius:10, background:tc.bg, color:tc.color, fontSize:15, fontWeight:800 }}>{avg}%</Box>
+                        <Typography sx={{ fontFamily: FONT_DISPLAY, fontWeight:800, color: PAL.ink, fontSize:15 }}>Class {cls}</Typography>
+                        <Box sx={{ px:1.5, py:0.3, borderRadius:10, background:tc.bg, color:tc.color, fontSize:15, fontFamily: FONT_DISPLAY, fontWeight:800 }}>{avg}%</Box>
                       </Box>
-                      <Typography sx={{ fontSize:12, color:"#64748b", mb:1 }}>Students: <strong>{recs.length}</strong></Typography>
-                      <Box sx={{ height:6, background:"#e2e8f0", borderRadius:3, overflow:"hidden", mb:1 }}>
-                        <Box sx={{ height:"100%", width:`${Math.min(avg,100)}%`, background:tc.color, borderRadius:3 }} />
-                      </Box>
+                     
                       <Box sx={{ display:"flex", gap:1 }}>
-                        <Chip label={`🟢 ${good}`} size="small" sx={{ background:"#dcfce7", color:"#16a34a", fontWeight:700, fontSize:11 }} />
-                        <Chip label={`🔴 ${low}`}  size="small" sx={{ background:"#fee2e2", color:"#dc2626", fontWeight:700, fontSize:11 }} />
+                        <Chip label={`🟢 ${good}`} size="small" sx={{ background:"#e3efd8", color:"#3f7d3a", fontWeight:700, fontSize:11, fontFamily: FONT_BODY }} />
+                        <Chip label={`🔴 ${low}`}  size="small" sx={{ background:"#f7e2d8", color: PAL.clay, fontWeight:700, fontSize:11, fontFamily: FONT_BODY }} />
                       </Box>
                     </Paper>
                   </Grid>
@@ -1007,7 +1124,7 @@ const StudentAttendanceSection = ({
 
       {activeTab === "performance" && (
         <Box>
-          <Typography sx={{ fontWeight:700, color:"#0f766e", fontSize:14, mb:1.5 }}>📈 Monthly Attendance Trend</Typography>
+          <Typography sx={{ ...headingSx(14), color: STUDENT_ACCENT, mb: 1.5 }}>📈 Monthly Attendance Trend</Typography>
           {(() => {
             const trend = MONTHS.map((m) => {
               const recs = studentAttendanceData.filter((r) => r.month === m);
@@ -1024,25 +1141,25 @@ const StudentAttendanceSection = ({
 
             if (!hasAnyData) {
               return (
-                <Box sx={{ textAlign:"center", py:4, border:"2px dashed #e2e8f0", borderRadius:2, color:"#94a3b8" }}>
-                  <Typography sx={{ fontSize:13 }}>No attendance data yet. Import records to see the trend.</Typography>
+                <Box sx={{ textAlign:"center", py:4, border:`2px dashed ${PAL.ochre}`, borderRadius:2, color: PAL.brown }}>
+                  <Typography sx={{ fontFamily: FONT_BODY, fontSize:13 }}>No attendance data yet. Import records to see the trend.</Typography>
                 </Box>
               );
             }
 
             return (
-              <Box sx={{ display:"flex", alignItems:"flex-end", gap:1, height:160, background:"#f0fdfa", border:"1px solid #a7f3d0", borderRadius:2, px:2, py:2, overflowX:"auto", mb:3 }}>
+              <Box sx={{ display:"flex", alignItems:"flex-end", gap:1, height:160, background: PAL.sand, border: `1px solid ${PAL.ochre}`, borderRadius:2, px:2, py:2, overflowX:"auto", mb:3 }}>
                 {trend.map(({ month, avg, count }) => {
-                  const clr = avg === null ? "#d1d5db" : avg >= 75 ? "#16a34a" : avg >= 50 ? "#d97706" : "#dc2626";
+                  const clr = avg === null ? "#c9bda4" : avg >= 75 ? "#3f7d3a" : avg >= 50 ? PAL.ochre : PAL.clay;
                   const barH = avg !== null ? `${Math.max((avg / maxAvg) * 100, 4)}px` : "4px";
                   return (
                     <Tooltip key={month} title={avg !== null ? `${avg}% (${count} students)` : "No data"} arrow>
                       <Box sx={{ display:"flex", flexDirection:"column", alignItems:"center", minWidth:36, flex:1, cursor:"default" }}>
-                        <Typography sx={{ fontSize:9, fontWeight:700, color:clr, mb:0.5 }}>
+                        <Typography sx={{ fontFamily: FONT_BODY, fontSize:9, fontWeight:700, color:clr, mb:0.5 }}>
                           {avg !== null ? `${avg}%` : "—"}
                         </Typography>
                         <Box sx={{ width:"80%", height: barH, background:clr, borderRadius:"4px 4px 0 0", minHeight:4, transition:"height 0.3s" }} />
-                        <Typography sx={{ fontSize:9, color: month === studentAttendanceMonth ? "#0f766e" : "#64748b", mt:0.5, fontWeight: month === studentAttendanceMonth ? 800 : 400 }}>
+                        <Typography sx={{ fontFamily: FONT_BODY, fontSize:9, color: month === studentAttendanceMonth ? STUDENT_ACCENT : PAL.brown, mt:0.5, fontWeight: month === studentAttendanceMonth ? 800 : 400 }}>
                           {month.slice(0,3)}
                         </Typography>
                       </Box>
@@ -1055,12 +1172,12 @@ const StudentAttendanceSection = ({
 
           {studentAttendanceData.filter((r) => r.percentage < 75).length > 0 && (
             <Alert severity="warning" sx={{ borderRadius:2 }}>
-              <Typography sx={{ fontWeight:700, fontSize:13, mb:1 }}>⚠️ Students Below 75% (all months)</Typography>
+              <Typography sx={{ ...headingSx(13), mb:1 }}>⚠️ Records Below 75% (all months)</Typography>
               <Box sx={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
                   <thead>
-                    <tr>{["Roll No","Name","Class","Month","Att %"].map((h) => (
-                      <th key={h} style={{ padding:"4px 8px", background:"#fef3c7", fontSize:11, fontWeight:700, border:"1px solid #fde68a" }}>{h}</th>
+                    <tr>{["Class","Month","Att %"].map((h) => (
+                      <th key={h} style={{ padding:"4px 8px", background: PAL.sandDark, fontSize:11, fontFamily: FONT_BODY, fontWeight:700, border: `1px solid ${PAL.ochre}` }}>{h}</th>
                     ))}</tr>
                   </thead>
                   <tbody>
@@ -1069,12 +1186,10 @@ const StudentAttendanceSection = ({
                       .sort((a, b) => a.percentage - b.percentage)
                       .slice(0, 20)
                       .map((r, i) => (
-                        <tr key={i} style={{ backgroundColor: r.percentage < 50 ? "#fee2e2" : "#fffbeb" }}>
-                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.rollNo}</td>
-                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12, fontWeight:600 }}>{r.name}</td>
-                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.class} {r.section ? `- ${r.section}` : ""}</td>
-                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12 }}>{r.month}</td>
-                          <td style={{ padding:"4px 8px", border:"1px solid #fde68a", fontSize:12, fontWeight:700, color: r.percentage < 50 ? "#dc2626" : "#d97706" }}>{r.percentage}%</td>
+                        <tr key={i} style={{ backgroundColor: r.percentage < 50 ? "#f7e2d8" : "#fbf0dc" }}>
+                          <td style={{ padding:"4px 8px", border: `1px solid ${PAL.ochre}`, fontSize:12, fontFamily: FONT_BODY }}>{r.class} {r.section ? `- ${r.section}` : ""}</td>
+                          <td style={{ padding:"4px 8px", border: `1px solid ${PAL.ochre}`, fontSize:12, fontFamily: FONT_BODY }}>{r.month}</td>
+                          <td style={{ padding:"4px 8px", border: `1px solid ${PAL.ochre}`, fontSize:12, fontFamily: FONT_BODY, fontWeight:700, color: r.percentage < 50 ? PAL.clay : PAL.ochre }}>{r.percentage}%</td>
                         </tr>
                       ))}
                   </tbody>
@@ -1093,7 +1208,7 @@ const StudentAttendanceSection = ({
 ───────────────────────────────────────────────────────────────────────────── */
 const AnnualStaffOverview = ({ staffAttendanceRows }) => {
   if (!staffAttendanceRows.length)
-    return <Typography sx={{ color:"#94a3b8", fontStyle:"italic", fontSize:13 }}>No attendance data yet.</Typography>;
+    return <Typography sx={{ fontFamily: FONT_BODY, color: PAL.brown, opacity: 0.7, fontStyle:"italic", fontSize:13 }}>No attendance data yet.</Typography>;
 
   const staffMap = {};
   staffAttendanceRows.forEach((r) => {
@@ -1108,26 +1223,26 @@ const AnnualStaffOverview = ({ staffAttendanceRows }) => {
         <thead>
           <tr>
             {["Staff","Post","Type",...MONTHS.map((m) => m.slice(0,3))].map((h) => (
-              <th key={h} style={{ backgroundColor:"#f1f5f9", color:"#374151", padding:"6px 8px", textAlign:"center", fontSize:11, fontWeight:700, border:"1px solid #e2e8f0", whiteSpace:"nowrap" }}>{h}</th>
+              <th key={h} style={{ backgroundColor: PAL.sandDark, color: PAL.brownDark, padding:"6px 8px", textAlign:"center", fontSize:11, fontFamily: FONT_BODY, fontWeight:700, border: `1px solid ${PAL.ochre}`, whiteSpace:"nowrap" }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {Object.values(staffMap).map((staff, rIdx) => (
-            <tr key={rIdx} style={{ backgroundColor: rIdx % 2 === 0 ? "#f8fafc" : "#fff" }}>
-              <td style={{ padding:"6px 8px", border:"1px solid #e2e8f0", fontSize:12, fontWeight:600, whiteSpace:"nowrap" }}>{staff.name || "—"}</td>
-              <td style={{ padding:"6px 8px", border:"1px solid #e2e8f0", fontSize:11, color:"#1976d2", fontWeight:600 }}>{staff.post || "—"}</td>
-              <td style={{ padding:"6px 8px", border:"1px solid #e2e8f0", textAlign:"center" }}>
+            <tr key={rIdx} style={{ backgroundColor: rIdx % 2 === 0 ? PAL.cream : "#fff" }}>
+              <td style={{ padding:"6px 8px", border: `1px solid ${PAL.sandDark}`, fontSize:12, fontFamily: FONT_BODY, fontWeight:600, whiteSpace:"nowrap" }}>{staff.name || "—"}</td>
+              <td style={{ padding:"6px 8px", border: `1px solid ${PAL.sandDark}`, fontSize:11, fontFamily: FONT_BODY, color: PAL.clay, fontWeight:600 }}>{staff.post || "—"}</td>
+              <td style={{ padding:"6px 8px", border: `1px solid ${PAL.sandDark}`, textAlign:"center" }}>
                 <Chip label={staff.type === "Teaching" ? "🏫 T" : "🧹 NT"} size="small"
-                  sx={{ fontSize:10, background: staff.type === "Teaching" ? "#dbeafe" : "#ede9fe", color: staff.type === "Teaching" ? "#1d4ed8" : "#7c3aed", fontWeight:700 }} />
+                  sx={{ fontSize:10, fontFamily: FONT_BODY, background: staff.type === "Teaching" ? PAL.sand : PAL.sandDark, color: staff.type === "Teaching" ? PAL.clay : PAL.brown, fontWeight:700 }} />
               </td>
               {MONTHS.map((month) => {
                 const pct = staff.months[month];
                 return (
-                  <td key={month} style={{ padding:"4px 6px", border:"1px solid #e2e8f0", textAlign:"center", fontSize:11, backgroundColor: pct == null ? "transparent" : pct >= 75 ? "#f0fdf4" : "#fef2f2" }}>
+                  <td key={month} style={{ padding:"4px 6px", border: `1px solid ${PAL.sandDark}`, textAlign:"center", fontSize:11, fontFamily: FONT_BODY, backgroundColor: pct == null ? "transparent" : pct >= 75 ? "#f2f8ec" : "#fbeee6" }}>
                     {pct != null
-                      ? <Typography component="span" sx={{ fontWeight:700, color: pct >= 75 ? "#16a34a" : "#dc2626", fontSize:11 }}>{pct}%</Typography>
-                      : <Typography component="span" sx={{ color:"#d1d5db", fontSize:10 }}>—</Typography>}
+                      ? <Typography component="span" sx={{ fontFamily: FONT_BODY, fontWeight:700, color: pct >= 75 ? "#3f7d3a" : PAL.clay, fontSize:11 }}>{pct}%</Typography>
+                      : <Typography component="span" sx={{ color:"#d8c9ab", fontSize:10 }}>—</Typography>}
                   </td>
                 );
               })}
@@ -1189,9 +1304,6 @@ const SAKSHAM_ACTIVITIES_BY_THEME = {
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ACADEMIC CALENDAR WIDGET  (shared between pre & post sections)
-   - Month + Year selectors
-   - Saturday chips — clickable to set selectedDate
-   - Holidays shown inline on each chip
 ───────────────────────────────────────────────────────────────────────────── */
 const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear, setCalendarYear, selectedDate, setSelectedDate }) => {
   const saturdays = getSaturdaysForMonth(calendarMonth, calendarYear);
@@ -1200,22 +1312,22 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
   );
 
   return (
-    <Box sx={{ border: "1px solid #dbeafe", borderRadius: 2, overflow: "hidden", mb: 1.5, background: "#fff" }}>
+    <Box sx={{ border: `1px solid ${PAL.ochre}`, borderRadius: 2, overflow: "hidden", mb: 1.5, background: "#fff" }}>
       {/* Header */}
-      <Box sx={{ px: 1.5, py: 1, background: "linear-gradient(135deg, #1e40af, #3b82f6)", display: "flex", alignItems: "center", gap: 1 }}>
-        <Typography sx={{ fontWeight: 800, color: "#fff", fontSize: 13 }}>📅 Academic Calendar</Typography>
+      <Box sx={{ px: 1.5, py: 1, background: `linear-gradient(135deg, ${PAL.brown}, ${PAL.brownDark})`, display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography sx={{ ...headingSx(13), color: PAL.cream }}>📅 Academic Calendar</Typography>
         {selectedDate && (
           <Chip
             label={`Selected: ${new Date(selectedDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
             size="small"
             onDelete={() => setSelectedDate("")}
-            sx={{ ml: "auto", background: "#fff", color: "#1e40af", fontWeight: 700, fontSize: 11 }}
+            sx={{ ml: "auto", background: PAL.cream, color: PAL.brownDark, fontWeight: 700, fontFamily: FONT_BODY, fontSize: 11 }}
           />
         )}
       </Box>
 
       {/* Month / Year selectors */}
-      <Box sx={{ px: 1.5, py: 1, borderBottom: "1px solid #dbeafe", display: "flex", gap: 1.25, flexWrap: "wrap", alignItems: "center", background: "#eff6ff" }}>
+      <Box sx={{ px: 1.5, py: 1, borderBottom: `1px solid ${PAL.ochre}`, display: "flex", gap: 1.25, flexWrap: "wrap", alignItems: "center", background: PAL.sand }}>
         <TextField
           select size="small" label="Month" value={calendarMonth}
           onChange={(e) => { setCalendarMonth(e.target.value); setSelectedDate(""); }}
@@ -1229,7 +1341,7 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
           sx={{ minWidth: 100 }}
           inputProps={{ maxLength: 4 }}
         />
-        <Typography sx={{ fontSize: 11, color: "#3b82f6", fontWeight: 600, ml: "auto" }}>
+        <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, fontWeight: 600, ml: "auto" }}>
           Click a Saturday below to auto-fill the date in your rows
         </Typography>
       </Box>
@@ -1252,14 +1364,14 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
                 onClick={() => setSelectedDate(isSelected ? "" : iso)}
                 label={
                   <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 0.25 }}>
-                    <Typography sx={{ fontSize: 10, fontWeight: 700, lineHeight: 1.2 }}>
+                    <Typography sx={{ fontFamily: FONT_BODY, fontSize: 10, fontWeight: 700, lineHeight: 1.2 }}>
                       {date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                     </Typography>
-                    <Typography sx={{ fontSize: 9, lineHeight: 1.2, opacity: 0.85 }}>
+                    <Typography sx={{ fontFamily: FONT_BODY, fontSize: 9, lineHeight: 1.2, opacity: 0.85 }}>
                       Sat · Wk {weekNum}
                     </Typography>
                     {holiday && (
-                      <Typography sx={{ fontSize: 8, lineHeight: 1.2, color: "#dc2626", fontWeight: 700 }}>
+                      <Typography sx={{ fontFamily: FONT_BODY, fontSize: 8, lineHeight: 1.2, color: PAL.clay, fontWeight: 700 }}>
                         Holiday
                       </Typography>
                     )}
@@ -1270,15 +1382,15 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
                   py: 0.5,
                   cursor: "pointer",
                   background: isSelected
-                    ? "#1d4ed8"
+                    ? PAL.clay
                     : holiday
-                    ? "#fee2e2"
-                    : "#dcfce7",
-                  color: isSelected ? "#fff" : holiday ? "#dc2626" : "#166534",
+                    ? "#f7e2d8"
+                    : "#e3efd8",
+                  color: isSelected ? PAL.cream : holiday ? PAL.clay : "#3f7d3a",
                   fontWeight: 700,
-                  border: isSelected ? "2px solid #1e40af" : holiday ? "1px solid #fca5a5" : "1px solid #86efac",
+                  border: isSelected ? `2px solid ${PAL.clayDark}` : holiday ? "1px solid #e3b39a" : "1px solid #b7d9a3",
                   "&:hover": {
-                    background: isSelected ? "#1e40af" : holiday ? "#fecaca" : "#bbf7d0",
+                    background: isSelected ? PAL.clayDark : holiday ? "#f0cdb9" : "#d3ecc0",
                     transform: "translateY(-1px)",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
                   },
@@ -1288,25 +1400,25 @@ const AcademicCalendarWidget = ({ calendarMonth, setCalendarMonth, calendarYear,
             </Tooltip>
           );
         }) : (
-          <Typography sx={{ color: "#94a3b8", fontSize: 12, py: 0.5 }}>
+          <Typography sx={{ fontFamily: FONT_BODY, color: PAL.brown, opacity: 0.7, fontSize: 12, py: 0.5 }}>
             Enter a valid month and year to view Saturdays.
           </Typography>
         )}
       </Box>
 
       {/* Legend */}
-      <Box sx={{ px: 1.5, py: 0.75, borderTop: "1px solid #dbeafe", background: "#f8faff", display: "flex", gap: 1.25, flexWrap: "wrap" }}>
+      <Box sx={{ px: 1.5, py: 0.75, borderTop: `1px solid ${PAL.ochre}`, background: PAL.cream, display: "flex", gap: 1.25, flexWrap: "wrap" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#dcfce7", border: "1px solid #86efac" }} />
-          <Typography sx={{ fontSize: 10, color: "#64748b" }}>Regular Saturday</Typography>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#e3efd8", border: "1px solid #b7d9a3" }} />
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 10, color: PAL.brown, opacity: 0.8 }}>Regular Saturday</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#fee2e2", border: "1px solid #fca5a5" }} />
-          <Typography sx={{ fontSize: 10, color: "#64748b" }}>Holiday Saturday</Typography>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#f7e2d8", border: "1px solid #e3b39a" }} />
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 10, color: PAL.brown, opacity: 0.8 }}>Holiday Saturday</Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#1d4ed8" }} />
-          <Typography sx={{ fontSize: 10, color: "#64748b" }}>Selected</Typography>
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: PAL.clay }} />
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 10, color: PAL.brown, opacity: 0.8 }}>Selected</Typography>
         </Box>
       </Box>
     </Box>
@@ -1327,10 +1439,6 @@ const ClassDropdown = ({ value, onChange }) => (
 
 /* ─────────────────────────────────────────────────────────────────────────────
    SAKSHAM SATURDAY REPORT
-   CHANGES:
-   1. AcademicCalendarWidget moved ABOVE the Pre-Activity Planning box
-   2. Clicking a Saturday chip sets `selectedDate` which is the shared state
-   3. className field in both tables now uses ClassDropdown (6 / 7 / 8)
 ───────────────────────────────────────────────────────────────────────────── */
 export const SakshamSaturdayReport = () => {
   const currentYear = new Date().getFullYear();
@@ -1495,7 +1603,7 @@ export const SakshamSaturdayReport = () => {
         <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} style={{ background: "#f1f5f9", color: "#334155", padding: "7px 6px", textAlign: "left", fontSize: 11, fontWeight: 700, border: "1px solid #e2e8f0", whiteSpace: "normal" }}>
+              <th key={h} style={{ background: PAL.sandDark, color: PAL.brownDark, padding: "7px 6px", textAlign: "left", fontSize: 11, fontFamily: FONT_BODY, fontWeight: 700, border: `1px solid ${PAL.ochre}`, whiteSpace: "normal" }}>
                 {h}
               </th>
             ))}
@@ -1518,7 +1626,7 @@ export const SakshamSaturdayReport = () => {
         ["studentsParticipated","Students Participated"],       
       ].map(([field, label]) => (
         <td key={field} style={{
-          padding: "6px 5px", border: "1px solid #e2e8f0",
+          padding: "6px 5px", border: `1px solid ${PAL.sandDark}`,
           minWidth: field === "className" ? 90 : field === "studentsParticipated" ? 110 : 130,
         }}>
           {field === "className" ? (
@@ -1540,8 +1648,8 @@ export const SakshamSaturdayReport = () => {
           )}
         </td>
       ))}
-      <td style={{ padding: "6px 5px", border: "1px solid #e2e8f0", textAlign: "center" }}>
-        <Button size="small" color="error" onClick={() => removePrePlanningRow(row.id)}>Remove</Button>
+      <td style={{ padding: "6px 5px", border: `1px solid ${PAL.sandDark}`, textAlign: "center" }}>
+        <Button size="small" sx={{ color: PAL.clay, fontFamily: FONT_BODY }} onClick={() => removePrePlanningRow(row.id)}>Remove</Button>
       </td>
     </tr>
   );
@@ -1558,7 +1666,7 @@ export const SakshamSaturdayReport = () => {
              
       ].map(([field, label]) => (
         <td key={field} style={{
-          padding: "6px 5px", border: "1px solid #dbeafe",
+          padding: "6px 5px", border: `1px solid ${PAL.ochre}`,
           minWidth: field === "className" ? 90 : field === "studentsParticipated" ? 110 : 130,
         }}>
           {field === "className" ? (
@@ -1581,37 +1689,40 @@ export const SakshamSaturdayReport = () => {
         </td>
       ))}
       {/* Photos / Report column */}
-      <td style={{ padding: "6px 5px", border: "1px solid #dbeafe", minWidth: 180 }}>
+      <td style={{ padding: "6px 5px", border: `1px solid ${PAL.ochre}`, minWidth: 180 }}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-          <Button size="small" variant="outlined" component="label">
+          <Button size="small" variant="outlined" component="label" sx={{ fontFamily: FONT_BODY, borderColor: PAL.ochre, color: PAL.brownDark }}>
             Upload Photos
             <input hidden multiple accept="image/*" type="file"
               onChange={(e) => handlePostFileUpload(row.id, "photos", e.target.files)} />
           </Button>
-          <Typography sx={{ fontSize: 11, color: "#475569" }}>
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.85 }}>
             {row.photos?.length ? `${row.photos.length} photo(s): ${row.photos.join(", ")}` : "No photos uploaded"}
           </Typography>
-          <Button size="small" variant="outlined" component="label">
+          <Button size="small" variant="outlined" component="label" sx={{ fontFamily: FONT_BODY, borderColor: PAL.ochre, color: PAL.brownDark }}>
             Upload Report
             <input hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" type="file"
               onChange={(e) => handlePostFileUpload(row.id, "reportFile", e.target.files)} />
           </Button>
-          <Typography sx={{ fontSize: 11, color: "#475569" }}>
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.85 }}>
             {row.reportFile || "No report uploaded"}
           </Typography>
         </Box>
       </td>
-      <td style={{ padding: "6px 5px", border: "1px solid #dbeafe", textAlign: "center" }}>
-        <Button size="small" color="error" onClick={() => removePostPlanningRow(row.id)}>Remove</Button>
+      <td style={{ padding: "6px 5px", border: `1px solid ${PAL.ochre}`, textAlign: "center" }}>
+        <Button size="small" sx={{ color: PAL.clay, fontFamily: FONT_BODY }} onClick={() => removePostPlanningRow(row.id)}>Remove</Button>
       </td>
     </tr>
   );
 
   return (
     <Box sx={{ width: "100%", overflow: "hidden" }}>
-      <Typography sx={{ fontWeight: 800, color: "#1e3a5f", fontSize: 15, mb: 1.5 }}>
-        Saksham Saturday Planning Report
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+        <DiamondBullet size={8} />
+        <Typography sx={{ ...headingSx(15), color: PAL.clayDark }}>
+          Saksham Saturday Planning Report
+        </Typography>
+      </Box>
 
       {/* ══════════════════════════════════════════════════════
           ① ACADEMIC CALENDAR — placed first, above all tables
@@ -1627,9 +1738,9 @@ export const SakshamSaturdayReport = () => {
         <Alert
           severity="info"
           icon={false}
-          sx={{ mb: 1.5, py: 0.6, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 2 }}
+          sx={{ mb: 1.5, py: 0.6, background: PAL.sand, border: `1px solid ${PAL.ochre}`, borderRadius: 2 }}
         >
-          <Typography sx={{ fontSize: 12, color: "#1e40af" }}>
+          <Typography sx={{ fontFamily: FONT_BODY, fontSize: 12, color: PAL.brownDark }}>
             📌 <strong>{selectedWeekLabel}</strong> is selected — click <em>"Add Row"</em> in either table below to start a new entry pre-filled with this week label.
           </Typography>
         </Alert>
@@ -1638,15 +1749,15 @@ export const SakshamSaturdayReport = () => {
       {/* ══════════════════════════════════════════════════════
           ② PRE-ACTIVITY PLANNING TABLE
          ══════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: "1px solid #cbd5e1", borderRadius: 2, mb: 1.5, background: "#fff" }}>
+      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: `1px solid ${PAL.ochre}`, borderRadius: 2, mb: 1.5, background: "#fff" }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
           <Box>
-            <Typography sx={{ fontWeight: 700, color: "#334155", fontSize: 13 }}>Pre-Activity Planning</Typography>
-            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 0.25 }}>
+            <Typography sx={{ ...headingSx(13), color: PAL.brownDark }}>Pre-Activity Planning</Typography>
+            <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.8, mt: 0.25 }}>
               Class dropdown: 6 / 7 / 8 &nbsp;·&nbsp; Select a Saturday above then click Add Row to pre-fill the week
             </Typography>
           </Box>
-          <Button size="small" variant="outlined" onClick={addPrePlanningRow}>+ Add Row</Button>
+          <Button size="small" variant="outlined" onClick={addPrePlanningRow} sx={{ fontFamily: FONT_BODY, borderColor: PAL.ochre, color: PAL.brownDark }}>+ Add Row</Button>
         </Box>
         {renderEditableTable(
           ["Month / Week", "Class", "Theme Category", "Activity Name", "Resource Person", "Students Participated",  ""],
@@ -1658,15 +1769,15 @@ export const SakshamSaturdayReport = () => {
       {/* ══════════════════════════════════════════════════════
           ③ POST-ACTIVITY REPORT TABLE
          ══════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: "1px solid #bfdbfe", borderRadius: 2, mb: 1.5, background: "#f8fbff" }}>
+      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: `1px solid ${PAL.ochre}`, borderRadius: 2, mb: 1.5, background: PAL.sand }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
           <Box>
-            <Typography sx={{ fontWeight: 700, color: "#1d4ed8", fontSize: 13 }}>Post-Activity Report</Typography>
-            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 0.25 }}>
+            <Typography sx={{ ...headingSx(13), color: PAL.clayDark }}>Post-Activity Report</Typography>
+            <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.8, mt: 0.25 }}>
               Uses the same Academic Calendar above — select a Saturday and Add Row to pre-fill
             </Typography>
           </Box>
-          <Button size="small" variant="outlined" onClick={addPostPlanningRow}>+ Add Row</Button>
+          <Button size="small" variant="outlined" onClick={addPostPlanningRow} sx={{ fontFamily: FONT_BODY, borderColor: PAL.clay, color: PAL.clayDark }}>+ Add Row</Button>
         </Box>
 
         {renderEditableTable(
@@ -1681,22 +1792,22 @@ export const SakshamSaturdayReport = () => {
       {/* ══════════════════════════════════════════════════════
           ④ GAP ANALYSIS
          ══════════════════════════════════════════════════════ */}
-      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: "1px solid #fed7aa", borderRadius: 2, background: "#fff7ed" }}>
-        <Typography sx={{ fontWeight: 700, color: "#c2410c", fontSize: 13, mb: 1.5 }}>Gap Analysis</Typography>
+      <Paper elevation={0} sx={{ p: { xs: 1.25, md: 1.5 }, border: `1px solid ${PAL.ochre}`, borderRadius: 2, background: "#FBF0E2" }}>
+        <Typography sx={{ ...headingSx(13), color: PAL.clayDark, mb: 1.5 }}>Gap Analysis</Typography>
         {renderEditableTable(
           ["Month / Week", "Class", "Theme Category", "Activity Name", "Gap Identified", "Status", "Action Point"],
           gapRows,
           (row) => (
             <tr key={row.id}>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.monthWeek}</td>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.className}</td>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.themeCategory}</td>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12, fontWeight: 600 }}>{row.activity}</td>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12, color: row.gap === "No gap" ? "#16a34a" : "#dc2626", fontWeight: 700 }}>{row.gap}</td>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa" }}>
-                <Chip label={row.status} size="small" sx={{ background: row.status === "Complete" ? "#dcfce7" : "#fee2e2", color: row.status === "Complete" ? "#16a34a" : "#dc2626", fontWeight: 700 }} />
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}`, fontSize: 12, fontFamily: FONT_BODY }}>{row.monthWeek}</td>
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}`, fontSize: 12, fontFamily: FONT_BODY }}>{row.className}</td>
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}`, fontSize: 12, fontFamily: FONT_BODY }}>{row.themeCategory}</td>
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}`, fontSize: 12, fontFamily: FONT_BODY, fontWeight: 600 }}>{row.activity}</td>
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}`, fontSize: 12, fontFamily: FONT_BODY, color: row.gap === "No gap" ? "#3f7d3a" : PAL.clay, fontWeight: 700 }}>{row.gap}</td>
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}` }}>
+                <Chip label={row.status} size="small" sx={{ fontFamily: FONT_BODY, background: row.status === "Complete" ? "#e3efd8" : "#f7e2d8", color: row.status === "Complete" ? "#3f7d3a" : PAL.clay, fontWeight: 700 }} />
               </td>
-              <td style={{ padding: "8px", border: "1px solid #fed7aa", fontSize: 12 }}>{row.action}</td>
+              <td style={{ padding: "8px", border: `1px solid ${PAL.ochre}`, fontSize: 12, fontFamily: FONT_BODY }}>{row.action}</td>
             </tr>
           )
         )}
@@ -1719,34 +1830,30 @@ const Attendance = ({
   const teachingCount    = staffAttendanceRows.filter((r) => r.staffType === "Teaching"     && r.month === teachingAttMonth).length;
   const nonTeachingCount = staffAttendanceRows.filter((r) => r.staffType === "Non-Teaching" && r.month === nonTeachingAttMonth).length;
 
+  const accordionHeaderSx = {
+    color: PAL.cream,
+    minHeight: 48,
+    "& .MuiTypography-root": { fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, letterSpacing: 0.3 },
+  };
+
   return (
     <Box>
-      <Box sx={{ background: "linear-gradient(135deg, #0f172a, #1e3a5f)", borderRadius: 3, px: 3, py: 2.5, mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
-        <Typography sx={{ fontSize: 30 }}>📅</Typography>
-        <Box>
-          <Typography sx={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>Attendance Management</Typography>
-          <Typography sx={{ color: "#94a3b8", fontSize: 12 }}>
-            Staff &amp; Student monthly attendance — Excel import or manual entry
-          </Typography>
-        </Box>
-      </Box>
-
       {/* Holiday List */}
       <Accordion defaultExpanded={false} sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-          sx={{ background: "linear-gradient(135deg, #1e3a5f, #2563eb)", color: "#fff", minHeight: 48 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: PAL.cream }} />}
+          sx={{ background: `linear-gradient(135deg, ${PAL.brown}, ${PAL.clay})`, ...accordionHeaderSx }}>
           <Typography sx={{ fontWeight: 700, fontSize: 13 }}>🗓️ Assam Government Holiday List (2024–2026)</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}><AssamHolidayList /></AccordionDetails>
+        <AccordionDetails sx={{ p: 2, background: PAL.cream }}><AssamHolidayList /></AccordionDetails>
       </Accordion>
 
       {showSakshamSaturday && (
         <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-            sx={{ background: "linear-gradient(135deg, #92400e, #f97316)", color: "#fff", minHeight: 48 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: PAL.cream }} />}
+            sx={{ background: `linear-gradient(135deg, ${PAL.clayDark}, ${PAL.ochre})`, ...accordionHeaderSx }}>
             <Typography sx={{ fontWeight: 700, fontSize: 13 }}>Saksham Saturday - Pre-Activity Planning, Post-Activity Report &amp; Gap Analysis</Typography>
           </AccordionSummary>
-          <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+          <AccordionDetails sx={{ p: 2, background: PAL.cream }}>
             <SakshamSaturdayReport />
           </AccordionDetails>
         </Accordion>
@@ -1754,14 +1861,14 @@ const Attendance = ({
 
       {/* Teaching Staff */}
       <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-          sx={{ background: "linear-gradient(to right, #1976d2, #42a5f5)", color: "#fff", minHeight: 48 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: PAL.cream }} />}
+          sx={{ background: `linear-gradient(135deg, ${PAL.clay}, ${PAL.clayDark})`, ...accordionHeaderSx }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Typography sx={{ fontWeight: 700, fontSize: 13 }}>👨‍🏫 Teaching Staff — Monthly Attendance</Typography>
-            {teachingCount > 0 && <Chip label={`${teachingCount} records`} size="small" sx={{ background: "#ffffff33", color: "#fff", fontWeight: 700, fontSize: 11 }} />}
+            {teachingCount > 0 && <Chip label={`${teachingCount} records`} size="small" sx={{ background: "#ffffff33", color: PAL.cream, fontWeight: 700, fontFamily: FONT_BODY, fontSize: 11 }} />}
           </Box>
         </AccordionSummary>
-        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: PAL.cream }}>
           <StaffAttendanceSection
             staffType="Teaching"
             rows={staffAttendanceRows} setRows={setStaffAttendanceRows}
@@ -1772,14 +1879,14 @@ const Attendance = ({
 
       {/* Non-Teaching Staff */}
       <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-          sx={{ background: "linear-gradient(to right, #7c3aed, #a78bfa)", color: "#fff", minHeight: 48 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: PAL.cream }} />}
+          sx={{ background: `linear-gradient(135deg, ${PAL.brown}, ${PAL.brownDark})`, ...accordionHeaderSx }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Typography sx={{ fontWeight: 700, fontSize: 13 }}>🧹 Non-Teaching Staff — Monthly Attendance</Typography>
-            {nonTeachingCount > 0 && <Chip label={`${nonTeachingCount} records`} size="small" sx={{ background: "#ffffff33", color: "#fff", fontWeight: 700, fontSize: 11 }} />}
+            {nonTeachingCount > 0 && <Chip label={`${nonTeachingCount} records`} size="small" sx={{ background: "#ffffff33", color: PAL.cream, fontWeight: 700, fontFamily: FONT_BODY, fontSize: 11 }} />}
           </Box>
         </AccordionSummary>
-        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: PAL.cream }}>
           <StaffAttendanceSection
             staffType="Non-Teaching"
             rows={staffAttendanceRows} setRows={setStaffAttendanceRows}
@@ -1790,25 +1897,25 @@ const Attendance = ({
 
       {/* Annual Overview */}
       <Accordion sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-          sx={{ background: "linear-gradient(to right, #374151, #6b7280)", color: "#fff", minHeight: 48 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: PAL.cream }} />}
+          sx={{ background: `linear-gradient(135deg, ${PAL.slate}, ${PAL.slateDark})`, ...accordionHeaderSx }}>
           <Typography sx={{ fontWeight: 700, fontSize: 13 }}>📊 Annual Staff Attendance Overview</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: PAL.cream }}>
           <AnnualStaffOverview staffAttendanceRows={staffAttendanceRows} />
         </AccordionDetails>
       </Accordion>
 
       {/* Student Attendance */}
       <Accordion defaultExpanded sx={{ mb: 2, borderRadius: "10px !important", overflow: "hidden", "&::before": { display: "none" } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#fff" }} />}
-          sx={{ background: "linear-gradient(135deg, #0f766e, #14b8a6)", color: "#fff", minHeight: 48 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: PAL.cream }} />}
+          sx={{ background: `linear-gradient(135deg, ${STUDENT_ACCENT}, ${PAL.clay})`, ...accordionHeaderSx }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Typography sx={{ fontWeight: 700, fontSize: 13 }}>🎓 Student Attendance &amp; Performance</Typography>
-            {studentAttendanceData.length > 0 && <Chip label={`${studentAttendanceData.length} records`} size="small" sx={{ background: "#ffffff33", color: "#fff", fontWeight: 700, fontSize: 11 }} />}
+            {studentAttendanceData.length > 0 && <Chip label={`${studentAttendanceData.length} records`} size="small" sx={{ background: "#ffffff33", color: PAL.cream, fontWeight: 700, fontFamily: FONT_BODY, fontSize: 11 }} />}
           </Box>
         </AccordionSummary>
-        <AccordionDetails sx={{ p: 2, background: "#f8fafc" }}>
+        <AccordionDetails sx={{ p: 2, background: PAL.cream }}>
           <StudentAttendanceSection
             studentAttendanceData={studentAttendanceData}
             setStudentAttendanceData={setStudentAttendanceData}

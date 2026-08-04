@@ -321,7 +321,7 @@ export default function SchoolDetails({
                         type: "number",
                         inputProps: { min: 0 },
                       })}
-                    {...(["NameofthePrincipal", "emailid"].includes(fieldItem.name) && {
+                    {...(fieldItem.name === "NameofthePrincipal" && {
                       onKeyDown: (e) => {
                         if (/^[0-9]$/.test(e.key)) e.preventDefault();
                       },

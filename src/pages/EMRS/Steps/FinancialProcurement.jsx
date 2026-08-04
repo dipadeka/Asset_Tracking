@@ -67,7 +67,9 @@ const FinancialProcurement = ({
     typeof row.component === "string" &&
     row.component.toLowerCase().includes("direct expenditure on students");
 
-  // Sums of the 2a–2e sub-rows — these become the values for row 2 itself.
+  // Sums of the 2a–2e sub-rows. Row 2 ("Direct Expenditure on Students") is the
+  // ceiling — these sub-row totals must not exceed row 2's own values. We no
+  // longer auto-fill row 2 from these; row 2 is entered directly by the user.
   const directTotals = {
     colA: directExpenditure.reduce((sum, r) => sum + (Number(r.colA) || 0), 0),
     colC: directExpenditure.reduce((sum, r) => sum + (Number(r.colC) || 0), 0),
@@ -75,11 +77,25 @@ const FinancialProcurement = ({
     colE: directExpenditure.reduce((sum, r) => sum + (Number(r.colE) || 0), 0),
   };
 
-  // Effective value for a recurringBreakup row/field: for the Direct Expenditure
-  // row this is the computed sub-row total; for every other row it's just the
-  // value the user typed in.
-  const getEffectiveValue = (row, field) =>
-    isDirectExpenditureRow(row) ? directTotals[field] : Number(row[field]) || 0;
+  // Column labels used in the validation summary row.
+  const columnLabels = { colA: "A", colC: "C", colD: "D", colE: "E" };
+
+  // Given the parent "Direct Expenditure on Students" row, check each column's
+  // sub-row total against the parent's value. Returns an array of
+  // { field, label, subTotal, cap, exceeded, remaining }.
+  const getDirectExpenditureValidation = (parentRow) =>
+    Object.keys(columnLabels).map((field) => {
+      const subTotal = directTotals[field];
+      const cap = Number(parentRow[field]) || 0;
+      return {
+        field,
+        label: columnLabels[field],
+        subTotal,
+        cap,
+        exceeded: subTotal > cap,
+        remaining: cap - subTotal,
+      };
+    });
 
   return (
     <>
@@ -332,98 +348,54 @@ const FinancialProcurement = ({
                   {row.component}
                 </td>
                 <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                  {isDirectExpenditureRow(row) ? (
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={directTotals.colA}
-                      InputProps={{ readOnly: true }}
-                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
-                      sx={{ width: "130px" }}
-                    />
-                  ) : (
-                    <TextField
-                      size="small"
-                      type="number"
-                      inputProps={{ min: 0, style: { textAlign: "right" } }}
-                      value={row.colA}
-                      onChange={(e) => handleBreakupChange(index, "colA", e.target.value)}
-                      sx={{ width: "130px" }}
-                    />
-                  )}
+                  <TextField
+                    size="small"
+                    type="number"
+                    inputProps={{ min: 0, style: { textAlign: "right" } }}
+                    value={row.colA}
+                    onChange={(e) => handleBreakupChange(index, "colA", e.target.value)}
+                    sx={{ width: "130px" }}
+                  />
                 </td>
                 <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
                   <TextField
                     size="small"
                     type="number"
-                    value={getEffectiveValue(row, "colA") * 300}
+                    value={(Number(row.colA) || 0) * 300}
                     InputProps={{ readOnly: true }}
                     inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
                     sx={{ width: "140px" }}
                   />
                 </td>
                 <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                  {isDirectExpenditureRow(row) ? (
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={directTotals.colC}
-                      InputProps={{ readOnly: true }}
-                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
-                      sx={{ width: "130px" }}
-                    />
-                  ) : (
-                    <TextField
-                      size="small"
-                      type="number"
-                      inputProps={{ min: 0, style: { textAlign: "right" } }}
-                      value={row.colC}
-                      onChange={(e) => handleBreakupChange(index, "colC", e.target.value)}
-                      sx={{ width: "130px" }}
-                    />
-                  )}
+                  <TextField
+                    size="small"
+                    type="number"
+                    inputProps={{ min: 0, style: { textAlign: "right" } }}
+                    value={row.colC}
+                    onChange={(e) => handleBreakupChange(index, "colC", e.target.value)}
+                    sx={{ width: "130px" }}
+                  />
                 </td>
                 <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                  {isDirectExpenditureRow(row) ? (
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={directTotals.colD}
-                      InputProps={{ readOnly: true }}
-                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
-                      sx={{ width: "130px" }}
-                    />
-                  ) : (
-                    <TextField
-                      size="small"
-                      type="number"
-                      inputProps={{ min: 0, style: { textAlign: "right" } }}
-                      value={row.colD}
-                      onChange={(e) => handleBreakupChange(index, "colD", e.target.value)}
-                      sx={{ width: "130px" }}
-                    />
-                  )}
+                  <TextField
+                    size="small"
+                    type="number"
+                    inputProps={{ min: 0, style: { textAlign: "right" } }}
+                    value={row.colD}
+                    onChange={(e) => handleBreakupChange(index, "colD", e.target.value)}
+                    sx={{ width: "130px" }}
+                  />
                 </td>
                 <td style={{ border: "1px solid #e0e0e0", padding: "4px", textAlign: "right" }}>
-                  {isDirectExpenditureRow(row) ? (
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={directTotals.colE}
-                      InputProps={{ readOnly: true }}
-                      inputProps={{ style: { textAlign: "right", background: "#f0f4ff", color: "#1976d2" } }}
-                      sx={{ width: "140px" }}
-                    />
-                  ) : (
-                    <TextField
-                      size="small"
-                      type="number"
-                      inputProps={{ min: 0, style: { textAlign: "right" } }}
-                      value={row.colE}
-                      onChange={(e) => handleBreakupChange(index, "colE", e.target.value)}
-                      sx={{ width: "140px" }}
-                    />
-                  )}
+                  <TextField
+                    size="small"
+                    type="number"
+                    inputProps={{ min: 0, style: { textAlign: "right" } }}
+                    value={row.colE}
+                    onChange={(e) => handleBreakupChange(index, "colE", e.target.value)}
+                    sx={{ width: "140px" }}
+                  />
                 </td>
                 <td style={{ border: "1px solid #e0e0e0", padding: "4px" }}>
                   <TextField
@@ -453,6 +425,9 @@ const FinancialProcurement = ({
                       }}
                     >
                       Detailed Breakup — Direct Expenditure on Students
+                      <span style={{ fontWeight: 400, fontStyle: "normal", color: "#888", marginLeft: 8 }}>
+                        (2a–2e together must not exceed row 2's values)
+                      </span>
                     </td>
                   </tr>
                   {directExpenditure.map((subRow, subIndex) => (
@@ -543,12 +518,72 @@ const FinancialProcurement = ({
                       </td>
                     </tr>
                   ))}
+
+                  {/* ── Validation row: sub-row totals (2a–2e) vs row 2's cap ── */}
+                  {(() => {
+                    const validations = getDirectExpenditureValidation(row);
+                    const anyExceeded = validations.some((v) => v.exceeded);
+                    return (
+                      <tr style={{ background: anyExceeded ? "#fdecea" : "#f1f8f4" }}>
+                        <td
+                          colSpan={2}
+                          style={{
+                            border: "1px solid #e0e0e0",
+                            padding: "8px",
+                            fontWeight: 600,
+                            textAlign: "right",
+                            color: anyExceeded ? "#c62828" : "#2e7d32",
+                          }}
+                        >
+                          Sub-total (2a–2e){anyExceeded ? " — exceeds row 2!" : ""}
+                        </td>
+                        {["colA", "colA*300", "colC", "colD", "colE"].map((col) => {
+                          if (col === "colA*300") {
+                            return (
+                              <td
+                                key={col}
+                                style={{
+                                  border: "1px solid #e0e0e0",
+                                  padding: "8px",
+                                  textAlign: "right",
+                                  color: "#888",
+                                }}
+                              >
+                                —
+                              </td>
+                            );
+                          }
+                          const v = validations.find((x) => x.field === col);
+                          return (
+                            <td
+                              key={col}
+                              style={{
+                                border: "1px solid #e0e0e0",
+                                padding: "8px",
+                                textAlign: "right",
+                                fontWeight: v.exceeded ? 700 : 400,
+                                color: v.exceeded ? "#c62828" : "#333",
+                              }}
+                            >
+                              {v.subTotal} / {v.cap}
+                              {v.exceeded && (
+                                <div style={{ fontSize: "0.7rem" }}>
+                                  over by {Math.abs(v.remaining)}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td style={{ border: "1px solid #e0e0e0", padding: "8px" }}></td>
+                      </tr>
+                    );
+                  })()}
                 </>
               )}
             </React.Fragment>
           ))}
 
-          {/* Total Row — sums rows 1-6 only; row 2's value is its computed sub-row total */}
+          {/* Total Row — sums all rows using whatever value is currently in each row */}
           <tr style={{ background: "#e3f2fd" }}>
             <td colSpan={2} style={{ border: "1px solid #e0e0e0", padding: "8px", fontWeight: "bold" }}>
               TOTAL
@@ -566,10 +601,10 @@ const FinancialProcurement = ({
                 ₹
                 {col === "colA*300"
                   ? recurringBreakup
-                      .reduce((sum, r) => sum + getEffectiveValue(r, "colA") * 300, 0)
+                      .reduce((sum, r) => sum + (Number(r.colA) || 0) * 300, 0)
                       .toLocaleString("en-IN")
                   : recurringBreakup
-                      .reduce((sum, r) => sum + getEffectiveValue(r, col), 0)
+                      .reduce((sum, r) => sum + (Number(r[col]) || 0), 0)
                       .toLocaleString("en-IN")}
               </td>
             ))}

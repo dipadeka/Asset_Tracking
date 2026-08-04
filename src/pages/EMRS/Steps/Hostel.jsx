@@ -8,6 +8,8 @@ const AUTO_FILLED_FIELDS = {
   "Hostel Capacity": "240"
 };
 
+// ─── Helper: allow only alphabets + spaces (blocks numbers/symbols, incl. paste) ──
+const alphabetOnly = (value) => value.replace(/[^A-Za-z\s]/g, "");
 
 export default function HostelDetails({
   control,
@@ -318,6 +320,24 @@ export default function HostelDetails({
                            label="Warden Name"
                            fullWidth
                            size="small"
+                           onKeyDown={(e) => {
+                             if (
+                               /^[0-9]$/.test(e.key) ||
+                               /^[^A-Za-z\s]$/.test(e.key) &&
+                                 ![
+                                   "Backspace",
+                                   "Delete",
+                                   "ArrowLeft",
+                                   "ArrowRight",
+                                   "Tab",
+                                 ].includes(e.key)
+                             ) {
+                               e.preventDefault();
+                             }
+                           }}
+                           onChange={(e) => {
+                             field.onChange(alphabetOnly(e.target.value));
+                           }}
                          />
                        )}
                      />
@@ -654,6 +674,24 @@ export default function HostelDetails({
                            label="Warden Name"
                            fullWidth
                            size="small"
+                           onKeyDown={(e) => {
+                             if (
+                               /^[0-9]$/.test(e.key) ||
+                               /^[^A-Za-z\s]$/.test(e.key) &&
+                                 ![
+                                   "Backspace",
+                                   "Delete",
+                                   "ArrowLeft",
+                                   "ArrowRight",
+                                   "Tab",
+                                 ].includes(e.key)
+                             ) {
+                               e.preventDefault();
+                             }
+                           }}
+                           onChange={(e) => {
+                             field.onChange(alphabetOnly(e.target.value));
+                           }}
                          />
                        )}
                      />
@@ -892,5 +930,4 @@ export default function HostelDetails({
                    </Box>
                  </Box>
                </>
-             )}   
-  
+             )}

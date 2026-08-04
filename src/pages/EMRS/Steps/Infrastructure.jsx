@@ -41,6 +41,10 @@ const TOTAL_CLASSROOMS = CLASS_ROWS.length;
 
 const SPORTS_OPTIONS = ["Kho-kho", "Basketball", "Volleyball", "Kabaddi", "Archery", "Others"];
 
+// ─── Helper: only allow non-negative numeric input ──────────────────────────
+// Blocks "-" and any negative value from ever being committed to form state.
+const isNonNegative = (val) => val === "" || (Number(val) >= 0 && !isNaN(Number(val)));
+
 // ─── Reusable Excel Upload + Preview Component ───────────────────────────────
 function ExcelUploadField({ label, value, onChange, templateCols, hint }) {
   const inputRef = useRef();
@@ -324,37 +328,39 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
             <TableHead>
               <TableRow sx={{ backgroundColor: "#e3f2fd" }}>
                 <TableCell sx={{ fontWeight: 700, fontSize: 13 }}>Class – Section</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: 13, minWidth: 180 }}>Smart Class</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: 13, minWidth: 180 }}>Projector</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 13, minWidth: 100 }} align="center">Smart Class</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: 13, minWidth: 100 }} align="center">Projector</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {CLASS_ROWS.map((row, idx) => (
                 <TableRow key={row.key} sx={{ backgroundColor: idx % 2 === 0 ? "#fff" : "#f9fbff" }}>
                   <TableCell sx={{ fontWeight: 500, fontSize: 13 }}>{row.label}</TableCell>
-                  <TableCell>
+                  <TableCell align="center">
                     <Controller
                       name={`classroom_smart_${row.key}`}
                       control={control}
                       defaultValue=""
                       render={({ field }) => (
-                        <TextField {...field} select size="small" fullWidth label="Smart Class" sx={{ minWidth: 160 }}>
-                          <MenuItem value="Yes">✅ Yes</MenuItem>
-                          <MenuItem value="No">❌ No</MenuItem>
-                        </TextField>
+                        <Checkbox
+                          checked={field.value === "Yes"}
+                          onChange={(e) => field.onChange(e.target.checked ? "Yes" : "No")}
+                          color="primary"
+                        />
                       )}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell align="center">
                     <Controller
                       name={`classroom_proj_${row.key}`}
                       control={control}
                       defaultValue=""
                       render={({ field }) => (
-                        <TextField {...field} select size="small" fullWidth label="Projector" sx={{ minWidth: 160 }}>
-                          <MenuItem value="Yes">✅ Yes</MenuItem>
-                          <MenuItem value="No">❌ No</MenuItem>
-                        </TextField>
+                        <Checkbox
+                          checked={field.value === "Yes"}
+                          onChange={(e) => field.onChange(e.target.checked ? "Yes" : "No")}
+                          color="secondary"
+                        />
                       )}
                     />
                   </TableCell>
@@ -362,7 +368,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
               ))}
               <TableRow sx={{ backgroundColor: "#e8f5e9", fontWeight: 700 }}>
                 <TableCell sx={{ fontWeight: 700 }}>Total ({TOTAL_CLASSROOMS} rooms)</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>
+                <TableCell sx={{ fontWeight: 700 }} align="center">
                   ✅ {smartYesCount} &nbsp; ❌ {smartNoCount}
                   {smartYesCount + smartNoCount < TOTAL_CLASSROOMS && (
                     <Typography component="span" sx={{ fontSize: 11, color: "#999", ml: 1 }}>
@@ -370,7 +376,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                     </Typography>
                   )}
                 </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>
+                <TableCell sx={{ fontWeight: 700 }} align="center">
                   ✅ {projYesCount} &nbsp; ❌ {projNoCount}
                   {projYesCount + projNoCount < TOTAL_CLASSROOMS && (
                     <Typography component="span" sx={{ fontSize: 11, color: "#999", ml: 1 }}>
@@ -498,6 +504,10 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Plant Capacity (kW)"
                 fullWidth
                 size="small"
+                inputProps={{ min: 0 }}
+                onChange={(e) => {
+                  if (isNonNegative(e.target.value)) field.onChange(e.target.value);
+                }}
               />
             )}
           />
@@ -515,6 +525,10 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Installation Year"
                 fullWidth
                 size="small"
+                inputProps={{ min: 0 }}
+                onChange={(e) => {
+                  if (isNonNegative(e.target.value)) field.onChange(e.target.value);
+                }}
               />
             )}
           />
@@ -532,6 +546,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Solar Plant Type"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
               >
                 <MenuItem value="On Grid">On Grid</MenuItem>
                 <MenuItem value="Off Grid">Off Grid</MenuItem>
@@ -553,6 +568,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Plant Functional"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
               >
                 <MenuItem value="Yes">Yes</MenuItem>
                 <MenuItem value="No">No</MenuItem>
@@ -575,6 +591,10 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Campus Powered (%)"
                 fullWidth
                 size="small"
+                inputProps={{ min: 0, max: 100 }}
+                onChange={(e) => {
+                  if (isNonNegative(e.target.value)) field.onChange(e.target.value);
+                }}
               />
             )}
           />

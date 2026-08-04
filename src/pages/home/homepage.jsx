@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ApplyOnlineModal from "./ApplyOnline";
 import { T, EMRS_PINS, BodoWeaveBackground } from "./emrsShared";
-
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA (image field added to each EMRS pin + each Asset pin for hover/preview)
 // EMRS_PINS, T, and BodoWeaveBackground now live in ./emrsShared.jsx instead
@@ -235,21 +234,21 @@ function getCivicInfo(pinName) {
 }
 
 const STAFF_DATA = [
-  { name: "Mr. R. Basumatary", school: "EMRS Dalbari", desig: "Principal", subject: "General", exp: "14 yrs", status: "Active" },
-  { name: "Ms. P. Devi", school: "EMRS Kharadhara", desig: "Principal", subject: "General", exp: "11 yrs", status: "Active" },
-  { name: "Dr. S. Terang", school: "EMRS Howraghat", desig: "Principal", subject: "General", exp: "18 yrs", status: "Active" },
-  { name: "Mr. A. Gogoi", school: "EMRS Bedlangmari", desig: "Principal", subject: "General", exp: "9 yrs", status: "Active" },
-  { name: "Ms. N. Das", school: "EMRS Silonijan", desig: "Vice Principal", subject: "General", exp: "8 yrs", status: "Active" },
-  { name: "Mr. B. Bora", school: "EMRS Donka", desig: "PGT", subject: "Mathematics", exp: "7 yrs", status: "Active" },
-  { name: "Ms. R. Choudhury", school: "EMRS Jonai", desig: "PGT", subject: "Science", exp: "6 yrs", status: "Active" },
-  { name: "Mr. K. Hmar", school: "EMRS Phuloni", desig: "TGT", subject: "English", exp: "5 yrs", status: "Active" },
-  { name: "Ms. A. Kalita", school: "EMRS Harangajao", desig: "TGT", subject: "Social Studies", exp: "4 yrs", status: "On Leave" },
-  { name: "Mr. P. Hazarika", school: "EMRS Boko", desig: "PGT", subject: "Physics", exp: "10 yrs", status: "Active" },
-  { name: "Ms. L. Timung", school: "EMRS Howraghat", desig: "TGT", subject: "Hindi", exp: "6 yrs", status: "Active" },
-  { name: "Mr. D. Basumatary", school: "EMRS Dalbari", desig: "PRT", subject: "Primary", exp: "3 yrs", status: "Active" },
-  { name: "Ms. G. Boro", school: "EMRS Bedlangmari", desig: "Admin", subject: "—", exp: "8 yrs", status: "Active" },
-  { name: "Mr. H. Narzary", school: "EMRS Jalah", desig: "TGT", subject: "Biology", exp: "5 yrs", status: "Active" },
-  { name: "Ms. S. Mech", school: "EMRS Sarupeta", desig: "PGT", subject: "Chemistry", exp: "7 yrs", status: "Active" },
+  { name: "Mr. R. Basumatary", school: "EMRS Dalbari", desig: "Principal", subject: "General", exp: "14 yrs", status: "Functional" },
+  { name: "Ms. P. Devi", school: "EMRS Kharadhara", desig: "Principal", subject: "General", exp: "11 yrs", status: "Functional" },
+  { name: "Dr. S. Terang", school: "EMRS Howraghat", desig: "Principal", subject: "General", exp: "18 yrs", status: "Functional" },
+  { name: "Mr. A. Gogoi", school: "EMRS Bedlangmari", desig: "Principal", subject: "General", exp: "9 yrs", status: "Functional" },
+  { name: "Ms. N. Das", school: "EMRS Silonijan", desig: "Vice Principal", subject: "General", exp: "8 yrs", status: "Functional" },
+  { name: "Mr. B. Bora", school: "EMRS Donka", desig: "PGT", subject: "Mathematics", exp: "7 yrs", status: "Functional" },
+  { name: "Ms. R. Choudhury", school: "EMRS Jonai", desig: "PGT", subject: "Science", exp: "6 yrs", status: "Functional" },
+  { name: "Mr. K. Hmar", school: "EMRS Phuloni", desig: "TGT", subject: "English", exp: "5 yrs", status: "Functional" },
+  { name: "Ms. A. Kalita", school: "EMRS Harangajao", desig: "TGT", subject: "Social Studies", exp: "4 yrs", status: "Functional" },
+  { name: "Mr. P. Hazarika", school: "EMRS Boko", desig: "PGT", subject: "Physics", exp: "10 yrs", status: "Non-Functional" },
+  { name: "Ms. L. Timung", school: "EMRS Howraghat", desig: "TGT", subject: "Hindi", exp: "6 yrs", status: "Functional" },
+  { name: "Mr. D. Basumatary", school: "EMRS Dalbari", desig: "PRT", subject: "Primary", exp: "3 yrs", status: "Functional" },
+  { name: "Ms. G. Boro", school: "EMRS Bedlangmari", desig: "Admin", subject: "—", exp: "8 yrs", status: "Functional" },
+  { name: "Mr. H. Narzary", school: "EMRS Jalah", desig: "TGT", subject: "Biology", exp: "5 yrs", status: "Functional" },
+  { name: "Ms. S. Mech", school: "EMRS Sarupeta", desig: "PGT", subject: "Chemistry", exp: "7 yrs", status: "Functional" },
 ];
 
 const HOSTEL_WARDENS = [
@@ -279,13 +278,14 @@ const HERO_SCROLL_IMAGES = [
   { src: "/images/emrs-ardaopur-assembly.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "School Assembly" },
   { src: "/images/emrs-ardaopur-dinninghall.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Dining Hall" },
   { src: "/images/emrs-ardaopur-hostel.jpeg", caption: "EMRS Ardaopur (Dima Hasao)", sub: "Hostel" },
+  { src: "/images/EMRS_eye_checkup.jpeg", caption: "EMRS Eye Checkup Camp", sub: "Health Camp" },
   { src: "/images/emrs-ardaopur-schoolgate.png", caption: "EMRS Ardaopur (Dima Hasao)", sub: "School Gate" },
-
+  { src: "/images/Min_with_staff.jpeg", caption: "Hob'ble Minister Visit to EMRS", sub: "Minister with Staff" },
   { src: "/images/emrs-boko-schoolbuilding.png", caption: "EMRS Boko (Kamrup)", sub: "School Building" },
-  { src: "/images/emrs-boko-playground.png", caption: "EMRS Boko (Kamrup)", sub: "Playground" },
-  { src: "/images/emrs-umrangsho-aerialview.png", caption: "EMRS Umrangso (Dima Hasao)", sub: "Aerial View" },
+  { src: "/images/emrs-sports-activity.jpeg", caption: "EMRS Sports Week", Sub: "Sports Activity" },
+  { src: "/images/emrs-umrangso-aerialview.png", caption: "EMRS Umrangso (Dima Hasao)", sub: "Aerial View" },
   { src: "/images/emrs-kharadhara-boyshostel.png", caption: "EMRS Kharadhara (Bajali)", sub: "Boys Hostel" },
-{ src: "/images/emrs-kharadhara-girlshostel.png", caption: "EMRS Kharadhara (Bajali)", sub: "Girls Hostel" },
+{ src: "/images/emrs_min_visit.jpeg", caption: "EMRS Kharadhara (Bajali)", sub: "Hon'ble Minister Visit" },
 ];
 
 // NOTE: T (design tokens) now comes from ./emrsShared — see the import at
@@ -1157,16 +1157,16 @@ function GallerySection() {
     "EMRS Dalbari, Barama": [
       { type: "photo", src: "/images/emrs-dalbari-school.jpeg", caption: "School Building" },
     ],
-    "EMRS Kharadhara": [
+    "EMRS Kharadhara, Bajali": [
       { type: "photo", src: "/images/emrs-kharadhara-girlshostel.png", caption: "Girls Hostel" },
       { type: "photo", src: "/images/emrs-kharadhara-boyshostel.png", caption: "Boys Hostel" },
       { type: "photo", src: "/images/emrs-kharadhara-inauguration.png", caption: "School Building" },
     ],
-    "EMRS Howraghat": [
+    "EMRS Howraghat, Karbi Anglong": [
       { type: "photo", src: "/images/emrs-howraghat-schoolbuilding.png", caption: "School Building" },
       { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", thumb: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600", caption: "Cultural Programme" },
     ],
-    "EMRS Bedlangmari": [
+    "EMRS Bedlangmari, Kokrajhar": [
       { type: "photo", src: "images/emrs-bedlangmari-schoolbuilding.png", caption: "School Building" },
       { type: "photo", src: "images/emrs-bedlangmari-hostel.png", caption: "Hostel" }],
       "EMRS Jonai, Dhemaji": [
@@ -1174,7 +1174,7 @@ function GallerySection() {
       { type: "photo", src: "images/emrs-jonai-schoolbuilding.png",  caption: "School Building" },
       { type: "photo", src: "images/emrs-jonai-aerialview.png", caption: "Aerial View" },
     ],
-    "EMRS Ardaopur": [
+    "EMRS Ardaopur, Dima Hasao": [
       { type: "photo", src: "images/emrs-ardaopur-schoolbuilding.png", caption: "School Building" },
       { type: "photo", src: "images/emrs-ardaopur-hostel.png", caption: "Hostel" },
       { type: "photo", src: "images/emrs-ardaopur-academic-block.jpeg", caption: "Academic Block" },
@@ -1182,7 +1182,7 @@ function GallerySection() {
 { type: "photo", src: "images/emrs-ardaopur-dinninghall.jpeg", caption: "Dining Hall" },
 { type: "photo", src: "images/emrs-ardaopur-schoolgate.png", caption: "School Gate" },
     ],   
-"EMRS Phuloni Karbi Anglong": [
+"EMRS Phuloni, Karbi Anglong": [
       { type: "photo", src: "images/emrs-phuloni-schoolbuilding.png", caption: "School Building" },
       { type: "photo", src: "images/emrs-phuloni-hostel.png", caption: "Hostel" },
     ]
@@ -1378,7 +1378,7 @@ function AssamOSMMap({ activeLayer, selectedPin, onPinClick }) {
   return (
     <div style={{ position: "relative", borderRadius: "0 0 16px 16px", overflow: "hidden" }}>
       <style>{`.leaflet-emrs-tooltip{background:#fffdf7!important;border:1px solid rgba(139,69,19,0.2)!important;border-radius:10px!important;padding:8px 10px!important;box-shadow:0 6px 24px rgba(139,69,19,0.18)!important;max-width:260px!important}.leaflet-emrs-tooltip::before{display:none!important}.leaflet-container{background:#f5ede0!important}`}</style>
-      <div ref={mapRef} style={{ width: "100%", height: 460, borderRadius: "0 0 16px 16px" }} />
+      <div ref={mapRef} style={{ width: "100%", height: "100%", minHeight: 460, borderRadius: "0 0 16px 16px" }} />
       {activeLayer === "asset" && (
         <div style={{ position: "absolute", bottom: 36, left: 12, zIndex: 1000, background: "rgba(253,246,233,0.95)", border: `1px solid rgba(139,69,19,0.18)`, borderRadius: 10, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
           {[{ color: T.brownLight, label: "Infrastructure" },{ color: T.green, label: "Road Project" },{ color: T.purple, label: "Building" }].map(({ color, label }) => (
@@ -2093,14 +2093,16 @@ const HomePage = () => {
           </div>
 
           {/* ── Map + right sidebar row ──────────────────────────────────
-              Sidebar now stretches to match the map card's height
-              (alignItems:"stretch") and is a flex column so both the
-              selected-pin detail card and the "All Schools/Assets" list
-              scroll internally instead of pushing extra blank space
-              below the map. */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "stretch" }}>
-            <div style={{ background: "#fff", borderRadius: 20, border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.2)" : "rgba(45,106,79,0.2)"}`, overflow: "hidden", boxShadow: "0 4px 24px rgba(139,69,19,0.08)", transition: "border-color 0.3s" }}>
-              <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", overflow: "hidden" }}>
+              FIX: the grid row now has an explicit `height`, so the row
+              size is no longer determined by "whichever column is
+              tallest" — that used to be the sidebar once it listed all
+              17 schools serially, leaving a block of blank white space
+              beneath the (shorter) map card. Both columns now stretch
+              to fill this fixed height, and the "All Schools / Assets"
+              list scrolls internally instead of growing past it. ────── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "stretch", height: 620 }}>
+            <div style={{ background: "#fff", borderRadius: 20, border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.2)" : "rgba(45,106,79,0.2)"}`, overflow: "hidden", boxShadow: "0 4px 24px rgba(139,69,19,0.08)", transition: "border-color 0.3s", display: "flex", flexDirection: "column", height: "100%" }}>
+              <div style={{ background: mapLayer==="emrs" ? "linear-gradient(135deg,#8b4513,#c8781e)" : "linear-gradient(135deg,#1a3d2e,#2d6a4f)", padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", overflow: "hidden", flexShrink: 0 }}>
                 <BodoWeaveBackground opacity={0.08} color="#fff" />
                 <div style={{ position: "relative", zIndex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{mapLayer==="emrs" ? "🏫 EMRS School Locations" : "🏗️ Asset Site Locations"}</div>
@@ -2108,10 +2110,12 @@ const HomePage = () => {
                 </div>
                 <div style={{ background: "rgba(255,255,255,0.2)", color: "#fff", padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, position: "relative", zIndex: 1 }}>{mapLayer==="emrs" ? `${EMRS_PINS.length} Schools` : `${ASSET_PINS.length} Assets`}</div>
               </div>
-              <AssamOSMMap activeLayer={mapLayer} selectedPin={selectedPin} onPinClick={handlePinClick} />
-              <div style={{ margin: "12px 14px 14px", background: mapLayer==="emrs" ? "rgba(139,69,19,0.05)" : "rgba(45,106,79,0.05)", border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.12)" : "rgba(45,106,79,0.12)"}`, borderRadius: 12, padding: "10px 16px", display: "flex", justifyContent: "space-around" }}>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <AssamOSMMap activeLayer={mapLayer} selectedPin={selectedPin} onPinClick={handlePinClick} />
+              </div>
+              <div style={{ margin: "12px 14px 14px", background: mapLayer==="emrs" ? "rgba(139,69,19,0.05)" : "rgba(45,106,79,0.05)", border: `1px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.12)" : "rgba(45,106,79,0.12)"}`, borderRadius: 12, padding: "10px 16px", display: "flex", justifyContent: "space-around", flexShrink: 0 }}>
                 {(mapLayer==="emrs" ? [
-                  { label: "Active", count: EMRS_PINS.filter(p => p.status==="Active").length, color: T.green },
+                  { label: "Functional", count: EMRS_PINS.filter(p => p.status==="Functional").length, color: T.green },
 
                   { label: "Total", count: EMRS_PINS.length, color: T.brown },
                 ] : [
@@ -2127,13 +2131,15 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* RIGHT SIDEBAR — flex column that stretches to the map's
-                height; the detail card and list each scroll internally. */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
+            {/* RIGHT SIDEBAR — height:"100%" now matches the fixed 620px
+                row instead of auto-growing with content. The detail
+                card and the "All Schools" list below it each scroll
+                internally within that shared height. */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0, height: "100%" }}>
               {selectedData ? (
-                <div style={{ background: "#fff", border: `2px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.35)" : "rgba(45,106,79,0.35)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(139,69,19,0.12)", flexShrink: 0, maxHeight: "58%", display: "flex", flexDirection: "column" }}>
+                <div style={{ background: "#fff", border: `2px solid ${mapLayer==="emrs" ? "rgba(139,69,19,0.35)" : "rgba(45,106,79,0.35)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(139,69,19,0.12)", flexShrink: 0, maxHeight: "55%", display: "flex", flexDirection: "column" }}>
                   {/* Image preview at top of selected-pin detail card */}
-                  <div style={{ width: "100%", height: 140, overflow: "hidden", flexShrink: 0 }}>
+                  <div style={{ width: "100%", height: 130, overflow: "hidden", flexShrink: 0 }}>
                     <img
                       src={selectedData.image || FALLBACK_IMG}
                       alt={selectedData.name}
@@ -2253,8 +2259,9 @@ const HomePage = () => {
                 </div>
               )}
 
-              {/* All-items list — fills remaining sidebar height and
-                  scrolls independently instead of using a fixed maxHeight. */}
+              {/* All-items list — fills the rest of the sidebar's fixed
+                  height and scrolls internally, so listing all 17
+                  schools never pushes the row taller than the map. */}
               <div style={{ background: "#fff", border: `1px solid rgba(139,69,19,0.1)`, borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 12px rgba(139,69,19,0.06)", display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
                 <div style={{ padding: "12px 16px", borderBottom: `1px solid rgba(139,69,19,0.08)`, fontSize: 12, fontWeight: 700, color: T.muted, letterSpacing: 1, textTransform: "uppercase", flexShrink: 0 }}>All {mapLayer==="emrs" ? "Schools" : "Assets"}</div>
                 <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
