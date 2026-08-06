@@ -5,23 +5,16 @@
 // Steps/MonthlyActivityHistory.jsx) are now inlined right here, so there
 // is nothing extra to create — this ONE file is a full drop-in replacement.
 //
-// Visual theme: warm, hand-carved "tribal" look — terracotta / ochre / clay
-// palette, woven zig-zag dividers, diamond motifs, and a carved-wood display
-// font for headings. All original functionality is preserved.
+// Visual theme: warm terracotta / ochre / clay palette, diamond motifs,
+// and a carved-wood display font for headings. All original functionality
+// is preserved.
 //
-// NEW IN THIS REVISION
+// THIS REVISION
 // ─────────────────────
-// 1. Every month in "Submitted Activities" now lists each individual staff
-//    (teacher) and student attendance row with its own "Export to Excel" /
-//    "Export to PDF" button, plus a bulk "export all" pair per section.
-// 2. A brand-new "Teacher & Student Register" tab lets an admin pick ANY
-//    teacher or student and see/export their complete attendance history
-//    across every month that has ever been submitted — so nothing is
-//    siloed inside a single month anymore.
-// 3. Removed the descriptive subtitle line under each step heading
-//    (e.g. "Fill staff and student attendance details", "Capture
-//    planning, reports and outcomes", "Enter monthly operational
-//    expenses") — the step title alone is now shown.
+// • Removed the triangular zig-zag divider pattern. Every place that used
+//   to show the woven/triangle strip (top & bottom of panels, under the
+//   page header) now shows a single clean line instead — same accent
+//   color, just simplified.
 //
 // DEPENDENCIES TO INSTALL (if not already present in the project):
 //   npm install xlsx jspdf jspdf-autotable
@@ -352,19 +345,20 @@ const ExportIconButtons = ({ onExcel, onPdf, size = "small" }) => (
 );
 
 /* ────────────────────────────────────────────────────────────────────────
-   Decorative primitives — woven zig-zag divider & diamond motifs
+   Decorative primitives — single-line divider (replaces the old
+   triangular zig-zag strip) & diamond motifs
    ──────────────────────────────────────────────────────────────────────── */
 
+// A plain, single accent-colored rule. Same slot/props as the old
+// ZigZagDivider (color, height) so every call site below still works,
+// but it now renders one clean line instead of a row of triangles.
 const ZigZagDivider = ({ color = PAL.clay, height = 14 }) => (
   <Box
     aria-hidden
     sx={{
       width: "100%",
-      height,
-      backgroundImage: `linear-gradient(135deg, ${color} 25%, transparent 25%), linear-gradient(225deg, ${color} 25%, transparent 25%), linear-gradient(45deg, ${color} 25%, transparent 25%), linear-gradient(315deg, ${color} 25%, transparent 25%)`,
-      backgroundPosition: `${height}px 0, ${height}px 0, 0 0, 0 0`,
-      backgroundSize: `${height * 2}px ${height * 2}px`,
-      backgroundRepeat: "repeat-x",
+      height: Math.max(2, Math.round(height / 4)),
+      backgroundColor: color,
       opacity: 0.9,
     }}
   />
