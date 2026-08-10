@@ -15,11 +15,19 @@
 //   to show the woven/triangle strip (top & bottom of panels, under the
 //   page header) now shows a single clean line instead — same accent
 //   color, just simplified.
+// • NEW: Draft persistence. If the user is filling out a Monthly Activity
+//   (Attendance / Saksham Saturday / Operational Cost) and gets logged
+//   out — or just closes the tab — before finishing, their progress is
+//   auto-saved (per logged-in user) to localStorage. The next time they
+//   log back in and open this page, the form is restored to the exact
+//   step and data they left off at, and the "New Monthly Activity" tab
+//   shows a small draft indicator dot so it's obvious there's unfinished
+//   work waiting, even before opening the tab.
 //
 // DEPENDENCIES TO INSTALL (if not already present in the project):
 //   npm install xlsx jspdf jspdf-autotable
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -67,6 +75,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import GridOnIcon from "@mui/icons-material/GridOn";
 import PersonIcon from "@mui/icons-material/Person";
 import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
+import EditNoteIcon from "@mui/icons-material/EditNote";
 import toast from "react-hot-toast";
 import Attendance, { SakshamSaturdayReport } from "./Steps/Attendance";
 import OperationalCost from "./Steps/OperationalCost";
@@ -102,6 +111,9 @@ const PAL = {
    ──────────────────────────────────────────────────────────────────────── */
 
 const STORAGE_PREFIX = "emrs_monthly_activity__";
+// Separate namespace for the auto-saved, not-yet-submitted draft, so a
+// draft never gets confused with a real, completed submission.
+const DRAFT_STORAGE_PREFIX = "emrs_monthly_activity_draft__";
 
 const getCurrentUserId = () => {
   const candidateKeys = ["userId", "user_id", "username", "user", "authUser", "emrsUser"];
@@ -120,6 +132,7 @@ const getCurrentUserId = () => {
 };
 
 const getStorageKey = (userId) => `${STORAGE_PREFIX}${userId || getCurrentUserId()}`;
+const getDraftKey = (userId) => `${DRAFT_STORAGE_PREFIX}${userId || getCurrentUserId()}`;
 
 const readAll = (userId) => {
   try {
@@ -154,6 +167,37 @@ const saveSubmission = (submission, userId) => {
 const deleteSubmissionEntry = (id, userId) => {
   const existing = readAll(userId);
   return writeAll(userId, existing.filter((s) => s.id !== id));
+};
+
+/* ── Draft (in-progress, not-yet-submitted) persistence ──
+   Lets a partially-filled Monthly Activity survive a logout / tab close
+   and resume automatically, with a visible indicator in the tab bar. */
+const readDraft = (userId) => {
+  try {
+    const raw = localStorage.getItem(getDraftKey(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeDraft = (userId, draft) => {
+  try {
+    localStorage.setItem(
+      getDraftKey(userId),
+      JSON.stringify({ ...draft, savedAt: new Date().toISOString() })
+    );
+  } catch (err) {
+    console.warn("Could not auto-save monthly activity draft:", err);
+  }
+};
+
+const clearDraft = (userId) => {
+  try {
+    localStorage.removeItem(getDraftKey(userId));
+  } catch {
+    // ignore
+  }
 };
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -1075,12 +1119,102 @@ const MonthlyActivity = () => {
     (s) => s.month === reportingMonth && s.year === reportingYear
   );
 
+  /* ─────────────────────────────────────────────────────────────────
+     DRAFT PERSISTENCE — auto-save the in-progress Monthly Activity
+     (whichever of the 3 steps the user is on) so that if they get
+     logged out — or just close the tab — before submitting, the next
+     time they log back in and open this page everything is restored
+     exactly as they left it, and the "New Monthly Activity" tab shows
+     a small dot indicator so it's obvious there's unfinished work.
+  ───────────────────────────────────────────────────────────────── */
+  const [hasDraft, setHasDraft] = useState(false);
+  const draftRestoreAttemptedRef = useRef(false);
+
+  // Restore a previously saved draft once, on mount / when the user changes.
+  useEffect(() => {
+    draftRestoreAttemptedRef.current = false;
+    const draft = readDraft(userId);
+    if (draft) {
+      setReportingMonth(draft.reportingMonth || MONTHS[new Date().getMonth()]);
+      setReportingYear(draft.reportingYear || currentYear);
+      setActiveStep(draft.activeStep || 0);
+      setStaffAttendanceRows(draft.staffAttendanceRows || []);
+      setStudentAttendanceData(draft.studentAttendanceData || []);
+      setSakshamCompleted(!!draft.sakshamCompleted);
+      setOperationalCostRows(
+        draft.operationalCostRows && draft.operationalCostRows.length
+          ? draft.operationalCostRows
+          : [{ year: "", month: "", costType: "", amount: "" }]
+      );
+      setActiveTab("form");
+      setHasDraft(true);
+      toast.success(
+        `Resumed your unfinished monthly activity for ${draft.reportingMonth || ""} ${draft.reportingYear || ""} (Step ${(draft.activeStep || 0) + 1} of ${steps.length}).`
+      );
+    } else {
+      setHasDraft(false);
+    }
+    draftRestoreAttemptedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // Auto-save (debounced) whenever the in-progress form actually has
+  // something in it. If the user hasn't touched anything yet (still on
+  // step 0 with everything blank) we don't bother writing a draft, and
+  // we clean up any stale empty draft.
+  useEffect(() => {
+    if (!draftRestoreAttemptedRef.current) return;
+
+    const hasProgress =
+      activeStep > 0 ||
+      staffAttendanceRows.length > 0 ||
+      studentAttendanceData.length > 0 ||
+      sakshamCompleted ||
+      operationalCostRows.some((r) => r.amount || r.costType || r.month || r.year);
+
+    const t = setTimeout(() => {
+      if (hasProgress) {
+        writeDraft(userId, {
+          reportingMonth,
+          reportingYear,
+          activeStep,
+          staffAttendanceRows,
+          studentAttendanceData,
+          sakshamCompleted,
+          operationalCostRows,
+        });
+        setHasDraft(true);
+      } else {
+        clearDraft(userId);
+        setHasDraft(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(t);
+  }, [
+    userId,
+    reportingMonth,
+    reportingYear,
+    activeStep,
+    staffAttendanceRows,
+    studentAttendanceData,
+    sakshamCompleted,
+    operationalCostRows,
+  ]);
+
   const resetForm = () => {
     setActiveStep(0);
     setStaffAttendanceRows([]);
     setStudentAttendanceData([]);
     setSakshamCompleted(false);
     setOperationalCostRows([{ year: "", month: "", costType: "", amount: "" }]);
+  };
+
+  const discardDraftAndReset = () => {
+    resetForm();
+    clearDraft(userId);
+    setHasDraft(false);
+    toast.success("Draft discarded — starting a fresh monthly activity.");
   };
 
   const handleNext = () => {
@@ -1100,6 +1234,12 @@ const MonthlyActivity = () => {
 
       saveSubmission(submission, userId);
       setSubmissions(getSubmissions(userId));
+
+      // The activity was submitted successfully — the in-progress draft
+      // is no longer needed, so remove it right away (this also makes
+      // the draft dot on the "New Monthly Activity" tab disappear).
+      clearDraft(userId);
+      setHasDraft(false);
 
       toast.success(
         alreadySubmittedThisMonth
@@ -1200,7 +1340,9 @@ const MonthlyActivity = () => {
         </Box>
       </Box>
 
-      {/* Tabs */}
+      {/* Tabs — the "New Monthly Activity" tab shows a small dot badge
+          whenever there's unfinished draft work waiting, so the "bar"
+          itself signals incomplete progress even before opening it. */}
       <Tabs
         value={activeTab}
         onChange={(_, val) => setActiveTab(val)}
@@ -1220,7 +1362,21 @@ const MonthlyActivity = () => {
           "& .Mui-selected": { color: `${PAL.clayDark} !important`, opacity: 1 },
         }}
       >
-        <Tab label="New Monthly Activity" value="form" />
+        <Tab
+          value="form"
+          label={
+            hasDraft ? (
+              <Badge
+                variant="dot"
+                sx={{ "& .MuiBadge-badge": { bgcolor: PAL.clay, right: -8, top: 2 } }}
+              >
+                <span style={{ paddingRight: 6 }}>New Monthly Activity</span>
+              </Badge>
+            ) : (
+              "New Monthly Activity"
+            )
+          }
+        />
         <Tab
           value="history"
           label={
@@ -1241,6 +1397,41 @@ const MonthlyActivity = () => {
         <CarvedPanel elevation={0}>
           <ZigZagDivider color={PAL.ochre} height={10} />
           <Box sx={{ p: { xs: 2, md: 3 } }}>
+            {hasDraft && (
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.5}
+                alignItems={{ sm: "center" }}
+                justifyContent="space-between"
+                sx={{
+                  mb: 2.5,
+                  p: 1.5,
+                  borderRadius: 2.5,
+                  background: "#F5DCC9",
+                  border: `1.5px dashed ${PAL.clay}`,
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <EditNoteIcon sx={{ color: PAL.clayDark }} fontSize="small" />
+                  <Typography variant="body2" sx={{ color: PAL.brownDark, fontWeight: 700 }}>
+                    Continuing your unfinished draft — progress is saved automatically as you go.
+                  </Typography>
+                </Stack>
+                <Button
+                  size="small"
+                  onClick={discardDraftAndReset}
+                  sx={{
+                    color: PAL.clayDark,
+                    fontWeight: 700,
+                    textTransform: "none",
+                    "&:hover": { bgcolor: "#EFC777" },
+                  }}
+                >
+                  Discard draft &amp; start over
+                </Button>
+              </Stack>
+            )}
+
             <Stack
               direction={{ xs: "column", sm: "row" }}
               spacing={2}

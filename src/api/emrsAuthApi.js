@@ -1,4 +1,4 @@
-const EMRS_AUTH_BASE = "http://localhost:5000/api/emrs/auth";
+const EMRS_AUTH_BASE = "/api/emrs/auth";
 
 export const emrsLogin = async (username, password) => {
   const res = await fetch(`${EMRS_AUTH_BASE}/login`, {

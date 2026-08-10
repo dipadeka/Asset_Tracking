@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import SchoolDetails from "./Steps/SchoolDetails";
 import InfrastructureDetails from "./Steps/Infrastructure";
 import ConstructionDetails from "./Steps/Construction";
@@ -198,6 +198,68 @@ const convertUploadedImages = async (imagesObj) => {
     })
   );
   return Object.fromEntries(entries);
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DRAFT PERSISTENCE HELPERS
+   These let the EMRS form auto-save its in-progress state (per logged-in
+   user) to localStorage, so that if the user is logged out mid-way through
+   filling the form — or simply closes the tab / their session expires —
+   the next time they log back in and open this form, everything they had
+   entered (including which step they were on) is restored automatically.
+───────────────────────────────────────────────────────────────────────────── */
+const EMRS_DRAFT_PREFIX = "emrs_form_draft__";
+
+const getEmrsDraftUserId = (user) => {
+  if (user) {
+    return String(user.schoolCode || user.username || user.id || user.email || "guest");
+  }
+  // Fall back to whatever the app happens to keep in localStorage under a
+  // few common keys, in case `user` from context hasn't hydrated yet.
+  const candidateKeys = ["user", "authUser", "emrsUser", "username", "userId"];
+  for (const key of candidateKeys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const id = parsed?.schoolCode || parsed?.username || parsed?.id || parsed?.email;
+      if (id) return String(id);
+    } catch {
+      // raw wasn't JSON (e.g. a plain username string) — use it directly
+      const raw = localStorage.getItem(key);
+      if (raw) return raw;
+    }
+  }
+  return "guest";
+};
+
+const getEmrsDraftKey = (user) => `${EMRS_DRAFT_PREFIX}${getEmrsDraftUserId(user)}`;
+
+// Recursively strips File/Blob instances (which cannot survive
+// JSON.stringify / localStorage) out of a value before it's saved.
+const stripNonSerializable = (value) => {
+  if (value instanceof File || value instanceof Blob) return null;
+  if (Array.isArray(value)) return value.map(stripNonSerializable);
+  if (value && typeof value === "object" && value.constructor === Object) {
+    const out = {};
+    Object.entries(value).forEach(([k, v]) => {
+      out[k] = stripNonSerializable(v);
+    });
+    return out;
+  }
+  return value;
+};
+
+// Small helper hook: runs `effect` `delay` ms after the last change in
+// `deps`, so autosaving to localStorage doesn't fire on every keystroke.
+const useDebouncedEffect = (effect, deps, delay = 700) => {
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      effect();
+    }, delay);
+    return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, delay]);
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1592,7 +1654,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
   });
   const [reservationRows, setReservationRows] = useState([{ name: "", class: "", section: "", category: "" }]);
 
-  const { control, handleSubmit, setValue, watch, register, trigger } = useForm({
+  const { control, handleSubmit, setValue, watch, register, trigger, getValues, reset } = useForm({
     mode: "onBlur",
     reValidateMode: "onChange",
     defaultValues: {
@@ -2121,6 +2183,135 @@ const EMRSForm = ({ addSubmittedForm }) => {
     } catch (error) { console.error("Pincode lookup failed:", error); }
   };
 
+  /* ─────────────────────────────────────────────────────────────────
+     DRAFT PERSISTENCE — auto-save the in-progress EMRS form so that if
+     the user gets logged out (session expiry, closing the tab, etc.)
+     partway through filling it out, the next time they log back in and
+     open this form they land exactly on the step they were on with
+     everything they had already entered restored.
+  ───────────────────────────────────────────────────────────────── */
+  const draftKey = useMemo(() => getEmrsDraftKey(user), [user]);
+  const draftRestoreAttemptedRef = useRef(false);
+  const [draftBannerVisible, setDraftBannerVisible] = useState(false);
+
+  // Build a plain-JSON-safe snapshot of everything entered so far.
+  // Uploaded images are converted to base64 data URLs (same helper used
+  // for the final submission) so they survive being written to
+  // localStorage; the (non-serializable) water-test-report File is
+  // dropped from the snapshot — only its filename is kept as a hint.
+  const buildDraftSnapshot = async () => ({
+    savedAt: new Date().toISOString(),
+    currentStep,
+    formValues: stripNonSerializable(getValues()),
+    safetyCompliance,
+    selectedClass, selectedSection, selectedMonth, monthlyAttendance,
+    staffRows, staffIndex, attendance, reservationRows,
+    enrollmentRows, extraCurricularRows, hospitalizationRows,
+    eyeDateErrors, earDateErrors,
+    teachingRows, nonTeachingRows, recurringBreakup, operationalCostRows,
+    messData,
+    financialData, procurements, currentProcurement,
+    constructionRows,
+    waterHygieneData: { ...waterHygieneData, testReportFile: null },
+    sanitationFacilities,
+    staffAttendanceRows, teachingAttMonth, nonTeachingAttMonth,
+    studentAttendanceData, studentAttendanceMonth,
+    uploadedImages: await convertUploadedImages(uploadedImages),
+  });
+
+  // Restore a previously saved draft once, on mount.
+  useEffect(() => {
+    if (draftRestoreAttemptedRef.current) return;
+    draftRestoreAttemptedRef.current = true;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft) return;
+
+      if (draft.formValues) reset(draft.formValues);
+      if (typeof draft.currentStep === "number") setCurrentStep(draft.currentStep);
+      if (draft.safetyCompliance) setSafetyCompliance(draft.safetyCompliance);
+      if (draft.selectedClass !== undefined) setSelectedClass(draft.selectedClass);
+      if (draft.selectedSection !== undefined) setSelectedSection(draft.selectedSection);
+      if (draft.selectedMonth !== undefined) setSelectedMonth(draft.selectedMonth);
+      if (draft.monthlyAttendance) setMonthlyAttendance(draft.monthlyAttendance);
+      if (draft.staffRows) setStaffRows(draft.staffRows);
+      if (typeof draft.staffIndex === "number") setStaffIndex(draft.staffIndex);
+      if (draft.attendance) setAttendance(draft.attendance);
+      if (draft.reservationRows) setReservationRows(draft.reservationRows);
+      if (draft.enrollmentRows) setEnrollmentRows(draft.enrollmentRows);
+      if (draft.extraCurricularRows) setExtraCurricularRows(draft.extraCurricularRows);
+      if (draft.hospitalizationRows) setHospitalizationRows(draft.hospitalizationRows);
+      if (draft.eyeDateErrors) setEyeDateErrors(draft.eyeDateErrors);
+      if (draft.earDateErrors) setEarDateErrors(draft.earDateErrors);
+      if (draft.teachingRows) setteachingRows(draft.teachingRows);
+      if (draft.nonTeachingRows) setnonTeachingRows(draft.nonTeachingRows);
+      if (draft.recurringBreakup) setRecurringBreakup(draft.recurringBreakup);
+      if (draft.operationalCostRows) setOperationalCostRows(draft.operationalCostRows);
+      if (draft.messData) setMessData(draft.messData);
+      if (draft.financialData) setFinancialData(draft.financialData);
+      if (draft.procurements) setProcurements(draft.procurements);
+      if (draft.currentProcurement) setCurrentProcurement(draft.currentProcurement);
+      if (draft.constructionRows) setConstructionRows(draft.constructionRows);
+      if (draft.waterHygieneData) setWaterHygieneData((prev) => ({ ...prev, ...draft.waterHygieneData }));
+      if (draft.sanitationFacilities) setSanitationFacilities(draft.sanitationFacilities);
+      if (draft.staffAttendanceRows) setStaffAttendanceRows(draft.staffAttendanceRows);
+      if (draft.teachingAttMonth) setTeachingAttMonth(draft.teachingAttMonth);
+      if (draft.nonTeachingAttMonth) setNonTeachingAttMonth(draft.nonTeachingAttMonth);
+      if (draft.studentAttendanceData) setStudentAttendanceData(draft.studentAttendanceData);
+      if (draft.studentAttendanceMonth) setStudentAttendanceMonth(draft.studentAttendanceMonth);
+      if (draft.uploadedImages) setUploadedImages(draft.uploadedImages);
+
+      setDraftBannerVisible(true);
+      toast.success(
+        `Resumed your unfinished EMRS form (Step ${(draft.currentStep ?? 0) + 1} of ${STEPS.length}).`
+      );
+    } catch (err) {
+      console.warn("Could not restore EMRS draft:", err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Auto-save the draft (debounced) whenever meaningful state changes.
+  // Guarded by draftRestoreAttemptedRef so we never overwrite a
+  // not-yet-restored draft with the component's blank initial state.
+  useDebouncedEffect(
+    () => {
+      if (!draftRestoreAttemptedRef.current) return;
+      buildDraftSnapshot()
+        .then((snapshot) => {
+          try {
+            localStorage.setItem(draftKey, JSON.stringify(snapshot));
+          } catch (err) {
+            console.warn("Could not auto-save EMRS draft (storage full?):", err);
+          }
+        })
+        .catch((err) => console.warn("Could not build EMRS draft snapshot:", err));
+    },
+    [
+      draftKey, currentStep, safetyCompliance, selectedClass, selectedSection, selectedMonth,
+      monthlyAttendance, staffRows, staffIndex, attendance, reservationRows, enrollmentRows,
+      extraCurricularRows, hospitalizationRows, eyeDateErrors, earDateErrors, teachingRows,
+      nonTeachingRows, recurringBreakup, operationalCostRows, messData, financialData,
+      procurements, currentProcurement, constructionRows, waterHygieneData, sanitationFacilities,
+      staffAttendanceRows, teachingAttMonth, nonTeachingAttMonth, studentAttendanceData,
+      studentAttendanceMonth, uploadedImages,
+    ],
+    800
+  );
+
+  const clearEmrsDraft = () => {
+    try { localStorage.removeItem(draftKey); } catch {}
+  };
+
+  const discardEmrsDraft = () => {
+    clearEmrsDraft();
+    setDraftBannerVisible(false);
+    toast.success("Draft discarded. Starting a fresh form.");
+    window.location.reload();
+  };
+
   const onSubmit = async (data) => {
     setLoading(true);
     const loadingToast = toast.loading("Submitting EMRS data...");
@@ -2237,6 +2428,13 @@ const EMRSForm = ({ addSubmittedForm }) => {
         console.warn("localStorage save failed:", storageError.message);
       }
 
+      // The form was submitted successfully — the in-progress draft is
+      // no longer needed, so remove it. This is what makes the "resume
+      // where I left off" banner disappear after a real submission and
+      // ensures the NEXT time the user opens this form (for a new
+      // submission) they start from a clean, empty Step 1.
+      clearEmrsDraft();
+
       toast.dismiss(loadingToast);
       toast.success("✅ EMRS Form Submitted Successfully!");
       if (addSubmittedForm) {
@@ -2262,6 +2460,22 @@ const EMRSForm = ({ addSubmittedForm }) => {
       <Toaster position="top-right" />
       <Typography variant="h4" fontWeight="bold" gutterBottom>EMRS</Typography>
       <Typography variant="subtitle1" color="text.secondary" mb={3}>Create and manage EMRS details</Typography>
+
+      {/* ===== DRAFT RESUMED BANNER ===== */}
+      {draftBannerVisible && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3, borderRadius: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={discardEmrsDraft} sx={{ fontWeight: 700 }}>
+              Discard &amp; Start Fresh
+            </Button>
+          }
+          onClose={() => setDraftBannerVisible(false)}
+        >
+          We restored your unfinished EMRS form from your last session (Step {currentStep + 1} of {STEPS.length}) — continue filling it in below. Your progress is saved automatically as you go.
+        </Alert>
+      )}
 
       {/* ===== STEPPER ===== */}
       <Box sx={{ overflowX: "auto", pb: 1, mb: 3 }}>

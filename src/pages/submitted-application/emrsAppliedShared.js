@@ -21,19 +21,48 @@ export const getFormId = (form) => {
   return String(raw);
 };
 
-export const removeFormFromLS = (formId, emrsCode) => {
-  const code = String(emrsCode || "").trim();
-  const id = String(formId || "").trim();
-  const updated = readLS().filter((form) => {
-    const fid = getFormId(form);
-    if (id && fid === id) return false;
-    if (code && String(form.EMRScode || form.schoolCode || "").trim() === code) return false;
-    return true;
-  });
+/* ─────────────────────────────────────────────────────────────────────────
+   getUniqueKey — the ONE identifier that is guaranteed unique PER
+   SUBMISSION (never shared across a school's multiple forms).
+   clientSubmissionId is generated fresh on every submit in EMRSForm.jsx,
+   so it's always safe. getFormId() (the backend _id) is the fallback for
+   legacy records that predate clientSubmissionId.
+
+   Never use EMRScode / schoolCode as a uniqueness key — many submissions
+   legitimately share that field, and treating it as unique is exactly
+   what caused "delete one form → all forms from that school vanish".
+───────────────────────────────────────────────────────────────────────── */
+export const getUniqueKey = (form) => {
+  if (form?.clientSubmissionId) return String(form.clientSubmissionId);
+  const fid = getFormId(form);
+  return fid || "";
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FIX: removeFormFromLS now takes the submission's unique key
+   (clientSubmissionId, falling back to the record's own _id/id) and
+   removes ONLY that one record. It intentionally no longer accepts or
+   matches on EMRScode/schoolCode — matching on a field that many
+   different submissions share is what caused deleting one form to wipe
+   out every other form from the same school.
+───────────────────────────────────────────────────────────────────────── */
+export const removeFormFromLS = (uniqueKey) => {
+  const key = String(uniqueKey || "").trim();
+  if (!key) {
+    // Nothing safe to match on — do not touch storage rather than risk
+    // deleting the wrong records.
+    return readLS();
+  }
+  const updated = readLS().filter((form) => getUniqueKey(form) !== key);
   writeLS(updated);
   return updated;
 };
 
+/* deduplicate() — kept for backward compatibility with any other caller,
+   but note it collapses by EMRScode too, so it is NOT safe to use for a
+   school that has multiple legitimate submissions. Prefer dedupeForms()
+   in EMRSApplied.jsx (keyed on clientSubmissionId) for anything involving
+   deletion or per-submission identity. */
 export const deduplicate = (forms) => {
   const sorted = [...forms].sort(
     (a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0)
