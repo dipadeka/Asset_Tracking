@@ -1,19 +1,3 @@
-export const LS_KEY = "emrs_submitted_forms";
-
-export const readLS = () => {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
-
-export const writeLS = (forms) => {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(forms));
-  } catch { /* ignore */ }
-};
-
 export const getFormId = (form) => {
   const raw = form?._id ?? form?.id;
   if (raw == null || raw === "") return "";
@@ -36,54 +20,6 @@ export const getUniqueKey = (form) => {
   if (form?.clientSubmissionId) return String(form.clientSubmissionId);
   const fid = getFormId(form);
   return fid || "";
-};
-
-/* ─────────────────────────────────────────────────────────────────────────
-   FIX: removeFormFromLS now takes the submission's unique key
-   (clientSubmissionId, falling back to the record's own _id/id) and
-   removes ONLY that one record. It intentionally no longer accepts or
-   matches on EMRScode/schoolCode — matching on a field that many
-   different submissions share is what caused deleting one form to wipe
-   out every other form from the same school.
-───────────────────────────────────────────────────────────────────────── */
-export const removeFormFromLS = (uniqueKey) => {
-  const key = String(uniqueKey || "").trim();
-  if (!key) {
-    // Nothing safe to match on — do not touch storage rather than risk
-    // deleting the wrong records.
-    return readLS();
-  }
-  const updated = readLS().filter((form) => getUniqueKey(form) !== key);
-  writeLS(updated);
-  return updated;
-};
-
-/* deduplicate() — kept for backward compatibility with any other caller,
-   but note it collapses by EMRScode too, so it is NOT safe to use for a
-   school that has multiple legitimate submissions. Prefer dedupeForms()
-   in EMRSApplied.jsx (keyed on clientSubmissionId) for anything involving
-   deletion or per-submission identity. */
-export const deduplicate = (forms) => {
-  const sorted = [...forms].sort(
-    (a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0)
-  );
-  const seenIds = new Set();
-  const seenCodes = new Set();
-
-  return sorted.filter((form) => {
-    const id = getFormId(form);
-    const code = String(form.EMRScode || form.schoolCode || "").trim();
-
-    if (id) {
-      if (seenIds.has(id)) return false;
-      seenIds.add(id);
-    }
-    if (code) {
-      if (seenCodes.has(code)) return false;
-      seenCodes.add(code);
-    }
-    return true;
-  });
 };
 
 export const cell = (label, value) => ({ label, value: value ?? "—" });

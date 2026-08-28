@@ -20,9 +20,6 @@ import {
   fetchEmrsFromBackend,
   getFormId,
   getUniqueKey,
-  readLS,
-  removeFormFromLS,
-  writeLS,
   EMRS_API_BASE,
 } from "./emrsAppliedShared";
 
@@ -327,7 +324,6 @@ const EMRSApplied = () => {
   const { user } = useAuth();
   const [submittedForms, setSubmittedForms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [usingCache, setUsingCache] = useState(false);
   const [error, setError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
@@ -336,32 +332,14 @@ const EMRSApplied = () => {
   const loadForms = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setUsingCache(false);
-
-    const localRecords = dedupeForms(readLS());
 
     try {
       const fromApi = await fetchEmrsFromBackend();
-
-      const apiUniqueKeys = new Set(fromApi.map((f) => getUniqueKey(f)).filter(Boolean));
-
-      const localOnly = localRecords.filter((f) => {
-        const key = getUniqueKey(f);
-        return key && !apiUniqueKeys.has(key);
-      });
-
-      const allForms = dedupeForms([...fromApi, ...localOnly]);
-      writeLS(allForms);
-
-      const visibleForms = filterFormsForUser(allForms, user);
-      setSubmittedForms(visibleForms);
+      const allForms = dedupeForms(fromApi);
+      setSubmittedForms(filterFormsForUser(allForms, user));
     } catch (apiError) {
-      const visibleCached = filterFormsForUser(localRecords, user);
-      setSubmittedForms(visibleCached);
-      setUsingCache(true);
-      setError(
-        apiError.message || "Could not reach the server. Showing cached submissions."
-      );
+      setSubmittedForms([]);
+      setError(apiError.message || "Could not load submissions from the server.");
     } finally {
       setLoading(false);
     }
@@ -400,20 +378,19 @@ const EMRSApplied = () => {
       return;
     }
 
+    if (!formId) {
+      toast.error("Cannot delete: this record has no server id.");
+      return;
+    }
+
     setDeleting(true);
     try {
-      // Only hit the server when this record actually has a real backend
-      // id — locally-generated ids (from failed API submits) are never
-      // sent to the DELETE endpoint.
-      if (formId && !formId.startsWith("local_") && !formId.startsWith("sub_")) {
-        const res = await fetch(`${EMRS_API_BASE}/${formId}`, { method: "DELETE" });
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(body.message || body.error || "Failed to delete from server");
-        }
+      const res = await fetch(`${EMRS_API_BASE}/${formId}`, { method: "DELETE" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.message || body.error || "Failed to delete from server");
       }
 
-      removeFormFromLS(uniqueKey);
       setSubmittedForms((prev) => prev.filter((f) => getUniqueKey(f) !== uniqueKey));
 
       setDeleteDialogOpen(false);
@@ -453,13 +430,7 @@ const EMRSApplied = () => {
         </Button>
       </Box>
 
-      {usingCache && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {error || "Showing cached data because the server is unavailable."}
-        </Alert>
-      )}
-
-      {!usingCache && error && (
+      {error && (
         <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
       )}
 

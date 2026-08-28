@@ -988,17 +988,8 @@ const EMRSAdminDashboard = () => {
 
   const loadData = useCallback(async () => {
   try {
-    // ── Always try the backend first — it's the authoritative source,
-    //    independent of whatever any school's browser happens to have cached.
-    let raw = [];
-    try {
-      const fromApi = await fetchEmrsFromBackend();
-      raw = Array.isArray(fromApi) ? fromApi : [];
-      localStorage.setItem("emrs_submitted_forms", JSON.stringify(raw)); // keep cache in sync
-    } catch (apiErr) {
-      // Backend unreachable — fall back to whatever is cached locally.
-      raw = JSON.parse(localStorage.getItem("emrs_submitted_forms") || "[]");
-    }
+    const fromApi = await fetchEmrsFromBackend();
+    const raw = Array.isArray(fromApi) ? fromApi : [];
 
     // Safe string coerce helper
     const str = (v) => (v !== undefined && v !== null ? String(v).trim() : "");
@@ -1051,7 +1042,6 @@ const EMRSAdminDashboard = () => {
       };
     });
 
-    localStorage.setItem("emrs_submitted_forms", JSON.stringify(normalized));
     setSubmittedData(normalized);
   } catch {
     setSubmittedData([]);
@@ -1081,29 +1071,6 @@ const EMRSAdminDashboard = () => {
 
   // Keep selectedData in sync whenever submittedData refreshes
   const selectedData = selectedSchool ? getDataForSchool(selectedSchool) : null;
-
-  // ── DEV: log raw localStorage so you can see what fields the form saves ──
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      try {
-        const raw = JSON.parse(localStorage.getItem("emrs_submitted_forms") || "[]");
-        console.group("[EMRS Admin] Raw localStorage entries");
-        raw.forEach((entry, i) => {
-          console.log(
-            `Entry ${i + 1}:`,
-            "username=", entry.username,
-            "| loginId=", entry.loginId,
-            "| submittedBy=", entry.submittedBy,
-            "| schoolCode=", entry.schoolCode,
-            "| EMRScode=", entry.EMRScode,
-            "| schoolname=", entry.schoolname,
-            "| schoolName=", entry.schoolName,
-          );
-        });
-        console.groupEnd();
-      } catch { /* ignore */ }
-    }
-  }, [submittedData]);
 
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f0f4f8", overflow: "hidden" }}>

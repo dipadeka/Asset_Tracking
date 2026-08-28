@@ -1563,7 +1563,7 @@ const WaterHygieneSanitation = ({
 /* ─────────────────────────────────────────────────────────────────────────────
    MAIN EMRS FORM
 ───────────────────────────────────────────────────────────────────────────── */
-const EMRSForm = ({ addSubmittedForm }) => {
+const EMRSForm = () => {
   const { user } = useAuth();
 
   const [openImageDialog, setOpenImageDialog] = useState(false);
@@ -1577,6 +1577,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
 
   // NOTE: this local `submittedForms` state is intentionally unused for
@@ -2313,8 +2314,11 @@ const EMRSForm = ({ addSubmittedForm }) => {
   };
 
   const onSubmit = async (data) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setLoading(true);
     const loadingToast = toast.loading("Submitting EMRS data...");
+    const clientSubmissionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
     try {
       const emrsImagesBase64 = await convertUploadedImages(uploadedImages);
@@ -2322,6 +2326,7 @@ const EMRSForm = ({ addSubmittedForm }) => {
 
       const payload = {
         userId: "1",
+        clientSubmissionId,
         ...prepareBasicDetails(data),
         ...prepareLocationDetails(data),
         ...prepareInfrastructureDetails(data),
@@ -2354,105 +2359,39 @@ const EMRSForm = ({ addSubmittedForm }) => {
       if (cred) { payload.username = cred.username; payload.loginId = cred.username; payload.schoolCode = cred.schoolCode; payload.EMRScode = cred.schoolCode; payload.schoolname = payload.schoolname || cred.schoolName; payload.district = payload.district || cred.district; payload.block = payload.block || cred.block; }
       else if (user) { payload.username = String(user.username || user.loginId || user.id || ""); payload.loginId = payload.username; }
 
-      let submittedId = null;
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const response = await fetch("http://localhost:5000/api/emrs/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal });
-        clearTimeout(timeoutId);
-        const contentType = response.headers.get("content-type");
-        let result = {};
-        if (contentType && contentType.includes("application/json")) result = await response.json();
-        if (response.ok) submittedId = result.data?._id || result._id;
-        else submittedId = null; // let the local-save block assign a unique local id below
-      } catch (fetchError) { submittedId = null; } // network/API failed — fall back to local-only save
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch("http://localhost:5000/api/emrs/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-      // ─────────────────────────────────────────────────────────────
-      // FIX: Every submission — regardless of school — must get its own
-      // permanent, globally-unique id that is NEVER derived from (or
-      // matched against) the backend `_id`. Previously this block used
-      // `submittedId` (the backend's returned _id) as the localStorage
-      // dedup key. If the backend performs an upsert keyed by school
-      // (EMRScode), every submission from the SAME school comes back
-      // with the SAME `_id`, so each new submission silently
-      // overwrote the previous one in localStorage instead of being
-      // added — meaning only schools whose API calls happened to fail
-      // (and therefore fell into the `local_...` unique-id branch)
-      // ever ended up with more than one visible submission.
-      //
-      // `clientSubmissionId` is generated fresh on every single submit,
-      // for every school, and is what we now use to decide whether a
-      // record is an update of an existing entry or a brand-new one.
-      // ─────────────────────────────────────────────────────────────
-      try {
-        const credSchoolCode =
-          (user?.role === "school" ? user?.schoolCode : null) ||
-          payload.EMRScode ||
-          "";
-
-        const clientSubmissionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-
-        const recordToSave = {
-          ...payload,
-          _id:         submittedId || clientSubmissionId, // used for server delete calls when available
-          clientSubmissionId,                              // stable, always-unique key — use this for dedup
-          EMRScode:    credSchoolCode || payload.EMRScode || "",
-          schoolCode:  credSchoolCode || payload.EMRScode || "",   // mirror field
-          createdAt:   new Date().toISOString(),
-          submittedAt: new Date().toISOString(),
-        };
-
-        const existing = JSON.parse(
-          localStorage.getItem("emrs_submitted_forms") || "[]"
-        );
-
-        // Only treat this as an "update" if it's literally the same
-        // client submission being re-saved (e.g. a retry) — never merge
-        // two different submissions just because the backend happened
-        // to return a matching _id.
-        const idx = existing.findIndex(
-          (f) => f.clientSubmissionId && f.clientSubmissionId === clientSubmissionId
-        );
-
-        if (idx !== -1) {
-          existing[idx] = recordToSave;
-        } else {
-          existing.push(recordToSave);
-        }
-
-        localStorage.setItem("emrs_submitted_forms", JSON.stringify(existing));
-        // Notify any listening dashboard/list component to re-read from
-        // localStorage immediately (see EMRSApplied.jsx / dashboard notes).
-        window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
-      } catch (storageError) {
-        console.warn("localStorage save failed:", storageError.message);
+      const contentType = response.headers.get("content-type");
+      let result = {};
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      }
+      if (!response.ok) {
+        throw new Error(result.message || result.error || "Submission failed");
       }
 
-      // The form was submitted successfully — the in-progress draft is
-      // no longer needed, so remove it. This is what makes the "resume
-      // where I left off" banner disappear after a real submission and
-      // ensures the NEXT time the user opens this form (for a new
-      // submission) they start from a clean, empty Step 1.
       clearEmrsDraft();
+      window.dispatchEvent(new CustomEvent("emrs-form-submitted"));
 
       toast.dismiss(loadingToast);
       toast.success("✅ EMRS Form Submitted Successfully!");
-      if (addSubmittedForm) {
-        addSubmittedForm({
-          id: submittedId || `local_${Date.now()}`,
-          schoolname: payload.schoolname,
-          EMRScode: payload.EMRScode,
-          district: payload.district,
-          submittedAt: new Date().toLocaleString(),
-          payload,
-        });
-      }
       navigate("/emrs/dashboard");
     } catch (error) {
       toast.dismiss(loadingToast);
       toast.error("❌ Submission failed: " + error.message);
       console.error("Submit error:", error);
-    } finally { setLoading(false); }
+    } finally {
+      isSubmittingRef.current = false;
+      setLoading(false);
+    }
   };
 
   return (
@@ -2501,7 +2440,16 @@ const EMRSForm = ({ addSubmittedForm }) => {
         </Box>
         <Divider />
         <CardContent sx={{ backgroundColor: "#f8fafc", padding: 4, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}>
-          <form onSubmit={handleSubmit(onSubmit)} style={{ pointerEvents: loading ? "none" : "auto", opacity: loading ? 0.6 : 1 }}>
+          <form
+            onSubmit={(e) => {
+              if (isSubmittingRef.current || loading) {
+                e.preventDefault();
+                return;
+              }
+              handleSubmit(onSubmit)(e);
+            }}
+            style={{ pointerEvents: loading ? "none" : "auto", opacity: loading ? 0.6 : 1 }}
+          >
 
             {currentStep === 0 && <SchoolDetails control={control} watch={watch} setValue={setValue} emrsBasicFields={emrsBasicFields} onPincodeChange={onPincodeChange} />}
             {currentStep === 1 && <InfrastructureDetails control={control} watch={watch} syncInfraToConstruction={syncInfraToConstruction} />}
