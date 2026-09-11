@@ -3,13 +3,19 @@ import { Grid, Typography, TextField, MenuItem, Box,
          Button, Table, TableBody, TableCell, TableContainer,
          TableHead, TableRow, Paper } from "@mui/material";
 import { Controller } from "react-hook-form";
+
 const AUTO_FILLED_FIELDS = {
-  
   "Hostel Capacity": "240"
 };
 
+const HOSTEL_CAPACITY = 240;
+
 // ─── Helper: allow only alphabets + spaces (blocks numbers/symbols, incl. paste) ──
 const alphabetOnly = (value) => value.replace(/[^A-Za-z\s]/g, "");
+
+// ─── Helper: basic but solid email format check (requires @, a domain, a TLD) ──
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (value) => !value || EMAIL_REGEX.test(value.trim());
 
 export default function HostelDetails({
   control,
@@ -21,8 +27,10 @@ export default function HostelDetails({
   handleItemChange,
   calculateGrandTotal,
 }) {
-   
-  
+
+  const boysBedsAvailable = watch("boysBedsAvailable");
+  const girlsBedsAvailable = watch("girlsBedsAvailable");
+
   return (
     <>
    <Grid container spacing={2}>
@@ -50,7 +58,7 @@ export default function HostelDetails({
                    Boys Hostel Details
                  </Typography>
                  
- 
+
                  <Grid container spacing={2} mb={4}>
                    {/* ── Line 1: Capacity, Beds, Occupancy ── */}
                    <Grid item xs={12} sm={4} md={4}>
@@ -99,6 +107,10 @@ export default function HostelDetails({
                            value: 0,
                            message: "Beds available cannot be negative",
                          },
+                         max: {
+                           value: HOSTEL_CAPACITY,
+                           message: `Beds available cannot exceed hostel capacity (${HOSTEL_CAPACITY})`,
+                         },
                        }}
                        render={({ field, fieldState: { error } }) => (
                          <TextField
@@ -106,8 +118,8 @@ export default function HostelDetails({
                            label="Beds Available"
                            type="number"
                            fullWidth
-                           size="small"
-                           inputProps={{ min: 0 }}
+                           size="small" sx={{ minWidth: 220 }}
+                           inputProps={{ min: 0, max: HOSTEL_CAPACITY }}
                            error={!!error}
                            helperText={error ? error.message : ""}
                            onKeyDown={(e) => {
@@ -115,7 +127,12 @@ export default function HostelDetails({
                                e.preventDefault();
                            }}
                            onChange={(e) => {
-                             if (Number(e.target.value) >= 0) {
+                             const val = Number(e.target.value);
+                             if (e.target.value === "") {
+                               field.onChange(e);
+                               return;
+                             }
+                             if (val >= 0 && val <= HOSTEL_CAPACITY) {
                                field.onChange(e);
                              }
                            }}
@@ -133,6 +150,14 @@ export default function HostelDetails({
                            value: 0,
                            message: "Current occupancy cannot be negative",
                          },
+                         validate: (value) => {
+                           if (value === "" || value === undefined || value === null) return true;
+                           const beds = Number(boysBedsAvailable);
+                           if (!isNaN(beds) && boysBedsAvailable !== "" && Number(value) > beds) {
+                             return "Current occupancy cannot exceed beds available";
+                           }
+                           return true;
+                         },
                        }}
                        render={({ field, fieldState: { error } }) => (
                          <TextField
@@ -141,7 +166,11 @@ export default function HostelDetails({
                            type="number"
                            fullWidth
                            size="small"
-                           inputProps={{ min: 0 }}
+                           sx={{ minWidth: 220 }}
+                           inputProps={{
+                             min: 0,
+                             max: boysBedsAvailable || HOSTEL_CAPACITY,
+                           }}
                            error={!!error}
                            helperText={error ? error.message : ""}
                            onKeyDown={(e) => {
@@ -157,9 +186,9 @@ export default function HostelDetails({
                        )}
                      />
                    </Grid>
- 
+
                    <Grid item xs={12} sx={{ padding: "0 !important" }} />
- 
+
                    {/* ── Line 2: CCTV Installed, No of CCTV ── */}
                    <Grid item xs={12} sm={4} md={4}>
                      <Controller
@@ -215,9 +244,9 @@ export default function HostelDetails({
                        )}
                      />
                    </Grid>
- 
+
                    <Grid item xs={12} sx={{ padding: "0 !important" }} />
- 
+
                    {/* ── Line 3: Security Agency Available + conditional Name & Contact ── */}
                    <Grid item xs={12} sm={4} md={4}>
                      <Controller
@@ -305,9 +334,9 @@ export default function HostelDetails({
                        </Grid>
                      </>
                    )}
- 
+
                    <Grid item xs={12} sx={{ padding: "0 !important" }} />
- 
+
                    {/* ── Line 4: Warden Name, Contact, Email ── */}
                    <Grid item xs={12} sm={4} md={4}>
                      <Controller
@@ -389,12 +418,19 @@ export default function HostelDetails({
                        name="boysWardenEmail"
                        control={control}
                        defaultValue=""
-                       render={({ field }) => (
+                       rules={{
+                         validate: (value) =>
+                           isValidEmail(value) || "Enter a valid email address (e.g. name@example.com)",
+                       }}
+                       render={({ field, fieldState: { error } }) => (
                          <TextField
                            {...field}
                            label="Warden Email"
+                           type="email"
                            fullWidth
                            size="small"
+                           error={!!error}
+                           helperText={error ? error.message : ""}
                          />
                        )}
                      />
@@ -406,7 +442,7 @@ export default function HostelDetails({
                  >
                    Girls Hostel Details
                  </Typography>
- 
+
                  <Grid container spacing={2} mb={4}>
                    {/* ── Line 1: Capacity, Beds, Occupancy ── */}
                    <Grid item xs={12} sm={4} md={4}>
@@ -455,6 +491,10 @@ export default function HostelDetails({
                            value: 0,
                            message: "Beds available cannot be negative",
                          },
+                         max: {
+                           value: HOSTEL_CAPACITY,
+                           message: `Beds available cannot exceed hostel capacity (${HOSTEL_CAPACITY})`,
+                         },
                        }}
                        render={({ field, fieldState: { error } }) => (
                          <TextField
@@ -462,8 +502,8 @@ export default function HostelDetails({
                            label="Beds Available"
                            type="number"
                            fullWidth
-                           size="small"
-                           inputProps={{ min: 0 }}
+                           size="small" sx={{ minWidth: 220 }}
+                           inputProps={{ min: 0, max: HOSTEL_CAPACITY }}
                            error={!!error}
                            helperText={error ? error.message : ""}
                            onKeyDown={(e) => {
@@ -471,7 +511,12 @@ export default function HostelDetails({
                                e.preventDefault();
                            }}
                            onChange={(e) => {
-                             if (Number(e.target.value) >= 0) {
+                             const val = Number(e.target.value);
+                             if (e.target.value === "") {
+                               field.onChange(e);
+                               return;
+                             }
+                             if (val >= 0 && val <= HOSTEL_CAPACITY) {
                                field.onChange(e);
                              }
                            }}
@@ -489,6 +534,14 @@ export default function HostelDetails({
                            value: 0,
                            message: "Current occupancy cannot be negative",
                          },
+                         validate: (value) => {
+                           if (value === "" || value === undefined || value === null) return true;
+                           const beds = Number(girlsBedsAvailable);
+                           if (!isNaN(beds) && girlsBedsAvailable !== "" && Number(value) > beds) {
+                             return "Current occupancy cannot exceed beds available";
+                           }
+                           return true;
+                         },
                        }}
                        render={({ field, fieldState: { error } }) => (
                          <TextField
@@ -497,7 +550,11 @@ export default function HostelDetails({
                            type="number"
                            fullWidth
                            size="small"
-                           inputProps={{ min: 0 }}
+                           sx={{ minWidth: 220 }}
+                           inputProps={{
+                             min: 0,
+                             max: girlsBedsAvailable || HOSTEL_CAPACITY,
+                           }}
                            error={!!error}
                            helperText={error ? error.message : ""}
                            onKeyDown={(e) => {
@@ -513,9 +570,9 @@ export default function HostelDetails({
                        )}
                      />
                    </Grid>
- 
+
                    <Grid item xs={12} sx={{ padding: "0 !important" }} />
- 
+
                    {/* ── Line 2: CCTV Installed, No of CCTV ── */}
                    <Grid item xs={12} sm={4} md={4}>
                      <Controller
@@ -571,9 +628,9 @@ export default function HostelDetails({
                        )}
                      />
                    </Grid>
- 
+
                    <Grid item xs={12} sx={{ padding: "0 !important" }} />
- 
+
                    {/* ── Line 3: Security Agency Available + conditional Name & Contact ── */}
                    <Grid item xs={12} sm={4} md={4}>
                      <Controller
@@ -659,9 +716,9 @@ export default function HostelDetails({
                        </Grid>
                      </>
                    )}
- 
+
                    <Grid item xs={12} sx={{ padding: "0 !important" }} />
- 
+
                    {/* ── Line 4: Warden Name, Contact, Email ── */}
                    <Grid item xs={12} sm={4} md={4}>
                      <Controller
@@ -743,12 +800,19 @@ export default function HostelDetails({
                        name="girlsWardenEmail"
                        control={control}
                        defaultValue=""
-                       render={({ field }) => (
+                       rules={{
+                         validate: (value) =>
+                           isValidEmail(value) || "Enter a valid email address (e.g. name@example.com)",
+                       }}
+                       render={({ field, fieldState: { error } }) => (
                          <TextField
                            {...field}
                            label="Warden Email"
+                           type="email"
                            fullWidth
                            size="small"
+                           error={!!error}
+                           helperText={error ? error.message : ""}
                          />
                        )}
                      />
@@ -761,7 +825,7 @@ export default function HostelDetails({
                  >
                    🧾 Mess Management and Compliance
                  </Typography>
- 
+
                  <Box
                    sx={{
                      border: "1px solid #e2e8f0",
@@ -832,7 +896,7 @@ export default function HostelDetails({
                    >
                      📋 Mess Compliance & Monitoring
                    </Typography>
- 
+
                    <TableContainer component={Paper}>
                      <Table size="small">
                        <TableHead sx={{ background: "#f1f5f9" }}>
@@ -845,7 +909,7 @@ export default function HostelDetails({
                            <TableCell>Marks</TableCell>
                          </TableRow>
                        </TableHead>
- 
+
                        <TableBody>
                          <TableRow>
                            {[
@@ -872,7 +936,7 @@ export default function HostelDetails({
                                </TextField>
                              </TableCell>
                            ))}
- 
+
                            <TableCell>
                              <Typography sx={{ fontWeight: 700 }}>
                                {(() => {
@@ -883,7 +947,7 @@ export default function HostelDetails({
                                    messData.foodComplaintRegister,
                                    messData.messCleanlinessDaily,
                                  ].filter((v) => v === "Yes").length;
- 
+
                                  return yes === 5
                                    ? 5
                                    : yes === 4
@@ -898,13 +962,13 @@ export default function HostelDetails({
                        </TableBody>
                      </Table>
                    </TableContainer>
- 
+
                    {/* MARKING CRITERIA */}
                    <Box sx={{ mt: 3 }}>
                      <Typography sx={{ fontWeight: 600, mb: 1 }}>
                        *Marking Criteria (Out of 5)
                      </Typography>
- 
+
                      <TableContainer component={Paper}>
                        <Table size="small">
                          <TableBody>

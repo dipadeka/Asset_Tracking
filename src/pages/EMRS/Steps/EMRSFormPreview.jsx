@@ -90,16 +90,6 @@ const EMRSFormPreview = ({
     0
   );
 
-  /* quick stat chips at top */
-  const stats = [
-    { label: "Teaching Staff", value: teachingRows.length, icon: "👨‍🏫" },
-    { label: "Non-Teaching", value: nonTeachingRows.length, icon: "🧹" },
-    { label: "Enrollment Records", value: enrollmentRows.length, icon: "🎓" },
-    { label: "Student Attendance", value: studentAttendanceData.length, icon: "📋" },
-    { label: "Procurements", value: procurements.length, icon: "📦" },
-    { label: "Photos Uploaded", value: totalImages, icon: "📸" },
-  ];
-
   return (
     <Box>
       {/* ── Top Banner ── */}
@@ -128,22 +118,6 @@ const EMRSFormPreview = ({
         </Typography>
         Once submitted, the form will be recorded and sent to the EMRS portal.
       </Alert>
-
-      {/* ── Quick Stats ── */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        {stats.map(({ label, value, icon }) => (
-          <Grid item xs={6} sm={4} md={2} key={label}>
-            <Paper
-              elevation={0}
-              sx={{ p: 2, textAlign: "center", border: "1px solid #e2e8f0", borderRadius: 2 }}
-            >
-              <Typography sx={{ fontSize: 22 }}>{icon}</Typography>
-              <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#1976d2" }}>{value}</Typography>
-              <Typography sx={{ fontSize: 11, color: "#64748b" }}>{label}</Typography>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
 
       {/* ══════════════ 1. SCHOOL DETAILS ══════════════ */}
       <PreviewAccordion emoji="🏫" title="School Details" color="#1976d2" defaultExpanded>

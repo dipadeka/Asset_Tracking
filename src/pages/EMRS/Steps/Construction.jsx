@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Grid, Typography, Box, TextField } from "@mui/material";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
+import toast from "react-hot-toast";
 import { CONSTRUCTION_CONFIG, CONSTRUCTION_STATUS_STYLE } from "./constants/emrsfields.js";
 
 // ── Default rows for the Physical & Financial Status table ──────────────────
@@ -44,6 +45,13 @@ export default function ConstructionDetails({ control, constructionRows, setCons
     setEmrsStatusRows((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // ── Project Overview date fields — watched so the two date pickers can
+  //    validate against each other (end date must never be before start
+  //    date, and start date must never land after an already-picked end
+  //    date). ────────────────────────────────────────────────────────────
+  const projectStartDate = useWatch({ control, name: "projectStartDate" });
+  const projectEndDate = useWatch({ control, name: "projectEndDate" });
+
   // ── Existing construction table renderer ───────────────────────────────────
   const renderConstructionTable = (catKey) => {
     const cfg = CONSTRUCTION_CONFIG[catKey];
@@ -51,6 +59,18 @@ export default function ConstructionDetails({ control, constructionRows, setCons
 
     const updateRow = (idx, field, val) => {
       setConstructionRows((prev) => {
+        const currentRow = prev[catKey][idx];
+
+        // ── Date guard: block End Date < Start Date and Start Date > End Date ──
+        if (field === "startDate" && currentRow.endDate && val && val > currentRow.endDate) {
+          toast.error("Start date cannot be after the end date.");
+          return prev;
+        }
+        if (field === "endDate" && currentRow.startDate && val && val < currentRow.startDate) {
+          toast.error("End date cannot be before the start date.");
+          return prev;
+        }
+
         const updated = [...prev[catKey]];
         updated[idx] = { ...updated[idx], [field]: val };
         if (field === "status" && val === "Completed") updated[idx].progress = 100;
@@ -138,10 +158,22 @@ export default function ConstructionDetails({ control, constructionRows, setCons
                     </Box>
                   </td>
                   <td style={{ ...tdStyle, minWidth: 120 }}>
-                    <input type="date" value={row.startDate} onChange={(e) => updateRow(i, "startDate", e.target.value)} style={nativeInput} />
+                    <input
+                      type="date"
+                      value={row.startDate}
+                      max={row.endDate || undefined}
+                      onChange={(e) => updateRow(i, "startDate", e.target.value)}
+                      style={nativeInput}
+                    />
                   </td>
                   <td style={{ ...tdStyle, minWidth: 120 }}>
-                    <input type="date" value={row.endDate} onChange={(e) => updateRow(i, "endDate", e.target.value)} style={nativeInput} />
+                    <input
+                      type="date"
+                      value={row.endDate}
+                      min={row.startDate || undefined}
+                      onChange={(e) => updateRow(i, "endDate", e.target.value)}
+                      style={nativeInput}
+                    />
                   </td>
                   <td style={{ ...tdStyle, minWidth: 130 }}>
                     <input type="text" value={row.assignedTo} onChange={(e) => updateRow(i, "assignedTo", e.target.value)} placeholder="Name / Agency" style={nativeInput} />
@@ -203,18 +235,58 @@ export default function ConstructionDetails({ control, constructionRows, setCons
           Project Overview
         </Typography>
         <Grid container spacing={2}>
-          {[
-            { name: "projectStartDate", label: "Project Start Date" },
-            { name: "projectEndDate", label: "Expected End Date" },
-          ].map(({ name, label }) => (
-            <Grid item xs={12} sm={6} md={4} key={name}>
-              <Controller name={name} control={control} defaultValue=""
-                render={({ field }) => (
-                  <TextField {...field} label={label} type="date" InputLabelProps={{ shrink: true }} fullWidth size="small" />
-                )}
-              />
-            </Grid>
-          ))}
+          <Grid item xs={12} sm={6} md={4}>
+            <Controller
+              name="projectStartDate"
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Project Start Date"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                  size="small"
+                  inputProps={{ max: projectEndDate || undefined }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (projectEndDate && val && val > projectEndDate) {
+                      toast.error("Project Start Date cannot be after the Expected End Date.");
+                      return;
+                    }
+                    field.onChange(e);
+                  }}
+                />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Controller
+              name="projectEndDate"
+              control={control}
+              defaultValue=""
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Expected End Date"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                  size="small"
+                  inputProps={{ min: projectStartDate || undefined }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (projectStartDate && val && val < projectStartDate) {
+                      toast.error("Expected End Date cannot be before the Project Start Date.");
+                      return;
+                    }
+                    field.onChange(e);
+                  }}
+                />
+              )}
+            />
+          </Grid>
           <Grid item xs={12} sm={6} md={4}>
             <Controller name="totalProjectBudget" control={control} defaultValue=""
               render={({ field }) => (

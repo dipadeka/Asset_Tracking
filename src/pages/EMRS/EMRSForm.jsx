@@ -168,6 +168,29 @@ const getHolidaysForMonth = (monthName) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   QUALIFICATION ROW DEFAULTS — single source of truth for the shape of one
+   Academic / Professional / TET qualification entry. Used everywhere a new
+   qualification row is created (initial staff state, "+ Add Staff Post",
+   and the +/↺ buttons inside the qualification tables) so every staff row
+   — first one or the fifth one added later — always has the full, matching
+   field set. Previously these were duplicated ad-hoc in three different
+   places with different (incomplete) field sets, which is why newly added
+   staff or Professional Qualifications silently lost data.
+───────────────────────────────────────────────────────────────────────────── */
+const blankAcademicQualification = () => ({
+  post: "", staffname: " ", qualification: "", course: "", registrationNo: "",
+  rollNo: "", college: "", marksObtained: "", university: "", passingYear: "",
+});
+const blankProfessionalQualification = () => ({
+  post: "", staffname: " ", qualification: "", registrationNo: "", rollNo: "",
+  examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "",
+});
+const blankTetQualification = () => ({
+  post: "", staffname: " ", qualification: "", registrationNo: "", rollNo: "",
+  examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "",
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
    IMAGE HELPERS — convert File objects to base64 data URLs so they survive
    JSON.stringify / localStorage / API submission, and can be re-rendered
    later in EMRSApplied.jsx
@@ -190,10 +213,12 @@ const convertUploadedImages = async (imagesObj) => {
   const entries = await Promise.all(
     Object.entries(imagesObj).map(async ([key, val]) => {
       if (Array.isArray(val)) {
-        const converted = await Promise.all(val.map((f) => fileToBase64(f)));
+        const converted = await Promise.all(
+          val.map((item) => fileToBase64(item?.dataUrl || item))
+        );
         return [key, converted];
       }
-      const converted = await fileToBase64(val);
+      const converted = await fileToBase64(val?.dataUrl || val);
       return [key, converted];
     })
   );
@@ -380,10 +405,6 @@ const blankTeacherRow = () => ({
 
 /* ─────────────────────────────────────────────────────────────────────────────
    TEACHER ATTENDANCE SECTION
-   - Completely independent from Staff Details
-   - Excel upload auto-fills the table
-   - Manual add row
-   - Auto-calculates Present, Absent, % per teacher
 ───────────────────────────────────────────────────────────────────────────── */
 const TeacherAttendanceSection = ({
   title,
@@ -397,24 +418,20 @@ const TeacherAttendanceSection = ({
   const [uploading, setUploading] = useState(false);
   const [newRow, setNewRow] = useState({ ...blankTeacherRow(), staffType, month: activeMonth });
 
-  // sync newRow month when activeMonth changes
   useEffect(() => {
     setNewRow((p) => ({ ...p, month: activeMonth }));
   }, [activeMonth]);
 
   const filteredRows = rows.filter((r) => r.staffType === staffType && r.month === activeMonth);
 
-  /* ── Field change handler with auto-compute ── */
   const handleFieldChange = (idx, field, value) => {
     setRows((prev) => {
-      // idx here is index in the *full* rows array
       const updated = [...prev];
       updated[idx] = computeTeacherRow({ ...updated[idx], [field]: value });
       return updated;
     });
   };
 
-  /* ── Find real index in full rows array ── */
   const fullIndexOf = (filteredIdx) => {
     let count = -1;
     for (let i = 0; i < rows.length; i++) {
@@ -426,12 +443,10 @@ const TeacherAttendanceSection = ({
     return -1;
   };
 
-  /* ── Add manual row ── */
   const addManualRow = () => {
     if (!newRow.name && !newRow.post) return;
     const computed = computeTeacherRow({ ...newRow, staffType, month: activeMonth });
     setRows((prev) => {
-      // check duplicate (same name + month + staffType)
       const idx = prev.findIndex(
         (r) => r.name === computed.name && r.month === computed.month && r.staffType === computed.staffType
       );
@@ -445,14 +460,12 @@ const TeacherAttendanceSection = ({
     setNewRow({ ...blankTeacherRow(), staffType, month: activeMonth });
   };
 
-  /* ── Remove row ── */
   const removeRow = (filteredIdx) => {
     const realIdx = fullIndexOf(filteredIdx);
     if (realIdx === -1) return;
     setRows((prev) => prev.filter((_, i) => i !== realIdx));
   };
 
-  /* ── Download Excel template ── */
   const downloadTemplate = () => {
     const headers = [["Post", "Name", "Month", "Working Days", "Casual Leave", "Earned Leave", "Medical Leave", "Maternity Leave", "Paternity Leave"]];
     const wb = XLSX.utils.book_new();
@@ -462,7 +475,6 @@ const TeacherAttendanceSection = ({
     XLSX.writeFile(wb, `${staffType.replace(/\s/g, "_")}_Attendance_Template.xlsx`);
   };
 
-  /* ── Export current month data ── */
   const exportData = () => {
     if (filteredRows.length === 0) { toast.error("No data to export."); return; }
     const exportRows = filteredRows.map((r) => ({
@@ -485,7 +497,6 @@ const TeacherAttendanceSection = ({
     XLSX.writeFile(wb, `${staffType.replace(/\s/g, "_")}_${activeMonth}_Attendance.xlsx`);
   };
 
-  /* ── Handle Excel upload — auto-fills table ── */
   const handleExcelUpload = (file) => {
     if (!file) return;
     setExcelError("");
@@ -495,8 +506,6 @@ const TeacherAttendanceSection = ({
     reader.onload = (e) => {
       try {
        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-//   reader.readAsArrayBuffer(file);
- 
 
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -508,7 +517,6 @@ const TeacherAttendanceSection = ({
           return;
         }
 
-        // Normalize header keys
         const normalise = (obj) => {
           const out = {};
           Object.entries(obj).forEach(([k, v]) => {
@@ -560,7 +568,6 @@ const TeacherAttendanceSection = ({
     reader.readAsBinaryString(file);
   };
 
-  // Stats
   const totalStaff = filteredRows.length;
   const avgPct = totalStaff > 0
     ? (filteredRows.reduce((s, r) => s + r.percentage, 0) / totalStaff).toFixed(1)
@@ -590,7 +597,6 @@ const TeacherAttendanceSection = ({
 
   return (
     <Box sx={{ mb: 3 }}>
-      {/* Header */}
       <Box sx={{ background: headerColor, borderRadius: 2, px: 3, py: 2, mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
         <Box>
           <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
@@ -605,7 +611,6 @@ const TeacherAttendanceSection = ({
         )}
       </Box>
 
-      {/* Month Selector */}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2, alignItems: "center" }}>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Month:</Typography>
         {MONTHS.map((m) => (
@@ -621,7 +626,6 @@ const TeacherAttendanceSection = ({
         ))}
       </Box>
 
-      {/* Holidays for month */}
       {monthHolidays.length > 0 && (
         <Alert severity="info" sx={{ mb: 2, py: 0.5, "& .MuiAlert-message": { width: "100%" } }}>
           <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>🗓️ Assam Govt Holidays in {activeMonth}:</Typography>
@@ -634,7 +638,6 @@ const TeacherAttendanceSection = ({
         </Alert>
       )}
 
-      {/* Stats */}
       {totalStaff > 0 && (
         <Grid container spacing={2} sx={{ mb: 2 }}>
           {[
@@ -654,7 +657,6 @@ const TeacherAttendanceSection = ({
         </Grid>
       )}
 
-      {/* Excel Controls */}
       <Box sx={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 2, p: 2, mb: 2, display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
         <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#0369a1", mr: 1 }}>📁 Excel Import / Export</Typography>
         <Button variant="outlined" size="small" sx={{ borderColor: "#0369a1", color: "#0369a1", fontWeight: 600, fontSize: 12 }} onClick={downloadTemplate}>
@@ -676,7 +678,6 @@ const TeacherAttendanceSection = ({
       </Box>
       {excelError && <Alert severity="error" sx={{ mb: 2 }}>{excelError}</Alert>}
 
-      {/* Manual Add Row */}
       <Box sx={{ border: "1px dashed #94a3b8", borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
         <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#374151", mb: 1.5 }}>✏️ Add Staff Manually</Typography>
         <Grid container spacing={1.5} alignItems="center">
@@ -707,7 +708,6 @@ const TeacherAttendanceSection = ({
             </Button>
           </Grid>
         </Grid>
-        {/* Live preview of computed values */}
         {(newRow.workingDays || newRow.casualLeave) && (
           <Box sx={{ mt: 1.5, display: "flex", gap: 2, flexWrap: "wrap" }}>
             <Typography sx={{ fontSize: 12, color: "#16a34a" }}>✅ Present: <strong>{newRow.daysPresent}</strong></Typography>
@@ -717,7 +717,6 @@ const TeacherAttendanceSection = ({
         )}
       </Box>
 
-      {/* Attendance Table */}
       {filteredRows.length > 0 ? (
         <Box sx={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -788,7 +787,6 @@ const TeacherAttendanceSection = ({
         </Box>
       )}
 
-      {/* Summary Cards */}
       {filteredRows.length > 0 && (
         <Box sx={{ mt: 3 }}>
           <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#374151", mb: 1.5 }}>Individual Summary — {activeMonth}</Typography>
@@ -821,7 +819,7 @@ const TeacherAttendanceSection = ({
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   STUDENT ATTENDANCE SECTION (CLASS-WISE with class average %)
+   STUDENT ATTENDANCE SECTION
 ───────────────────────────────────────────────────────────────────────────── */
 const StudentAttendanceSection = ({
   studentAttendanceData,
@@ -842,7 +840,6 @@ const StudentAttendanceSection = ({
     daysAbsent: 0, percentage: 0,
   });
 
-  // Sync month in newRow
   useEffect(() => {
     setNewRow((p) => ({ ...p, month: studentAttendanceMonth }));
   }, [studentAttendanceMonth]);
@@ -855,7 +852,6 @@ const StudentAttendanceSection = ({
     return { ...row, daysAbsent: da, percentage: pct };
   };
 
-  // All classes available in filtered-by-month data
   const allClasses = [...new Set(
     studentAttendanceData.filter((r) => !studentAttendanceMonth || r.month === studentAttendanceMonth).map((r) => r.class).filter(Boolean)
   )].sort();
@@ -866,7 +862,6 @@ const StudentAttendanceSection = ({
     return monthOk && classOk;
   });
 
-  // Class-wise averages
   const classAverages = {};
   allClasses.forEach((cls) => {
     const classRecords = studentAttendanceData.filter((r) => r.class === cls && (!studentAttendanceMonth || r.month === studentAttendanceMonth));
@@ -910,7 +905,6 @@ const StudentAttendanceSection = ({
 
   return (
     <Box>
-      {/* Header */}
       <Box sx={{ background: "linear-gradient(135deg, #0f766e, #14b8a6)", borderRadius: 2, px: 3, py: 2, mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
         <Box>
           <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>🎓 Student Attendance &amp; Performance</Typography>
@@ -919,7 +913,6 @@ const StudentAttendanceSection = ({
         {avgAttendance && <Chip label={`Overall Avg: ${avgAttendance}%`} sx={{ background: "#ffffff22", color: "#fff", fontWeight: 800, fontSize: 13 }} />}
       </Box>
 
-      {/* Tab Switcher */}
       <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
         {[{ id: "attendance", label: "📋 Attendance" }, { id: "classwise", label: "🏫 Class-wise Summary" }, { id: "performance", label: "📊 Performance" }].map((tab) => (
           <Button key={tab.id} variant={activeTab === tab.id ? "contained" : "outlined"} size="small" onClick={() => setActiveTab(tab.id)}
@@ -929,7 +922,6 @@ const StudentAttendanceSection = ({
         ))}
       </Box>
 
-      {/* Month Selector */}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2, alignItems: "center" }}>
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Month:</Typography>
         {MONTHS.map((m) => (
@@ -940,7 +932,6 @@ const StudentAttendanceSection = ({
         ))}
       </Box>
 
-      {/* Holidays */}
       {monthHolidays.length > 0 && (
         <Alert severity="info" sx={{ mb: 2, fontSize: 12, py: 0.5, "& .MuiAlert-message": { width: "100%" } }}>
           <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>Holidays in {studentAttendanceMonth}:</Typography>
@@ -955,7 +946,6 @@ const StudentAttendanceSection = ({
 
       {activeTab === "attendance" && (
         <>
-          {/* Stats */}
           {totalStudents > 0 && (
             <Grid container spacing={2} sx={{ mb: 2 }}>
               {[
@@ -975,7 +965,6 @@ const StudentAttendanceSection = ({
             </Grid>
           )}
 
-          {/* Excel Controls */}
           <Box sx={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 2, p: 2, mb: 2, display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
             <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#166534", mr: 1 }}>📁 Excel Import / Export (Class-wise)</Typography>
             <Button variant="outlined" size="small" sx={{ borderColor: "#16a34a", color: "#16a34a", fontWeight: 600, fontSize: 12 }} onClick={downloadStudentAttendanceTemplate}>
@@ -997,7 +986,6 @@ const StudentAttendanceSection = ({
           </Box>
           {studentExcelError && <Alert severity="error" sx={{ mb: 2 }}>{studentExcelError}</Alert>}
 
-          {/* Class filter */}
           {allClasses.length > 0 && (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2, alignItems: "center" }}>
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Filter by Class:</Typography>
@@ -1011,7 +999,6 @@ const StudentAttendanceSection = ({
             </Box>
           )}
 
-          {/* Manual Add Row */}
           <Box sx={{ border: "1px dashed #94a3b8", borderRadius: 2, p: 2, mb: 2, background: "#fafafa" }}>
             <Typography sx={{ fontWeight: 600, fontSize: 13, color: "#374151", mb: 1.5 }}>✏️ Add Student Manually</Typography>
             <Grid container spacing={1.5} alignItems="center">
@@ -1045,7 +1032,6 @@ const StudentAttendanceSection = ({
             )}
           </Box>
 
-          {/* Attendance Table */}
           {filteredData.length > 0 ? (
             <Box sx={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -1098,7 +1084,6 @@ const StudentAttendanceSection = ({
         </>
       )}
 
-      {/* ── CLASS-WISE SUMMARY TAB ── */}
       {activeTab === "classwise" && (
         <Box>
           <Typography sx={{ fontWeight: 700, color: "#0f766e", fontSize: 14, mb: 2 }}>
@@ -1116,7 +1101,6 @@ const StudentAttendanceSection = ({
                 const low = classRecords.filter((r) => r.percentage < 50).length;
                 const tc = attColor(avg);
 
-                // Section-wise breakdown
                 const sectionBreakdown = sections.map((sec) => {
                   const secRecs = classRecords.filter((r) => r.section === sec);
                   const secAvg = secRecs.length > 0
@@ -1134,7 +1118,6 @@ const StudentAttendanceSection = ({
                       </Box>
                       <Typography sx={{ fontSize: 12, color: "#64748b", mb: 1 }}>Total Students: <strong>{classRecords.length}</strong></Typography>
 
-                      {/* Progress bar */}
                       <Box sx={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", mb: 1.5 }}>
                         <Box sx={{ height: "100%", width: `${Math.min(avg, 100)}%`, background: tc.color, borderRadius: 4, transition: "width 0.4s" }} />
                       </Box>
@@ -1144,7 +1127,6 @@ const StudentAttendanceSection = ({
                         <Chip label={`🔴 ${low} <50%`} size="small" sx={{ background: "#fee2e2", color: "#dc2626", fontWeight: 700, fontSize: 11 }} />
                       </Box>
 
-                      {/* Section breakdown */}
                       {sectionBreakdown.length > 0 && (
                         <Box sx={{ mt: 1.5, pt: 1.5, borderTop: "1px solid #e2e8f0" }}>
                           <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#374151", mb: 1 }}>Section-wise:</Typography>
@@ -1166,7 +1148,6 @@ const StudentAttendanceSection = ({
             </Grid>
           )}
 
-          {/* Overall class comparison bar chart */}
           {allClasses.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Typography sx={{ fontWeight: 700, color: "#0f766e", fontSize: 14, mb: 1.5 }}>📊 Class-wise Comparison</Typography>
@@ -1191,10 +1172,8 @@ const StudentAttendanceSection = ({
         </Box>
       )}
 
-      {/* ── PERFORMANCE TAB ── */}
       {activeTab === "performance" && (
         <Box>
-          {/* Monthly trend */}
           <Typography sx={{ fontWeight: 700, color: "#0f766e", fontSize: 14, mb: 1.5 }}>📈 Monthly Average Attendance Trend</Typography>
           {(() => {
             const monthlyTrend = MONTHS.map((m) => {
@@ -1219,7 +1198,6 @@ const StudentAttendanceSection = ({
             );
           })()}
 
-          {/* Low attendance alert */}
           {studentAttendanceData.filter((r) => r.percentage < 75).length > 0 && (
             <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
               <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 1 }}>⚠️ Students Below 75% Attendance (Action Required)</Typography>
@@ -1254,14 +1232,7 @@ const StudentAttendanceSection = ({
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   WATER HYGIENE, SANITATION & CLEANLINESS MONITORING SECTION (UPDATED)
-   - Water quality testing status + report upload
-   - Corrective action details if water quality is poor
-   - UPDATED: Essential Water & Sanitation Facilities (Marks-based) table now
-     has its own Yes/No dropdowns edited directly inside the table (the old
-     separate "Cleanliness & Hygiene Monitoring" block has been removed —
-     those same conditions are now controlled from this single table),
-     with the Marking Criteria table below.
+   WATER HYGIENE, SANITATION & CLEANLINESS MONITORING SECTION
 ───────────────────────────────────────────────────────────────────────────── */
 const blankSanitationFacilityRows = () => ([
   { facility: "Boys Toilets", total: "", functional: "", nonFunctional: "", remarks: "" },
@@ -1271,7 +1242,6 @@ const blankSanitationFacilityRows = () => ([
   { facility: "Handwashing Stations", total: "", functional: "", nonFunctional: "", remarks: "" },
 ]);
 
-// Marking criteria for the 5-condition Essential Water & Sanitation Facilities table
 const getWaterHygieneMarks = (yesCount) => {
   if (yesCount === 5) return 5;
   if (yesCount >= 3) return 3;
@@ -1286,7 +1256,16 @@ const WaterHygieneSanitation = ({
   setSanitationFacilities,
 }) => {
   const handleField = (field, value) => {
-    setWaterHygieneData((prev) => ({ ...prev, [field]: value }));
+    setWaterHygieneData((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === "waterQualityStatus" && value === "Bad") {
+        updated.dailyCleaningLog = "No";
+        updated.toiletCleaningSchedule = "No";
+        updated.soapAvailable = "No";
+        updated.wasteDisposalSystem = "No";
+      }
+      return updated;
+    });
   };
 
   const handleReportUpload = (file) => {
@@ -1300,45 +1279,41 @@ const WaterHygieneSanitation = ({
 
   const isBadQuality = waterHygieneData.waterQualityStatus === "Bad" || waterHygieneData.waterQualityStatus === "Poor";
 
-  /* ── Essential Water & Sanitation Facilities — 5 Yes/No conditions ──
-     Each condition is now directly editable via a dropdown inside the
-     table itself (see the "Essential Water & Sanitation Facilities"
-     table below). "waterQualityGood" stays in sync with the
-     Water Quality Testing result above; the other four are stored
-     directly on waterHygieneData. */
   const essentialConditions = [
     {
       key: "waterQualityGood",
       label: "Safe Drinking Water Quality Tested & Good (Yes/No)",
-      value: waterHygieneData.waterQualityStatus === "Good" ? "Yes" : "No",
+      value:
+        waterHygieneData.waterQualityStatus === "Good"
+          ? "Yes"
+          : waterHygieneData.waterQualityStatus === "Bad"
+          ? "No"
+          : "",
     },
     {
       key: "dailyCleaningLog",
       label: "Daily Cleaning Log Maintained (Yes/No)",
-      value: waterHygieneData.dailyCleaningLog || "No",
+      value: waterHygieneData.dailyCleaningLog || "",
     },
     {
       key: "toiletCleaningSchedule",
       label: "Toilet Cleaning Schedule Displayed (Yes/No)",
-      value: waterHygieneData.toiletCleaningSchedule || "No",
+      value: waterHygieneData.toiletCleaningSchedule || "",
     },
     {
       key: "soapAvailable",
       label: "Soap / Handwash Available (Yes/No)",
-      value: waterHygieneData.soapAvailable || "No",
+      value: waterHygieneData.soapAvailable || "",
     },
     {
       key: "wasteDisposalSystem",
       label: "Proper Waste Disposal System (Yes/No)",
-      value: waterHygieneData.wasteDisposalSystem || "No",
+      value: waterHygieneData.wasteDisposalSystem || "",
     },
   ];
 
-  // Handles edits made directly from the dropdowns in the Essential
-  // Water & Sanitation Facilities table.
   const handleConditionChange = (key, value) => {
     if (key === "waterQualityGood") {
-      // Keep this in sync with the Water Quality Testing result above.
       handleField("waterQualityStatus", value === "Yes" ? "Good" : "Bad");
     } else {
       handleField(key, value);
@@ -1350,7 +1325,6 @@ const WaterHygieneSanitation = ({
 
   return (
     <Box>
-      {/* Header */}
       <Box sx={{ background: "linear-gradient(135deg, #0369a1, #38bdf8)", borderRadius: 2, px: 3, py: 2, mb: 3, display: "flex", alignItems: "center", gap: 1.5 }}>
         <Typography sx={{ fontSize: 22 }}>💧</Typography>
         <Box>
@@ -1361,7 +1335,6 @@ const WaterHygieneSanitation = ({
         </Box>
       </Box>
 
-      {/* ── Water Quality Testing ── */}
       <Box sx={{ border: "1px solid #bae6fd", borderRadius: 2, p: 3, mb: 3, background: "#f0f9ff" }}>
         <Typography sx={{ fontWeight: 700, color: "#0369a1", fontSize: 14, mb: 2 }}>🧪 Water Quality Testing</Typography>
         <Grid container spacing={2}>
@@ -1402,7 +1375,6 @@ const WaterHygieneSanitation = ({
                 </TextField>
               </Grid>
 
-              {/* Upload report */}
               <Grid item xs={12} sm={8}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
                   <Button variant="contained" size="small" component="label"
@@ -1430,7 +1402,6 @@ const WaterHygieneSanitation = ({
           </Alert>
         )}
 
-        {/* ── Corrective Action (only if Bad quality) ── */}
         {isBadQuality && (
           <Box sx={{ mt: 3, border: "1px solid #fecaca", borderRadius: 2, p: 2.5, background: "#fef2f2" }}>
             <Typography sx={{ fontWeight: 700, color: "#dc2626", fontSize: 13, mb: 1.5 }}>
@@ -1468,10 +1439,6 @@ const WaterHygieneSanitation = ({
         )}
       </Box>
 
-      {/* ── Essential Water & Sanitation Facilities (5 Marks) ──
-          Each condition below is now a live Yes/No dropdown — editing
-          it here updates waterHygieneData directly (the old separate
-          "Cleanliness & Hygiene Monitoring" section has been removed). */}
       <Box sx={{ border: "1px solid #bae6fd", borderRadius: 2, overflow: "hidden", mb: 3 }}>
         <Box sx={{ background: "linear-gradient(135deg, #0f766e, #14b8a6)", px: 3, py: 1.5 }}>
           <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
@@ -1502,19 +1469,26 @@ const WaterHygieneSanitation = ({
                       value={c.value}
                       onChange={(e) => handleConditionChange(c.key, e.target.value)}
                       SelectProps={{
-                        renderValue: (val) => (
-                          <Chip
-                            label={val}
-                            size="small"
-                            sx={{
-                              fontWeight: 700,
-                              background: val === "Yes" ? "#dcfce7" : "#fee2e2",
-                              color: val === "Yes" ? "#16a34a" : "#dc2626",
-                            }}
-                          />
-                        ),
+                        displayEmpty: true,
+                        renderValue: (val) =>
+                          val ? (
+                            <Chip
+                              label={val}
+                              size="small"
+                              sx={{
+                                fontWeight: 700,
+                                background: val === "Yes" ? "#dcfce7" : "#fee2e2",
+                                color: val === "Yes" ? "#16a34a" : "#dc2626",
+                              }}
+                            />
+                          ) : (
+                            <Typography sx={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>
+                              Select
+                            </Typography>
+                          ),
                       }}
                     >
+                      <MenuItem value="">Select</MenuItem>
                       <MenuItem value="Yes">Yes</MenuItem>
                       <MenuItem value="No">No</MenuItem>
                     </TextField>
@@ -1529,7 +1503,6 @@ const WaterHygieneSanitation = ({
         </Box>
       </Box>
 
-      {/* ── Marking Criteria (Out of 5) ── */}
       <Box sx={{ mb: 3 }}>
         <Typography sx={{ fontWeight: 700, color: "#374151", fontSize: 13, mb: 1 }}>*Marking Criteria (Out of 5)</Typography>
         <Box sx={{ overflowX: "auto" }}>
@@ -1579,13 +1552,8 @@ const EMRSForm = () => {
   const [loading, setLoading] = useState(false);
   const isSubmittingRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState(new Set());
 
-  // NOTE: this local `submittedForms` state is intentionally unused for
-  // display — this component's job is to SUBMIT a form, not render the
-  // list of submitted forms. The list should be owned by the dashboard /
-  // EMRSApplied.jsx component so it survives navigation and re-mounts.
-  // Kept here (unused) only for backward compatibility with older code
-  // paths that may still reference it.
   const [submittedForms, setSubmittedForms] = useState([]);
 
   const [safetyCompliance, setSafetyCompliance] = useState({
@@ -1625,20 +1593,28 @@ const EMRSForm = () => {
     { label: "Extra Curricular", icon: "🎭" },
     { label: "Hospitalization", icon: "🏥" },
     { label: "Staff Details", icon: "👨‍🏫" },
-    
-   
     { label: "Financial & Procurement Compliance", icon: "📊" },
     { label: "EMRS Image Upload", icon: "📸" },
-     { label: "Preview & Submit", icon: "👁️" },
+    { label: "Preview & Submit", icon: "👁️" },
   ];
 
   const handleNext = () => {
+    setCompletedSteps((prev) => {
+      const updated = new Set(prev);
+      updated.add(currentStep);
+      return updated;
+    });
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleBack = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleStepClick = (index) => {
+    setCurrentStep(index);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1757,11 +1733,15 @@ const EMRSForm = () => {
 
   const [hospitalizationRows, setHospitalizationRows] = useState([emptyHospitalizationRow()]);
 
+  /* ── TEACHING / NON-TEACHING STAFF STATE — all three qualification
+     arrays now use the shared blank*Qualification() helpers so every row
+     (first one, or one added later via "+ Add Staff Post") has the exact
+     same field set. ── */
   const [teachingRows, setteachingRows] = useState([{
     post: "", staffName: "", name: "", dob: "", doj: "", email: "", contactNumber: "", contact: "", total: "", filled: "", vacant: "",
-    academicQualifications: [{ post: "", staffname: " ", qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
-    professionalQualifications: [{ post: "", staffname: " ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
-    tetQualifications: [{ post: "", staffname: " ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+    academicQualifications: [blankAcademicQualification()],
+    professionalQualifications: [blankProfessionalQualification()],
+    tetQualifications: [blankTetQualification()],
     monthlyAttendance: [],
   }]);
 
@@ -1780,9 +1760,9 @@ const EMRSForm = () => {
 
   const [nonTeachingRows, setnonTeachingRows] = useState([{
     post: "", name: "", dob: "", doj: "", email: "", contact: "", total: "", filled: "", vacant: "",
-    academicQualifications: [{ post: "", staffname: " ", qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" }],
-    professionalQualifications: [{ post: "", staffname: " ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
-    tetQualifications: [{ post: "", staffname: " ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" }],
+    academicQualifications: [blankAcademicQualification()],
+    professionalQualifications: [blankProfessionalQualification()],
+    tetQualifications: [blankTetQualification()],
     monthlyAttendance: [],
   }]);
 
@@ -1850,9 +1830,6 @@ const EMRSForm = () => {
     ],
   });
 
-  /* ─────────────────────────────────────────────────────────────────
-     WATER HYGIENE / SANITATION STATE
-  ───────────────────────────────────────────────────────────────── */
   const [waterHygieneData, setWaterHygieneData] = useState({
     waterQualityTestConducted: "No",
     testDate: "",
@@ -1864,25 +1841,17 @@ const EMRSForm = () => {
     actionStatus: "",
     actionInitiated: "",
     correctiveMeasures: "",
-    dailyCleaningLog: "No",
-    toiletCleaningSchedule: "No",
-    soapAvailable: "No",
-    wasteDisposalSystem: "No",
+    dailyCleaningLog: "",
+    toiletCleaningSchedule: "",
+    soapAvailable: "",
+    wasteDisposalSystem: "",
   });
   const [sanitationFacilities, setSanitationFacilities] = useState(blankSanitationFacilityRows());
 
-  /* ─────────────────────────────────────────────────────────────────
-     INDEPENDENT ATTENDANCE STATE (decoupled from Staff Details)
-  ───────────────────────────────────────────────────────────────── */
-  // Single shared array for ALL staff attendance rows (Teaching + Non-Teaching)
-  // staffType field distinguishes them
   const [staffAttendanceRows, setStaffAttendanceRows] = useState([]);
   const [teachingAttMonth, setTeachingAttMonth] = useState(MONTHS[new Date().getMonth()]);
   const [nonTeachingAttMonth, setNonTeachingAttMonth] = useState(MONTHS[new Date().getMonth()]);
 
-  /* ─────────────────────────────────────────────────────────────────
-     STUDENT ATTENDANCE STATE
-  ───────────────────────────────────────────────────────────────── */
   const [studentAttendanceData, setStudentAttendanceData] = useState([]);
   const [studentAttendanceMonth, setStudentAttendanceMonth] = useState(MONTHS[new Date().getMonth()]);
   const [studentExcelError, setStudentExcelError] = useState("");
@@ -1908,7 +1877,6 @@ const EMRSForm = () => {
         return;
       }
  
-      // Normalize column header keys
       const normalise = (obj) => {
         const out = {};
         Object.entries(obj).forEach(([k, v]) => {
@@ -1917,7 +1885,6 @@ const EMRSForm = () => {
         return out;
       };
  
-      // Convert any month format → canonical MONTHS[] entry
       const normalizeMonth = (raw) => {
         if (raw == null || raw === "") return "";
         const s = String(raw).trim();
@@ -2035,7 +2002,6 @@ const EMRSForm = () => {
       toiletCleaningSchedule: waterHygieneData.toiletCleaningSchedule,
       soapAvailable: waterHygieneData.soapAvailable,
       wasteDisposalSystem: waterHygieneData.wasteDisposalSystem,
-      // marksObtained for the new Essential Water & Sanitation Facilities table
       waterHygieneMarksObtained: getWaterHygieneMarks(
         [
           waterHygieneData.waterQualityStatus === "Good",
@@ -2092,14 +2058,72 @@ const EMRSForm = () => {
 
   const passingYears = Array.from({ length: 40 }, (_, i) => String(new Date().getFullYear() - i));
 
+  const sanitizeAlphaName = (value) => (value || "").replace(/[^A-Za-z\s]/g, "");
+  const sanitizeContactDigits = (value) => (value || "").replace(/\D/g, "").slice(0, 10);
+  const isValidStaffEmail = (value) => !value || value.includes("@");
+  const isValidStaffContact = (value) => !value || /^\d{10}$/.test(value);
+  const sanitizeNoDigits = (value) => (value || "").replace(/[0-9]/g, "");
+  const todayDateStr = dayjs().format("YYYY-MM-DD");
+
+  const updateStaffField = (rows, setRows, rowIndex, fieldName, rawValue) => {
+    const lowerField = String(fieldName).toLowerCase();
+    let value = rawValue;
+
+    if (lowerField === "name" || lowerField === "staffname") {
+      value = sanitizeAlphaName(value);
+    } else if (lowerField === "contact" || lowerField === "contactnumber") {
+      value = sanitizeContactDigits(value);
+    } else if (lowerField === "dob" || lowerField === "doj") {
+      if (value && dayjs(value).isAfter(dayjs(), "day")) {
+        toast.error("Future date is not allowed.");
+        return;
+      }
+    }
+
+    setRows((prev) => {
+      if (!prev[rowIndex]) return prev;
+      const updated = [...prev];
+      const row = { ...updated[rowIndex], [fieldName]: value };
+
+      if (lowerField === "filled") {
+        const total = Number(row.total || 0);
+        const filled = Number(value || 0);
+        if (total > 0 && filled > total) {
+          toast.error("Filled staff cannot exceed total sanctioned staff.");
+          row.filled = String(total);
+        }
+      }
+      if (lowerField === "total") {
+        const total = Number(value || 0);
+        const filled = Number(row.filled || 0);
+        if (total > 0 && filled > total) {
+          row.filled = String(total);
+        }
+      }
+
+      updated[rowIndex] = row;
+      return updated;
+    });
+  };
+
+  /* ── QUALIFICATION TABLES — now renders THREE tables: Academic,
+     Professional (previously missing any UI at all — this is why it was
+     always blank), and TET. `showTET` still lets non-teaching staff hide
+     the TET table; Professional Qualification is shown for both staff
+     types since both have a professionalQualifications array. ── */
   const renderQualificationTables = (staffRows, setStaffRows, staffIndex, showTET = true) => {
     const row = staffRows[staffIndex];
     const qThStyle = { backgroundColor: "#1976d2", color: "#fff", padding: "8px 6px", textAlign: "center", fontSize: "12px", fontWeight: 600, border: "1px solid #1565c0", whiteSpace: "nowrap" };
     const qTdStyle = { padding: "3px", border: "1px solid #cbd5e1" };
     const qTdCenterStyle = { textAlign: "center", padding: "6px", border: "1px solid #cbd5e1", fontSize: "13px" };
 
+    const noDigitFields = ["course", "college", "university", "examconductedby", "affiliationbody"];
+
     const updateField = (qualType, qIndex, field, value) => {
-      const u = [...staffRows]; u[staffIndex][qualType][qIndex][field] = value; setStaffRows(u);
+      const sanitizedValue = noDigitFields.includes(String(field).toLowerCase())
+        ? sanitizeNoDigits(value)
+        : value;
+      const u = [...staffRows]; u[staffIndex][qualType][qIndex][field] = sanitizedValue; setStaffRows(u);
     };
 
     const ActionButtons = ({ qualType, qIndex, emptyObj }) => (
@@ -2111,11 +2135,19 @@ const EMRSForm = () => {
       </Box>
     );
 
-    const emptyAcademic = { post: "", name: " ", qualification: "", course: "", registrationNo: "", rollNo: "", college: "", marksObtained: "", university: "", passingYear: "" };
-    const emptyTET = { post: "", name: " ", qualification: "", registrationNo: "", rollNo: "", examConductedBy: "", passingYear: "", marksObtained: "", affiliationBody: "" };
+    // Row post/name preview — read-only, mirrors the staff row itself
+    // (post/staffname on the qualification object are kept in sync
+    // automatically at submit time, see syncQualificationOwner()).
+    const PostNameCells = () => (
+      <>
+        <td style={{ ...qTdStyle, minWidth: 120 }}><Typography sx={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#1976d2", px: 1, py: 0.4, borderRadius: 1, textAlign: "center", whiteSpace: "nowrap" }}>{row.post || "—"}</Typography></td>
+        <td style={{ ...qTdStyle, minWidth: 130 }}><Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", px: 1, whiteSpace: "nowrap" }}>{row.name || row.staffName || "—"}</Typography></td>
+      </>
+    );
 
     return (
       <Box mt={2}>
+        {/* ── Academic Qualification ── */}
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>Academic Qualification</Typography>
         <Box sx={{ overflowX: "auto", mb: 2 }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -2126,19 +2158,47 @@ const EMRSForm = () => {
               {row.academicQualifications.map((q, qIndex) => (
                 <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
                   <td style={qTdCenterStyle}>{qIndex + 1}</td>
-                  <td style={{ ...qTdStyle, minWidth: 120 }}><Typography sx={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#1976d2", px: 1, py: 0.4, borderRadius: 1, textAlign: "center", whiteSpace: "nowrap" }}>{row.post || "—"}</Typography></td>
-                  <td style={{ ...qTdStyle, minWidth: 130 }}><Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", px: 1, whiteSpace: "nowrap" }}>{row.name || row.staffName || "—"}</Typography></td>
+                  <PostNameCells />
                   <td style={qTdStyle}><TextField select fullWidth size="small" value={q.qualification} onChange={(e) => updateField("academicQualifications", qIndex, "qualification", e.target.value)} sx={{ minWidth: 110 }}>{qualificationOptions.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField></td>
                   <td style={qTdStyle}><TextField fullWidth size="small" value={q.course} onChange={(e) => updateField("academicQualifications", qIndex, "course", e.target.value)} sx={{ minWidth: 90 }} /></td>
                   <td style={qTdStyle}><TextField fullWidth size="small" value={q.college} onChange={(e) => updateField("academicQualifications", qIndex, "college", e.target.value)} sx={{ minWidth: 120 }} /></td>
                   <td style={qTdStyle}><TextField fullWidth size="small" value={q.university} onChange={(e) => updateField("academicQualifications", qIndex, "university", e.target.value)} sx={{ minWidth: 120 }} /></td>
                   <td style={qTdStyle}><TextField select fullWidth size="small" value={q.passingYear} onChange={(e) => updateField("academicQualifications", qIndex, "passingYear", e.target.value)} sx={{ minWidth: 100 }}>{passingYears.map((y) => <MenuItem key={y} value={y}>{y}</MenuItem>)}</TextField></td>
-                  <td style={qTdCenterStyle}><ActionButtons qualType="academicQualifications" qIndex={qIndex} emptyObj={emptyAcademic} /></td>
+                  <td style={qTdCenterStyle}><ActionButtons qualType="academicQualifications" qIndex={qIndex} emptyObj={blankAcademicQualification()} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </Box>
+
+        {/* ── Professional Qualification — NEW: previously this data had
+            no editable table anywhere, so it stayed at its blank default
+            forever and dumped as raw JSON on the applied-forms page. ── */}
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>Professional Qualification</Typography>
+        <Box sx={{ overflowX: "auto", mb: 2 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>{["S.No", "Post", "Name", "Qualification", "Registration No", "Roll No", "Exam Conducted By", "Affiliation Body", "Passing Year", "Marks Obtained", "Action"].map((h) => (<th key={h} style={qThStyle}>{h}</th>))}</tr>
+            </thead>
+            <tbody>
+              {(row.professionalQualifications || []).map((q, qIndex) => (
+                <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
+                  <td style={qTdCenterStyle}>{qIndex + 1}</td>
+                  <PostNameCells />
+                  <td style={qTdStyle}><TextField select fullWidth size="small" value={q.qualification} onChange={(e) => updateField("professionalQualifications", qIndex, "qualification", e.target.value)} sx={{ minWidth: 130 }}>{professionalQualificationOptions.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField></td>
+                  <td style={qTdStyle}><TextField fullWidth size="small" value={q.registrationNo} onChange={(e) => updateField("professionalQualifications", qIndex, "registrationNo", e.target.value)} sx={{ minWidth: 110 }} /></td>
+                  <td style={qTdStyle}><TextField fullWidth size="small" value={q.rollNo} onChange={(e) => updateField("professionalQualifications", qIndex, "rollNo", e.target.value)} sx={{ minWidth: 100 }} /></td>
+                  <td style={qTdStyle}><TextField fullWidth size="small" value={q.examConductedBy} onChange={(e) => updateField("professionalQualifications", qIndex, "examConductedBy", e.target.value)} sx={{ minWidth: 130 }} /></td>
+                  <td style={qTdStyle}><TextField fullWidth size="small" value={q.affiliationBody} onChange={(e) => updateField("professionalQualifications", qIndex, "affiliationBody", e.target.value)} sx={{ minWidth: 130 }} /></td>
+                  <td style={qTdStyle}><TextField select fullWidth size="small" value={q.passingYear} onChange={(e) => updateField("professionalQualifications", qIndex, "passingYear", e.target.value)} sx={{ minWidth: 100 }}>{passingYears.map((y) => <MenuItem key={y} value={y}>{y}</MenuItem>)}</TextField></td>
+                  <td style={qTdStyle}><TextField fullWidth size="small" type="number" value={q.marksObtained} onChange={(e) => updateField("professionalQualifications", qIndex, "marksObtained", e.target.value)} sx={{ minWidth: 90 }} inputProps={{ min: 0 }} /></td>
+                  <td style={qTdCenterStyle}><ActionButtons qualType="professionalQualifications" qIndex={qIndex} emptyObj={blankProfessionalQualification()} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+
         {showTET && (
           <>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>TET Qualification</Typography>
@@ -2149,11 +2209,10 @@ const EMRSForm = () => {
                   {row.tetQualifications.map((q, qIndex) => (
                     <tr key={qIndex} style={{ backgroundColor: qIndex % 2 === 0 ? "#f8fafc" : "#fff" }}>
                       <td style={qTdCenterStyle}>{qIndex + 1}</td>
-                      <td style={{ ...qTdStyle, minWidth: 120 }}><Typography sx={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#1976d2", px: 1, py: 0.4, borderRadius: 1, textAlign: "center", whiteSpace: "nowrap" }}>{row.post || "—"}</Typography></td>
-                      <td style={{ ...qTdStyle, minWidth: 130 }}><Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151", px: 1, whiteSpace: "nowrap" }}>{row.name || row.staffName || "—"}</Typography></td>
+                      <PostNameCells />
                       <td style={qTdStyle}><TextField select fullWidth size="small" value={q.qualification} onChange={(e) => updateField("tetQualifications", qIndex, "qualification", e.target.value)} sx={{ minWidth: 130 }}>{tetQualificationOptions.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField></td>
                       <td style={qTdStyle}><TextField select fullWidth size="small" value={q.passingYear} onChange={(e) => updateField("tetQualifications", qIndex, "passingYear", e.target.value)} sx={{ minWidth: 100 }}>{passingYears.map((y) => <MenuItem key={y} value={y}>{y}</MenuItem>)}</TextField></td>
-                      <td style={qTdCenterStyle}><ActionButtons qualType="tetQualifications" qIndex={qIndex} emptyObj={emptyTET} /></td>
+                      <td style={qTdCenterStyle}><ActionButtons qualType="tetQualifications" qIndex={qIndex} emptyObj={blankTetQualification()} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -2184,25 +2243,14 @@ const EMRSForm = () => {
     } catch (error) { console.error("Pincode lookup failed:", error); }
   };
 
-  /* ─────────────────────────────────────────────────────────────────
-     DRAFT PERSISTENCE — auto-save the in-progress EMRS form so that if
-     the user gets logged out (session expiry, closing the tab, etc.)
-     partway through filling it out, the next time they log back in and
-     open this form they land exactly on the step they were on with
-     everything they had already entered restored.
-  ───────────────────────────────────────────────────────────────── */
   const draftKey = useMemo(() => getEmrsDraftKey(user), [user]);
   const draftRestoreAttemptedRef = useRef(false);
   const [draftBannerVisible, setDraftBannerVisible] = useState(false);
 
-  // Build a plain-JSON-safe snapshot of everything entered so far.
-  // Uploaded images are converted to base64 data URLs (same helper used
-  // for the final submission) so they survive being written to
-  // localStorage; the (non-serializable) water-test-report File is
-  // dropped from the snapshot — only its filename is kept as a hint.
   const buildDraftSnapshot = async () => ({
     savedAt: new Date().toISOString(),
     currentStep,
+    completedSteps: Array.from(completedSteps),
     formValues: stripNonSerializable(getValues()),
     safetyCompliance,
     selectedClass, selectedSection, selectedMonth, monthlyAttendance,
@@ -2220,7 +2268,6 @@ const EMRSForm = () => {
     uploadedImages: await convertUploadedImages(uploadedImages),
   });
 
-  // Restore a previously saved draft once, on mount.
   useEffect(() => {
     if (draftRestoreAttemptedRef.current) return;
     draftRestoreAttemptedRef.current = true;
@@ -2232,6 +2279,7 @@ const EMRSForm = () => {
 
       if (draft.formValues) reset(draft.formValues);
       if (typeof draft.currentStep === "number") setCurrentStep(draft.currentStep);
+      if (Array.isArray(draft.completedSteps)) setCompletedSteps(new Set(draft.completedSteps));
       if (draft.safetyCompliance) setSafetyCompliance(draft.safetyCompliance);
       if (draft.selectedClass !== undefined) setSelectedClass(draft.selectedClass);
       if (draft.selectedSection !== undefined) setSelectedSection(draft.selectedSection);
@@ -2274,9 +2322,6 @@ const EMRSForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
 
-  // Auto-save the draft (debounced) whenever meaningful state changes.
-  // Guarded by draftRestoreAttemptedRef so we never overwrite a
-  // not-yet-restored draft with the component's blank initial state.
   useDebouncedEffect(
     () => {
       if (!draftRestoreAttemptedRef.current) return;
@@ -2291,7 +2336,7 @@ const EMRSForm = () => {
         .catch((err) => console.warn("Could not build EMRS draft snapshot:", err));
     },
     [
-      draftKey, currentStep, safetyCompliance, selectedClass, selectedSection, selectedMonth,
+      draftKey, currentStep, completedSteps, safetyCompliance, selectedClass, selectedSection, selectedMonth,
       monthlyAttendance, staffRows, staffIndex, attendance, reservationRows, enrollmentRows,
       extraCurricularRows, hospitalizationRows, eyeDateErrors, earDateErrors, teachingRows,
       nonTeachingRows, recurringBreakup, operationalCostRows, messData, financialData,
@@ -2311,6 +2356,23 @@ const EMRSForm = () => {
     setDraftBannerVisible(false);
     toast.success("Draft discarded. Starting a fresh form.");
     window.location.reload();
+  };
+
+  /* ── syncQualificationOwner — at submit time, stamps every qualification
+     entry (academic / professional / TET) with the staff row's own post
+     and name. This guarantees the exported "post"/"staffname" fields
+     always match what the user actually typed for that staff member,
+     regardless of when each qualification row was added. ── */
+  const syncQualificationOwner = (staff) => {
+    const staffname = String(staff.name || staff.staffName || "").trim() || " ";
+    const post = staff.post || "";
+    const syncArray = (arr) =>
+      Array.isArray(arr) ? arr.map((q) => ({ ...q, post, staffname })) : [];
+    return {
+      academicQualifications: syncArray(staff.academicQualifications),
+      professionalQualifications: syncArray(staff.professionalQualifications),
+      tetQualifications: syncArray(staff.tetQualifications),
+    };
   };
 
   const onSubmit = async (data) => {
@@ -2345,13 +2407,46 @@ const EMRSForm = () => {
         })),
         extraCurricular: extraCurricularRows.map((item) => ({ academicYear: item.academicYear, initiativeName: item.initiativeName?.trim(), collaboratingPartner: item.collaboratingPartner?.trim(), areasOfDevelopment: item.areasOfDevelopment ? [item.areasOfDevelopment] : [], description: item.description?.trim(), targetStudents: item.targetStudents?.trim(), status: item.status })),
         hospitalization: hospitalizationRows.map((item) => ({ studentName: item.studentName?.trim(), rollNo: item.rollNo, class: item.class, section: item.section, admissionDate: item.admissionDate, dischargeDate: item.dischargeDate, reasonForHospitalization: item.reasonForHospitalization?.trim(), hospitalEmpanelled: item.hospitalEmpanelled?.trim(), empanellementValidity: item.empanellementValidity, treatmentDetails: item.treatmentDetails?.trim(), doctorName: item.doctorName?.trim(), estimatedCost: toSafeNumber(item.estimatedCost), amountClaimed: toSafeNumber(item.amountClaimed), claimStatus: item.claimStatus, guardianName: item.guardianName?.trim(), guardianContact: item.guardianContact })),
-        teachingStaff: teachingRows.map((staff) => ({ post: staff.post, name: (staff.name || staff.staffName)?.trim(), dob: staff.dob, doj: staff.doj, email: staff.email?.trim(), contact: staff.contact || staff.contactNumber, total: toSafeNumber(staff.total), filled: toSafeNumber(staff.filled), vacant: toSafeNumber(staff.total) - toSafeNumber(staff.filled), academicQualifications: staff.academicQualifications, professionalQualifications: staff.professionalQualifications, tetQualifications: staff.tetQualifications })),
-        nonTeachingStaff: nonTeachingRows.map((staff) => ({ post: staff.post, name: staff.name?.trim(), dob: staff.dob, doj: staff.doj, email: staff.email?.trim(), contact: staff.contact, total: toSafeNumber(staff.total), filled: toSafeNumber(staff.filled), vacant: toSafeNumber(staff.total) - toSafeNumber(staff.filled), academicQualifications: staff.academicQualifications, professionalQualifications: staff.professionalQualifications })),
-        // Independent attendance — stored separately
+        teachingStaff: teachingRows.map((staff) => {
+          const synced = syncQualificationOwner(staff);
+          return {
+            post: staff.post,
+            name: (staff.name || staff.staffName)?.trim(),
+            dob: staff.dob,
+            doj: staff.doj,
+            email: staff.email?.trim(),
+            contact: staff.contact || staff.contactNumber,
+            total: toSafeNumber(staff.total),
+            filled: toSafeNumber(staff.filled),
+            vacant: toSafeNumber(staff.total) - toSafeNumber(staff.filled),
+            academicQualifications: synced.academicQualifications,
+            professionalQualifications: synced.professionalQualifications,
+            tetQualifications: synced.tetQualifications,
+          };
+        }),
+        nonTeachingStaff: nonTeachingRows.map((staff) => {
+          const synced = syncQualificationOwner(staff);
+          return {
+            post: staff.post,
+            name: staff.name?.trim(),
+            dob: staff.dob,
+            doj: staff.doj,
+            email: staff.email?.trim(),
+            contact: staff.contact,
+            total: toSafeNumber(staff.total),
+            filled: toSafeNumber(staff.filled),
+            vacant: toSafeNumber(staff.total) - toSafeNumber(staff.filled),
+            academicQualifications: synced.academicQualifications,
+            professionalQualifications: synced.professionalQualifications,
+          };
+        }),
         teachingStaffAttendance: staffAttendanceRows.filter((r) => r.staffType === "Teaching"),
         nonTeachingStaffAttendance: staffAttendanceRows.filter((r) => r.staffType === "Non-Teaching"),
         studentAttendance: studentAttendanceData,
         operationalCost: operationalCostRows.map((row) => ({ year: row.year, month: row.month, costType: row.costType, amount: toSafeNumber(row.amount) })),
+        financialData,
+        recurringBreakup,
+        procurements,
         emrsImages: emrsImagesBase64,
       };
 
@@ -2361,7 +2456,7 @@ const EMRSForm = () => {
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch("http://localhost:5000/api/emrs/create", {
+      const response = await fetch("/api/emrs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -2369,10 +2464,12 @@ const EMRSForm = () => {
       });
       clearTimeout(timeoutId);
 
-      const contentType = response.headers.get("content-type");
+      const responseText = await response.text();
       let result = {};
-      if (contentType && contentType.includes("application/json")) {
-        result = await response.json();
+      try {
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        result = { message: responseText.trim() };
       }
       if (!response.ok) {
         throw new Error(result.message || result.error || "Submission failed");
@@ -2400,7 +2497,6 @@ const EMRSForm = () => {
       <Typography variant="h4" fontWeight="bold" gutterBottom>EMRS</Typography>
       <Typography variant="subtitle1" color="text.secondary" mb={3}>Create and manage EMRS details</Typography>
 
-      {/* ===== DRAFT RESUMED BANNER ===== */}
       {draftBannerVisible && (
         <Alert
           severity="info"
@@ -2416,21 +2512,23 @@ const EMRSForm = () => {
         </Alert>
       )}
 
-      {/* ===== STEPPER ===== */}
       <Box sx={{ overflowX: "auto", pb: 1, mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", minWidth: 700 }}>
-          {STEPS.map((step, i) => (
-            <React.Fragment key={i}>
-              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 72 }}>
-                <Box onClick={() => i < currentStep && setCurrentStep(i)}
-                  sx={{ width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: i === currentStep ? "#1976d2" : i < currentStep ? "#4caf50" : "#e2e8f0", color: i <= currentStep ? "#fff" : "#94a3b8", cursor: i < currentStep ? "pointer" : "default", fontWeight: 700, transition: "all 0.3s", boxShadow: i === currentStep ? "0 0 0 4px #bbdefb" : "none" }}>
-                  {i < currentStep ? "✓" : step.icon}
+          {STEPS.map((step, i) => {
+            const isDone = completedSteps.has(i);
+            return (
+              <React.Fragment key={i}>
+                <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 72 }}>
+                  <Box onClick={() => handleStepClick(i)}
+                    sx={{ width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: i === currentStep ? "#1976d2" : isDone ? "#4caf50" : "#e2e8f0", color: i === currentStep || isDone ? "#fff" : "#94a3b8", cursor: "pointer", fontWeight: 700, transition: "all 0.3s", boxShadow: i === currentStep ? "0 0 0 4px #bbdefb" : "none" }}>
+                    {isDone && i !== currentStep ? "✓" : step.icon}
+                  </Box>
+                  <Typography sx={{ fontSize: 10, mt: 0.5, fontWeight: i === currentStep ? 700 : 400, color: i === currentStep ? "#1976d2" : isDone ? "#4caf50" : "#94a3b8", textAlign: "center", lineHeight: 1.2 }}>{step.label}</Typography>
                 </Box>
-                <Typography sx={{ fontSize: 10, mt: 0.5, fontWeight: i === currentStep ? 700 : 400, color: i === currentStep ? "#1976d2" : i < currentStep ? "#4caf50" : "#94a3b8", textAlign: "center", lineHeight: 1.2 }}>{step.label}</Typography>
-              </Box>
-              {i < STEPS.length - 1 && (<Box sx={{ flex: 1, height: 3, mx: 0.5, background: i < currentStep ? "#4caf50" : "#e2e8f0", borderRadius: 2, transition: "background 0.3s", minWidth: 10 }} />)}
-            </React.Fragment>
-          ))}
+                {i < STEPS.length - 1 && (<Box sx={{ flex: 1, height: 3, mx: 0.5, background: isDone ? "#4caf50" : "#e2e8f0", borderRadius: 2, transition: "background 0.3s", minWidth: 10 }} />)}
+              </React.Fragment>
+            );
+          })}
         </Box>
       </Box>
 
@@ -2476,10 +2574,8 @@ const EMRSForm = () => {
               />
             )}
 
-            {/* ── Step 8: Staff Details ── */}
             {currentStep === 8 && (
               <>
-                {/* ══════════ TEACHING STAFF ══════════ */}
                 <Typography variant="h6" sx={{ background: "linear-gradient(to right, #1976d2, #42a5f5)", color: "#fff", padding: "8px 16px", borderRadius: 2, fontWeight: 600, mb: 2 }}>Teaching Staff Details</Typography>
                 <Box sx={{ border: "1px solid #bfdbfe", borderRadius: 2, p: 3, mb: 3, backgroundColor: "#eff6ff" }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1d4ed8", mb: 1.5 }}>Sanctioned Strength</Typography>
@@ -2489,7 +2585,7 @@ const EMRSForm = () => {
                         <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label}
                           value={field.name === "vacant" ? Number(teachingRows[0]?.total || 0) - Number(teachingRows[0]?.filled || 0) || "" : teachingRows[0]?.[field.name] ?? ""}
                           inputProps={{ min: 0 }} InputProps={{ readOnly: field.readOnly }}
-                          onChange={(e) => { const u = [...teachingRows]; if (!u.length) return; u[0][field.name] = e.target.value; setteachingRows(u); }} />
+                          onChange={(e) => updateStaffField(teachingRows, setteachingRows, 0, field.name, e.target.value)} />
                       </Grid>
                     ))}
                   </Grid>
@@ -2512,8 +2608,35 @@ const EMRSForm = () => {
                                 {field.options?.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                               </TextField>
                             ) : (
-                              <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: field.type === "date" || undefined }}
-                                onChange={(e) => { const u = [...teachingRows]; u[index][field.name] = e.target.value; setteachingRows(u); }} />
+                              <TextField
+                                fullWidth
+                                size="small"
+                                sx={{ minWidth: 220 }}
+                                type={field.type || "text"}
+                                label={field.label}
+                                value={row[field.name] ?? ""}
+                                InputProps={{ readOnly: field.readOnly }}
+                                InputLabelProps={{ shrink: field.type === "date" || undefined }}
+                                inputProps={
+                                  field.type === "date"
+                                    ? { max: todayDateStr }
+                                    : ["contact", "contactnumber"].includes(String(field.name).toLowerCase())
+                                    ? { maxLength: 10, inputMode: "numeric" }
+                                    : undefined
+                                }
+                                error={
+                                  (String(field.name).toLowerCase() === "email" && !isValidStaffEmail(row[field.name])) ||
+                                  (["contact", "contactnumber"].includes(String(field.name).toLowerCase()) && !isValidStaffContact(row[field.name]))
+                                }
+                                helperText={
+                                  String(field.name).toLowerCase() === "email" && !isValidStaffEmail(row[field.name])
+                                    ? "Email must contain @"
+                                    : ["contact", "contactnumber"].includes(String(field.name).toLowerCase()) && !isValidStaffContact(row[field.name])
+                                    ? "Enter a valid 10-digit contact number"
+                                    : undefined
+                                }
+                                onChange={(e) => updateStaffField(teachingRows, setteachingRows, index, field.name, e.target.value)}
+                              />
                             )}
                           </Grid>
                         ))}
@@ -2526,12 +2649,17 @@ const EMRSForm = () => {
                   </Box>
                 ))}
                 <Box mb={4}>
-                  <Button variant="outlined" onClick={() => setteachingRows((prev) => [...prev, { post: "", name: "", dob: "", doj: "", email: "", contact: "", academicQualifications: [{ qualification: "", course: "", college: "", university: "", passingYear: "" }], tetQualifications: [{ qualification: "", passingYear: "" }], monthlyAttendance: [] }])}>
+                  <Button variant="outlined" onClick={() => setteachingRows((prev) => [...prev, {
+                    post: "", name: "", dob: "", doj: "", email: "", contact: "",
+                    academicQualifications: [blankAcademicQualification()],
+                    professionalQualifications: [blankProfessionalQualification()],
+                    tetQualifications: [blankTetQualification()],
+                    monthlyAttendance: [],
+                  }])}>
                     + Add Teaching Staff Post
                   </Button>
                 </Box>
 
-                {/* ══════════ NON-TEACHING STAFF ══════════ */}
                 <Typography variant="h6" sx={{ background: "linear-gradient(to right, #1976d2, #42a5f5)", color: "#fff", padding: "8px 16px", borderRadius: 2, fontWeight: 600, mb: 2 }}>Non-Teaching Staff Details</Typography>
                 <Box sx={{ border: "1px solid #bfdbfe", borderRadius: 2, p: 3, mb: 3, backgroundColor: "#eff6ff" }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1d4ed8", mb: 1.5 }}>Sanctioned Strength</Typography>
@@ -2540,8 +2668,8 @@ const EMRSForm = () => {
                       <Grid item xs={12} sm={4} key={field.name}>
                         <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label}
                           value={field.name === "vacant" ? Number(nonTeachingRows[0]?.total || 0) - Number(nonTeachingRows[0]?.filled || 0) || "" : nonTeachingRows[0]?.[field.name] ?? ""}
-                          InputProps={{ readOnly: field.readOnly }}
-                          onChange={(e) => { const u = [...nonTeachingRows]; if (!u.length) return; u[0][field.name] = e.target.value; setnonTeachingRows(u); }} />
+                          inputProps={{ min: 0 }} InputProps={{ readOnly: field.readOnly }}
+                          onChange={(e) => updateStaffField(nonTeachingRows, setnonTeachingRows, 0, field.name, e.target.value)} />
                       </Grid>
                     ))}
                   </Grid>
@@ -2564,8 +2692,35 @@ const EMRSForm = () => {
                                 {field.options?.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                               </TextField>
                             ) : (
-                              <TextField fullWidth size="small" sx={{ minWidth: 220 }} type={field.type || "text"} label={field.label} value={row[field.name] ?? ""} InputProps={{ readOnly: field.readOnly }} InputLabelProps={{ shrink: field.type === "date" || undefined }}
-                                onChange={(e) => { const u = [...nonTeachingRows]; u[index][field.name] = e.target.value; setnonTeachingRows(u); }} />
+                              <TextField
+                                fullWidth
+                                size="small"
+                                sx={{ minWidth: 220 }}
+                                type={field.type || "text"}
+                                label={field.label}
+                                value={row[field.name] ?? ""}
+                                InputProps={{ readOnly: field.readOnly }}
+                                InputLabelProps={{ shrink: field.type === "date" || undefined }}
+                                inputProps={
+                                  field.type === "date"
+                                    ? { max: todayDateStr }
+                                    : ["contact", "contactnumber"].includes(String(field.name).toLowerCase())
+                                    ? { maxLength: 10, inputMode: "numeric" }
+                                    : undefined
+                                }
+                                error={
+                                  (String(field.name).toLowerCase() === "email" && !isValidStaffEmail(row[field.name])) ||
+                                  (["contact", "contactnumber"].includes(String(field.name).toLowerCase()) && !isValidStaffContact(row[field.name]))
+                                }
+                                helperText={
+                                  String(field.name).toLowerCase() === "email" && !isValidStaffEmail(row[field.name])
+                                    ? "Email must contain @"
+                                    : ["contact", "contactnumber"].includes(String(field.name).toLowerCase()) && !isValidStaffContact(row[field.name])
+                                    ? "Enter a valid 10-digit contact number"
+                                    : undefined
+                                }
+                                onChange={(e) => updateStaffField(nonTeachingRows, setnonTeachingRows, index, field.name, e.target.value)}
+                              />
                             )}
                           </Grid>
                         ))}
@@ -2578,15 +2733,19 @@ const EMRSForm = () => {
                   </Box>
                 ))}
                 <Box mb={4}>
-                  <Button variant="outlined" onClick={() => setnonTeachingRows((prev) => [...prev, { post: "", name: "", dob: "", doj: "", email: "", contact: "", academicQualifications: [{ qualification: "", course: "", college: "", university: "", passingYear: "" }], monthlyAttendance: [] }])}>
+                  <Button variant="outlined" onClick={() => setnonTeachingRows((prev) => [...prev, {
+                    post: "", name: "", dob: "", doj: "", email: "", contact: "",
+                    academicQualifications: [blankAcademicQualification()],
+                    professionalQualifications: [blankProfessionalQualification()],
+                    tetQualifications: [blankTetQualification()],
+                    monthlyAttendance: [],
+                  }])}>
                     + Add Non-Teaching Staff Post
                   </Button>
                 </Box>
               </>
             )}
 
-           
-            {/* ── STEP 9: Financial & Procurement ── */}           
 {currentStep === 9 && (
   <FinancialProcurement
     procurements={procurements}
@@ -2603,7 +2762,7 @@ const EMRSForm = () => {
     getGemMarks={getGemMarks}
   />
 )}
-            
+
           {currentStep === 10 && (
   <EMRSImageUpload
     uploadedImages={uploadedImages}
@@ -2632,7 +2791,6 @@ const EMRSForm = () => {
   />
 )}
 
-            {/* Navigation */}
             <Box display="flex" justifyContent="space-between" alignItems="center" mt={4} pt={3} sx={{ borderTop: "1px solid #e2e8f0" }}>
               <Button variant="outlined" onClick={handleBack} disabled={currentStep === 0} sx={{ minWidth: 120 }}>← Back</Button>
               <Typography sx={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>Step {currentStep + 1} of {STEPS.length}</Typography>
@@ -2651,7 +2809,6 @@ const EMRSForm = () => {
         </CardContent>
       </Card>
 
-      {/* Image Dialog */}
       <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)}>
         <DialogTitle>Select Image Option</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>

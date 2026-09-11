@@ -15,7 +15,7 @@
 //   to show the woven/triangle strip (top & bottom of panels, under the
 //   page header) now shows a single clean line instead — same accent
 //   color, just simplified.
-// • NEW: Draft persistence. If the user is filling out a Monthly Activity
+// • Draft persistence. If the user is filling out a Monthly Activity
 //   (Attendance / Saksham Saturday / Operational Cost) and gets logged
 //   out — or just closes the tab — before finishing, their progress is
 //   auto-saved (per logged-in user) to localStorage. The next time they
@@ -23,6 +23,11 @@
 //   step and data they left off at, and the "New Monthly Activity" tab
 //   shows a small draft indicator dot so it's obvious there's unfinished
 //   work waiting, even before opening the tab.
+// • NEW: Operational Cost and Saksham Saturday can now each be exported
+//   individually (Excel + PDF) per submitted month, exactly like Staff
+//   and Student attendance already could. Previously only the attendance
+//   rows had export buttons inside the history accordion — the other two
+//   steps had no way to download their results at all.
 //
 // DEPENDENCIES TO INSTALL (if not already present in the project):
 //   npm install xlsx jspdf jspdf-autotable
@@ -350,6 +355,114 @@ const exportRowsToPDF = async (rows, { title, fileName }) => {
   }
 };
 
+/* ── Operational Cost export helpers ──
+   Exports the operational cost entries recorded for one submitted month. */
+const exportOperationalCostToExcel = async (rows, { month, year, fileName }) => {
+  try {
+    const XLSX = await loadXLSX();
+    const cleanRows = (rows || [])
+      .filter((r) => r.amount || r.costType || r.month || r.year)
+      .map((r) => ({
+        Year: r.year || year,
+        Month: r.month || month,
+        "Cost Type": r.costType || "—",
+        Amount: r.amount || 0,
+      }));
+    const ws = XLSX.utils.json_to_sheet(
+      cleanRows.length ? cleanRows : [{ Year: year, Month: month, "Cost Type": "—", Amount: 0 }]
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Operational Cost");
+    XLSX.writeFile(wb, fileName);
+  } catch (err) {
+    console.error(err);
+    toast.error(MISSING_DEPS_MESSAGE);
+  }
+};
+
+const exportOperationalCostToPDF = async (rows, { month, year, fileName }) => {
+  try {
+    const { jsPDF, autoTable } = await loadPDF();
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text(`Operational Cost — ${month} ${year}`, 14, 16);
+
+    const cleanRows = (rows || []).filter((r) => r.amount || r.costType || r.month || r.year);
+
+    if (cleanRows.length) {
+      autoTable(doc, {
+        startY: 22,
+        head: [["Year", "Month", "Cost Type", "Amount"]],
+        body: cleanRows.map((r) => [
+          r.year || year,
+          r.month || month,
+          r.costType || "—",
+          r.amount ? currency(r.amount) : "—",
+        ]),
+        headStyles: { fillColor: [180, 69, 31] },
+        styles: { fontSize: 9 },
+      });
+      const total = cleanRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 32;
+      doc.setFontSize(11);
+      doc.text(`Total Operational Cost: ${currency(total)}`, 14, finalY);
+    } else {
+      doc.setFontSize(11);
+      doc.text("No operational cost entries recorded for this month.", 14, 26);
+    }
+    doc.save(fileName);
+  } catch (err) {
+    console.error(err);
+    toast.error(MISSING_DEPS_MESSAGE);
+  }
+};
+
+/* ── Saksham Saturday export helpers ──
+   The stored submission only tracks whether Saksham Saturday was marked
+   complete for that month, so the export is a small status summary. */
+const exportSakshamToExcel = async (entry, { fileName }) => {
+  try {
+    const XLSX = await loadXLSX();
+    const ws = XLSX.utils.json_to_sheet([
+      {
+        Month: entry.month || "—",
+        Year: entry.year || "—",
+        Status: entry.sakshamCompleted ? "Completed" : "Not filled",
+      },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Saksham Saturday");
+    XLSX.writeFile(wb, fileName);
+  } catch (err) {
+    console.error(err);
+    toast.error(MISSING_DEPS_MESSAGE);
+  }
+};
+
+const exportSakshamToPDF = async (entry, { fileName }) => {
+  try {
+    const { jsPDF, autoTable } = await loadPDF();
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text(`Saksham Saturday — ${entry.month} ${entry.year}`, 14, 16);
+    autoTable(doc, {
+      startY: 22,
+      head: [["Field", "Value"]],
+      body: [
+        ["Month", entry.month || "—"],
+        ["Year", String(entry.year || "—")],
+        ["Status", entry.sakshamCompleted ? "Completed" : "Not filled"],
+      ],
+      headStyles: { fillColor: [180, 69, 31] },
+      styles: { fontSize: 10 },
+    });
+    doc.save(fileName);
+  } catch (err) {
+    console.error(err);
+    toast.error(MISSING_DEPS_MESSAGE);
+  }
+};
+
 /* Small reusable pair of Excel / PDF export icon buttons */
 const ExportIconButtons = ({ onExcel, onPdf, size = "small" }) => (
   <Stack direction="row" spacing={0.5}>
@@ -581,13 +694,151 @@ const AttendanceRecordsList = ({ rows = [], month, year, kind, icon }) => {
 };
 
 /* ────────────────────────────────────────────────────────────────────────
-   History view (previously Steps/MonthlyActivityHistory.jsx)
+   Operational Cost section — shown inside each month's accordion.
+   Lists every cost entry recorded for that month plus a running total,
+   with an "export all" pair (Excel + PDF) for the whole section.
    ──────────────────────────────────────────────────────────────────────── */
 
 const currency = (n) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(
     Number(n) || 0
   );
+
+const OperationalCostSection = ({ rows = [], month, year }) => {
+  const cleanRows = (rows || []).filter((r) => r.amount || r.costType || r.month || r.year);
+  const total = cleanRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
+  return (
+    <Box sx={{ mt: 2.5 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        rowGap={1}
+        sx={{ mb: 1 }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <PaidIcon fontSize="small" sx={{ color: PAL.clay }} />
+          <Typography variant="subtitle2" fontWeight={800} sx={{ color: PAL.clayDark }}>
+            Operational Cost — {month} {year}
+          </Typography>
+          <Chip
+            size="small"
+            label={`${cleanRows.length} entr${cleanRows.length === 1 ? "y" : "ies"}`}
+            sx={{ bgcolor: PAL.ochreLight, color: PAL.brownDark, fontWeight: 700 }}
+          />
+        </Stack>
+        <Tooltip title={`Export operational cost for ${month} ${year}`}>
+          <span>
+            <ExportIconButtons
+              onExcel={() =>
+                exportOperationalCostToExcel(rows, {
+                  month,
+                  year,
+                  fileName: `operational_cost_${slugify(month)}_${year}.xlsx`,
+                })
+              }
+              onPdf={() =>
+                exportOperationalCostToPDF(rows, {
+                  month,
+                  year,
+                  fileName: `operational_cost_${slugify(month)}_${year}.pdf`,
+                })
+              }
+            />
+          </span>
+        </Tooltip>
+      </Stack>
+
+      {cleanRows.length > 0 ? (
+        <Stack spacing={1} sx={{ maxHeight: 220, overflowY: "auto", pr: 0.5 }}>
+          {cleanRows.map((row, idx) => (
+            <Stack
+              key={idx}
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              flexWrap="wrap"
+              rowGap={0.5}
+              sx={{
+                px: 1.5,
+                py: 1,
+                borderRadius: 2,
+                bgcolor: PAL.sand,
+                border: `1px solid ${PAL.ochreLight}`,
+              }}
+            >
+              <Typography variant="body2" fontWeight={700} sx={{ color: PAL.ink }}>
+                {row.costType || "Untitled"}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ color: PAL.clayDark }}>
+                {currency(row.amount)}
+              </Typography>
+            </Stack>
+          ))}
+          <Stack direction="row" justifyContent="flex-end" sx={{ pt: 0.5 }}>
+            <Typography variant="body2" fontWeight={800} sx={{ color: PAL.ink }}>
+              Total: {currency(total)}
+            </Typography>
+          </Stack>
+        </Stack>
+      ) : (
+        <Typography variant="body2" sx={{ color: PAL.brown, opacity: 0.7 }}>
+          No operational cost entries recorded for this month.
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────────────
+   Saksham Saturday section — shown inside each month's accordion.
+   The submission only tracks a completed/not-filled status per month, so
+   this section shows that status with its own export pair (Excel + PDF).
+   ──────────────────────────────────────────────────────────────────────── */
+
+const SakshamSaturdaySection = ({ entry }) => (
+  <Box sx={{ mt: 2.5 }}>
+    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" rowGap={1}>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <CelebrationIcon fontSize="small" sx={{ color: PAL.clay }} />
+        <Typography variant="subtitle2" fontWeight={800} sx={{ color: PAL.clayDark }}>
+          Saksham Saturday — {entry.month} {entry.year}
+        </Typography>
+        <Chip
+          size="small"
+          label={entry.sakshamCompleted ? "Completed" : "Not filled"}
+          sx={{
+            bgcolor: entry.sakshamCompleted ? "#DCEEDB" : "#F3E3D3",
+            color: entry.sakshamCompleted ? "#2E7D32" : PAL.brownDark,
+            fontWeight: 700,
+          }}
+        />
+      </Stack>
+      <Tooltip title={`Export Saksham Saturday status for ${entry.month} ${entry.year}`}>
+        <span>
+          <ExportIconButtons
+            onExcel={() =>
+              exportSakshamToExcel(entry, {
+                fileName: `saksham_saturday_${slugify(entry.month)}_${entry.year}.xlsx`,
+              })
+            }
+            onPdf={() =>
+              exportSakshamToPDF(entry, {
+                fileName: `saksham_saturday_${slugify(entry.month)}_${entry.year}.pdf`,
+              })
+            }
+          />
+        </span>
+      </Tooltip>
+    </Stack>
+  </Box>
+);
+
+/* ────────────────────────────────────────────────────────────────────────
+   History view (previously Steps/MonthlyActivityHistory.jsx)
+   ──────────────────────────────────────────────────────────────────────── */
 
 const SummaryStat = ({ icon, label, value }) => (
   <Stack direction="row" spacing={1.25} alignItems="center">
@@ -774,7 +1025,7 @@ const MonthlyActivityHistory = ({ submissions = [], onDelete }) => {
                         </Grid>
                       </Grid>
 
-                      {/* Individual teacher / student export — the actual fix */}
+                      {/* Individual teacher / student export */}
                       <AttendanceRecordsList
                         rows={entry.staffAttendanceRows}
                         month={entry.month}
@@ -788,6 +1039,16 @@ const MonthlyActivityHistory = ({ submissions = [], onDelete }) => {
                         year={entry.year}
                         kind="Student"
                         icon={<SchoolIcon fontSize="small" sx={{ color: PAL.clay }} />}
+                      />
+
+                      {/* NEW: Saksham Saturday and Operational Cost — each
+                          individually exportable, matching Attendance. */}
+                      <SakshamSaturdaySection entry={entry} />
+
+                      <OperationalCostSection
+                        rows={entry.operationalCostRows}
+                        month={entry.month}
+                        year={entry.year}
                       />
 
                       <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2.5 }}>
