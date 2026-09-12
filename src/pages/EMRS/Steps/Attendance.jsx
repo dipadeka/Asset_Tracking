@@ -1,3 +1,28 @@
+// src/pages/EMRS/Steps/Attendance.jsx
+//
+// FIX REVISION
+// ─────────────────────
+// • "Students Participated" (Saksham Saturday, both Pre-Activity Planning
+//   and Post-Activity Report tables) can no longer go negative. Typing a
+//   negative number, pasting one, or using the number-input's down arrow
+//   is clamped to 0 immediately.
+// • ROOT CAUSE FIX for "submitted report only shows Completed / no photos":
+//   `SakshamSaturdayReport` used to manage its OWN internal state
+//   (prePlanningRows / postPlanningRows) instead of the state
+//   MonthlyActivity.jsx lifted up and passed in as props. That meant
+//   whatever the user actually typed never reached the parent's
+//   submission object — the parent only ever had its untouched default
+//   rows to save. This component now uses the parent's state + setters
+//   whenever they're passed in (which is how MonthlyActivity.jsx renders
+//   it), while still falling back to its own local state if it's ever
+//   rendered standalone without those props.
+// • Uploaded photos and the report file used to be stored as plain
+//   filename strings only ("photo.jpg"), with no actual image data. Now
+//   every uploaded file is read into a real data URL via FileReader and
+//   stored as { name, dataUrl }. This is what lets the submitted month's
+//   history view show real photo thumbnails, and lets the exported PDF
+//   actually embed the photos instead of only ever printing "Completed".
+
 import React, { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
@@ -187,6 +212,32 @@ const detectPostType = (postStr) => {
   if (ALL_TEACHING_POSTS_SET.has(p))     return "Teaching";
   if (ALL_NON_TEACHING_POSTS_SET.has(p)) return "Non-Teaching";
   return "Unknown";
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   HELPERS — file → data URL, and non-negative number sanitization
+   (used by the Saksham Saturday Post-Activity Report table below)
+───────────────────────────────────────────────────────────────────────────── */
+
+// Reads a File into a real data URL (not just its name) so the image / file
+// content itself survives into the submitted record, and can later be
+// embedded as an actual image in the exported PDF.
+const readFileAsDataURL = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ name: file.name, dataUrl: reader.result });
+    reader.onerror = () => reject(reader.error || new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
+
+// "Students Participated" must never go negative. An empty string is kept
+// as-is (so the field can be cleared while typing); anything else is
+// coerced to a non-negative whole number.
+const sanitizeNonNegativeCount = (raw) => {
+  if (raw === "" || raw === null || raw === undefined) return "";
+  const num = Number(raw);
+  if (Number.isNaN(num)) return "0";
+  return String(Math.max(0, Math.trunc(num)));
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1439,8 +1490,18 @@ const ClassDropdown = ({ value, onChange }) => (
 
 /* ─────────────────────────────────────────────────────────────────────────────
    SAKSHAM SATURDAY REPORT
+   Accepts prePlanningRows / setPrePlanningRows / postPlanningRows /
+   setPostPlanningRows as props so a parent (MonthlyActivity.jsx) can lift
+   this state up and persist the FULL report on submission. If rendered
+   standalone without those props, it falls back to its own local state so
+   nothing breaks for any other caller.
 ───────────────────────────────────────────────────────────────────────────── */
-export const SakshamSaturdayReport = () => {
+export const SakshamSaturdayReport = ({
+  prePlanningRows: prePlanningRowsProp,
+  setPrePlanningRows: setPrePlanningRowsProp,
+  postPlanningRows: postPlanningRowsProp,
+  setPostPlanningRows: setPostPlanningRowsProp,
+} = {}) => {
   const currentYear = new Date().getFullYear();
 
   // ── SHARED calendar state (used by both pre & post tables) ──
@@ -1456,7 +1517,9 @@ export const SakshamSaturdayReport = () => {
     return idx >= 0 ? `Week ${idx + 1} (${new Date(selectedDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })})` : selectedDate;
   })();
 
-  const [prePlanningRows, setPrePlanningRows] = useState([
+  // Fallback (uncontrolled) local state — only used if this component is
+  // ever rendered without prePlanningRows/postPlanningRows props.
+  const [localPrePlanningRows, setLocalPrePlanningRows] = useState([
     {
       id: 1,
       monthWeek: "Week 1",
@@ -1466,11 +1529,11 @@ export const SakshamSaturdayReport = () => {
       resourcePersons: "Language teacher",
       studentsParticipated: "40",
       orientation: "Student orientation before activity",
-      learningObjectives: "Reading fluency and comprehension",      
+      learningObjectives: "Reading fluency and comprehension",
     },
   ]);
 
-  const [postPlanningRows, setPostPlanningRows] = useState([
+  const [localPostPlanningRows, setLocalPostPlanningRows] = useState([
     {
       id: 1,
       monthWeek: "Week 1",
@@ -1489,6 +1552,17 @@ export const SakshamSaturdayReport = () => {
     },
   ]);
 
+  // Controlled mode: whenever a parent passes both the rows AND the setter,
+  // use the parent's state so everything the user fills in flows straight
+  // into the parent's submission object.
+  const isPreControlled  = prePlanningRowsProp  !== undefined && typeof setPrePlanningRowsProp  === "function";
+  const isPostControlled = postPlanningRowsProp !== undefined && typeof setPostPlanningRowsProp === "function";
+
+  const prePlanningRows     = isPreControlled  ? prePlanningRowsProp     : localPrePlanningRows;
+  const setPrePlanningRows  = isPreControlled  ? setPrePlanningRowsProp  : setLocalPrePlanningRows;
+  const postPlanningRows    = isPostControlled ? postPlanningRowsProp    : localPostPlanningRows;
+  const setPostPlanningRows = isPostControlled ? setPostPlanningRowsProp : setLocalPostPlanningRows;
+
   /* ── Row mutation helpers ── */
   const handlePrePlanningChange = (id, field, value) => {
     setPrePlanningRows((prev) => prev.map((row) => {
@@ -1506,13 +1580,29 @@ export const SakshamSaturdayReport = () => {
     }));
   };
 
-  const handlePostFileUpload = (id, field, files) => {
+  // Reads the selected files into real data URLs and stores { name, dataUrl }
+  // objects — this is what lets the submitted month keep the actual photos
+  // and report file, not just their names, so the export/history views can
+  // show and embed them.
+  const handlePostFileUpload = async (id, field, files) => {
     const selectedFiles = Array.from(files || []);
-    setPostPlanningRows((prev) => prev.map((row) => {
-      if (row.id !== id) return row;
-      if (field === "photos") return { ...row, photos: selectedFiles.map((f) => f.name) };
-      return { ...row, reportFile: selectedFiles[0]?.name || null };
-    }));
+    if (!selectedFiles.length) return;
+
+    try {
+      if (field === "photos") {
+        const photoObjs = await Promise.all(selectedFiles.map(readFileAsDataURL));
+        setPostPlanningRows((prev) => prev.map((row) =>
+          row.id === id ? { ...row, photos: photoObjs } : row
+        ));
+      } else {
+        const fileObj = await readFileAsDataURL(selectedFiles[0]);
+        setPostPlanningRows((prev) => prev.map((row) =>
+          row.id === id ? { ...row, reportFile: fileObj } : row
+        ));
+      }
+    } catch (err) {
+      toast.error("Could not read the uploaded file. Please try again.");
+    }
   };
 
   const addPrePlanningRow = () => {
@@ -1563,7 +1653,7 @@ export const SakshamSaturdayReport = () => {
       matchingPlan && matchingPlan.learningObjectives.trim() &&
         postRow.learningObjectives.trim() &&
       !postRow.resourcePersons.trim()                            ? "Resource person not recorded" : "",
-      !postRow.studentsParticipated.trim()                       ? "Students participated not recorded" : "",
+      !String(postRow.studentsParticipated).trim()               ? "Students participated not recorded" : "",
       !postRow.resourcesRequired.trim()                          ? "Resources/resource persons not recorded" : "",
       !postRow.preActivityPlanning.trim()                        ? "Pre-activity planning summary missing" : "",     
      
@@ -1641,8 +1731,17 @@ export const SakshamSaturdayReport = () => {
               <MenuItem value="">Select Activity</MenuItem>
               {(SAKSHAM_ACTIVITIES_BY_THEME[row.themeCategory] || []).map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
             </TextField>
+          ) : field === "studentsParticipated" ? (
+            // Non-negative only: browser spinner is clamped via inputProps
+            // min, and typed/pasted values are sanitized on change too.
+            <TextField
+              fullWidth size="small" type="number"
+              placeholder={label} value={row[field]}
+              inputProps={{ min: 0, step: 1 }}
+              onChange={(e) => handlePrePlanningChange(row.id, field, sanitizeNonNegativeCount(e.target.value))}
+            />
           ) : (
-            <TextField fullWidth size="small" type={field === "studentsParticipated" ? "number" : "text"}
+            <TextField fullWidth size="small" type="text"
               placeholder={label} value={row[field]}
               onChange={(e) => handlePrePlanningChange(row.id, field, e.target.value)} />
           )}
@@ -1681,8 +1780,15 @@ export const SakshamSaturdayReport = () => {
               <MenuItem value="">Select Activity</MenuItem>
               {(SAKSHAM_ACTIVITIES_BY_THEME[row.themeCategory] || []).map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
             </TextField>
+          ) : field === "studentsParticipated" ? (
+            <TextField
+              fullWidth size="small" type="number"
+              placeholder={label} value={row[field]}
+              inputProps={{ min: 0, step: 1 }}
+              onChange={(e) => handlePostPlanningChange(row.id, field, sanitizeNonNegativeCount(e.target.value))}
+            />
           ) : (
-            <TextField fullWidth size="small" type={field === "studentsParticipated" ? "number" : "text"}
+            <TextField fullWidth size="small" type="text"
               placeholder={label} value={row[field]}
               onChange={(e) => handlePostPlanningChange(row.id, field, e.target.value)} />
           )}
@@ -1694,18 +1800,33 @@ export const SakshamSaturdayReport = () => {
           <Button size="small" variant="outlined" component="label" sx={{ fontFamily: FONT_BODY, borderColor: PAL.ochre, color: PAL.brownDark }}>
             Upload Photos
             <input hidden multiple accept="image/*" type="file"
-              onChange={(e) => handlePostFileUpload(row.id, "photos", e.target.files)} />
+              onChange={(e) => { handlePostFileUpload(row.id, "photos", e.target.files); e.target.value = ""; }} />
           </Button>
+
+          {row.photos?.length > 0 && (
+            <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+              {row.photos.map((p, pIdx) => (
+                <Box
+                  key={pIdx}
+                  component="img"
+                  src={p.dataUrl}
+                  alt={p.name}
+                  sx={{ width: 32, height: 32, objectFit: "cover", borderRadius: 1, border: `1px solid ${PAL.ochre}` }}
+                />
+              ))}
+            </Box>
+          )}
           <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.85 }}>
-            {row.photos?.length ? `${row.photos.length} photo(s): ${row.photos.join(", ")}` : "No photos uploaded"}
+            {row.photos?.length ? `${row.photos.length} photo(s): ${row.photos.map((p) => p.name).join(", ")}` : "No photos uploaded"}
           </Typography>
+
           <Button size="small" variant="outlined" component="label" sx={{ fontFamily: FONT_BODY, borderColor: PAL.ochre, color: PAL.brownDark }}>
             Upload Report
             <input hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" type="file"
-              onChange={(e) => handlePostFileUpload(row.id, "reportFile", e.target.files)} />
+              onChange={(e) => { handlePostFileUpload(row.id, "reportFile", e.target.files); e.target.value = ""; }} />
           </Button>
           <Typography sx={{ fontFamily: FONT_BODY, fontSize: 11, color: PAL.brown, opacity: 0.85 }}>
-            {row.reportFile || "No report uploaded"}
+            {row.reportFile?.name || "No report uploaded"}
           </Typography>
         </Box>
       </td>

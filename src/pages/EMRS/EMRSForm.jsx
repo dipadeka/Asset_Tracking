@@ -2454,15 +2454,28 @@ const EMRSForm = () => {
       if (cred) { payload.username = cred.username; payload.loginId = cred.username; payload.schoolCode = cred.schoolCode; payload.EMRScode = cred.schoolCode; payload.schoolname = payload.schoolname || cred.schoolName; payload.district = payload.district || cred.district; payload.block = payload.block || cred.block; }
       else if (user) { payload.username = String(user.username || user.loginId || user.id || ""); payload.loginId = payload.username; }
 
+      // ── FIXED: was a 10-second timeout that could not survive a payload
+      // with base64-embedded images. Extended to 60s and now passes a real
+      // `reason` to abort() so, if it *does* fire, the caught error carries
+      // a meaningful message instead of "signal is aborted without reason".
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch("/api/emrs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+      const timeoutMs = 60000;
+      const timeoutId = setTimeout(
+        () => controller.abort(new DOMException("Request timed out after 60 seconds", "TimeoutError")),
+        timeoutMs
+      );
+
+      let response;
+      try {
+        response = await fetch("/api/emrs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const responseText = await response.text();
       let result = {};
@@ -2483,7 +2496,13 @@ const EMRSForm = () => {
       navigate("/emrs/dashboard");
     } catch (error) {
       toast.dismiss(loadingToast);
-      toast.error("❌ Submission failed: " + error.message);
+      // ── FIXED: give a clear, actionable message for timeouts instead of
+      // surfacing the raw DOMException text to the user.
+      const isTimeout = error.name === "AbortError" || error.name === "TimeoutError";
+      const friendlyMessage = isTimeout
+        ? "The submission timed out — this can happen when uploading a lot of photos. Please check your connection and try again."
+        : error.message || "Something went wrong. Please try again.";
+      toast.error("❌ Submission failed: " + friendlyMessage);
       console.error("Submit error:", error);
     } finally {
       isSubmittingRef.current = false;

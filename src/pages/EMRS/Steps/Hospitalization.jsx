@@ -10,6 +10,16 @@ import dayjs from "dayjs";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
+// ── Section options by class ──
+// Classes 6–10 only offer sections A and B; classes 11 & 12 offer A, B and C.
+const getSectionOptionsForClass = (className) => {
+  if (["11", "12"].includes(className)) return ["A", "B", "C"];
+  return ["A", "B"];
+};
+
+// ── Max allowed value for eye/ear health headcount fields ──
+const MAX_HEALTH_COUNT = 480;
+
 const HospitalizationSection = ({
   hospitalizationRows,
   setHospitalizationRows,
@@ -73,14 +83,23 @@ const HospitalizationSection = ({
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <TextField select label="Class" fullWidth size="small" sx={{ minWidth: 220 }} value={row.class}
-                onChange={(e) => { const u = [...hospitalizationRows]; u[index].class = e.target.value; setHospitalizationRows(u); }}>
+                onChange={(e) => {
+                  const u = [...hospitalizationRows];
+                  const newClass = e.target.value;
+                  u[index].class = newClass;
+                  const validSections = getSectionOptionsForClass(newClass);
+                  if (u[index].section && !validSections.includes(u[index].section)) {
+                    u[index].section = "";
+                  }
+                  setHospitalizationRows(u);
+                }}>
                 {["6","7","8","9","10","11","12"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <TextField select label="Section" fullWidth size="small" sx={{ minWidth: 220 }} value={row.section}
                 onChange={(e) => { const u = [...hospitalizationRows]; u[index].section = e.target.value; setHospitalizationRows(u); }}>
-                {["A","B","C"].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                {getSectionOptionsForClass(row.class).map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -120,12 +139,41 @@ const HospitalizationSection = ({
             <Grid item xs={12} sm={6} md={4}>
               <TextField label="Estimated Cost (₹)" fullWidth size="small" type="number" value={row.estimatedCost} inputProps={{ min: 0 }}
                 onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].estimatedCost = e.target.value; setHospitalizationRows(u); } }} />
+                onChange={(e) => {
+                  if (Number(e.target.value) >= 0) {
+                    const u = [...hospitalizationRows];
+                    u[index].estimatedCost = e.target.value;
+                    setHospitalizationRows(u);
+                  }
+                }} />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
-              <TextField label="Amount Claimed (₹)" fullWidth size="small" type="number" value={row.amountClaimed} inputProps={{ min: 0 }}
+              <TextField
+                label="Amount Claimed (₹)" fullWidth size="small" type="number" value={row.amountClaimed} inputProps={{ min: 0 }}
                 onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].amountClaimed = e.target.value; setHospitalizationRows(u); } }} />
+                error={
+                  row.amountClaimed !== "" &&
+                  row.amountClaimed !== undefined &&
+                  row.estimatedCost !== "" &&
+                  row.estimatedCost !== undefined &&
+                  Number(row.amountClaimed) >= Number(row.estimatedCost)
+                }
+                helperText={
+                  row.amountClaimed !== "" &&
+                  row.amountClaimed !== undefined &&
+                  row.estimatedCost !== "" &&
+                  row.estimatedCost !== undefined &&
+                  Number(row.amountClaimed) >= Number(row.estimatedCost)
+                    ? "Amount claimed must be less than estimated cost"
+                    : ""
+                }
+                onChange={(e) => {
+                  if (Number(e.target.value) >= 0) {
+                    const u = [...hospitalizationRows];
+                    u[index].amountClaimed = e.target.value;
+                    setHospitalizationRows(u);
+                  }
+                }} />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <TextField select label="Claim Status" fullWidth size="small" sx={{ minWidth: 220 }} value={row.claimStatus}
@@ -376,27 +424,43 @@ const HospitalizationSection = ({
                     </Grid>
                     <Grid item xs={6} sm={3} md={2}>
                       <TextField select label="Class" fullWidth size="small" sx={{ minWidth: 220 }} value={eye.eyeClass || ""}
-                        onChange={(e) => { const u = [...hospitalizationRows]; u[index].eyeEntries[ei].eyeClass = e.target.value; setHospitalizationRows(u); }}>
+                        onChange={(e) => {
+                          const u = [...hospitalizationRows];
+                          const newClass = e.target.value;
+                          u[index].eyeEntries[ei].eyeClass = newClass;
+                          const validSections = getSectionOptionsForClass(newClass);
+                          if (u[index].eyeEntries[ei].eyeSection && !validSections.includes(u[index].eyeEntries[ei].eyeSection)) {
+                            u[index].eyeEntries[ei].eyeSection = "";
+                          }
+                          setHospitalizationRows(u);
+                        }}>
                         {["6","7","8","9","10","11","12"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                       </TextField>
                     </Grid>
                     <Grid item xs={6} sm={3} md={2}>
                       <TextField select label="Section" fullWidth size="small" sx={{ minWidth: 220 }} value={eye.eyeSection || ""}
                         onChange={(e) => { const u = [...hospitalizationRows]; u[index].eyeEntries[ei].eyeSection = e.target.value; setHospitalizationRows(u); }}>
-                        {["A","B","C"].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                        {getSectionOptionsForClass(eye.eyeClass).map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                       </TextField>
                     </Grid>
                     {[
                       { label: "No. of Students Screened", field: "eyeStudentsScreened" },
                       { label: "No. of Students with Eye Problem", field: "eyeStudentsWithProblem" },
                       { label: "No. of Students requiring Spectacle", field: "eyeNeedsSpectacle" },
-                      { label: "No. of Students requiring Higher Investigation/Treatment", field: "eyeNeedsHigherInvestigation" },
+                      { label: "No. of Students requiring Treatment", field: "eyeNeedsHigherInvestigation" },
                     ].map(({ label, field }) => (
                       <Grid item xs={12} sm={6} md={3} key={field}>
-                        <TextField label={label} fullWidth size="small" type="number" inputProps={{ min: 0 }}
+                        <TextField label={label} fullWidth size="small" sx={{ minWidth: 220 }} type="number" inputProps={{ min: 0, max: MAX_HEALTH_COUNT }}
                           onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
                           value={eye[field] || ""}
-                          onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].eyeEntries[ei][field] = e.target.value; setHospitalizationRows(u); } }} />
+                          error={eye[field] !== "" && eye[field] !== undefined && Number(eye[field]) > MAX_HEALTH_COUNT}
+                          helperText={eye[field] !== "" && eye[field] !== undefined && Number(eye[field]) > MAX_HEALTH_COUNT ? `Cannot exceed ${MAX_HEALTH_COUNT}` : ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || (Number(value) >= 0 && Number(value) <= MAX_HEALTH_COUNT)) {
+                              const u = [...hospitalizationRows]; u[index].eyeEntries[ei][field] = value; setHospitalizationRows(u);
+                            }
+                          }} />
                       </Grid>
                     ))}
                   </Grid>
@@ -444,14 +508,23 @@ const HospitalizationSection = ({
                     </Grid>
                     <Grid item xs={6} sm={3} md={2}>
                       <TextField select label="Class" fullWidth size="small" sx={{ minWidth: 220 }} value={ear.earClass || ""}
-                        onChange={(e) => { const u = [...hospitalizationRows]; u[index].earEntries[eri].earClass = e.target.value; setHospitalizationRows(u); }}>
+                        onChange={(e) => {
+                          const u = [...hospitalizationRows];
+                          const newClass = e.target.value;
+                          u[index].earEntries[eri].earClass = newClass;
+                          const validSections = getSectionOptionsForClass(newClass);
+                          if (u[index].earEntries[eri].earSection && !validSections.includes(u[index].earEntries[eri].earSection)) {
+                            u[index].earEntries[eri].earSection = "";
+                          }
+                          setHospitalizationRows(u);
+                        }}>
                         {["6","7","8","9","10","11","12"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
                       </TextField>
                     </Grid>
                     <Grid item xs={6} sm={3} md={2}>
                       <TextField select label="Section" fullWidth size="small" sx={{ minWidth: 220 }} value={ear.earSection || ""}
                         onChange={(e) => { const u = [...hospitalizationRows]; u[index].earEntries[eri].earSection = e.target.value; setHospitalizationRows(u); }}>
-                        {["A","B","C"].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                        {getSectionOptionsForClass(ear.earClass).map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                       </TextField>
                     </Grid>
                     {[
@@ -460,10 +533,17 @@ const HospitalizationSection = ({
                       { label: "No. of Students requiring Ear Equipment", field: "earNeedsEquipment" },
                     ].map(({ label, field }) => (
                       <Grid item xs={12} sm={6} md={4} key={field}>
-                        <TextField label={label} fullWidth size="small" type="number" inputProps={{ min: 0 }}
+                        <TextField label={label} fullWidth size="small" sx={{ minWidth: 220 }} type="number" inputProps={{ min: 0, max: MAX_HEALTH_COUNT }}
                           onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
                           value={ear[field] || ""}
-                          onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].earEntries[eri][field] = e.target.value; setHospitalizationRows(u); } }} />
+                          error={ear[field] !== "" && ear[field] !== undefined && Number(ear[field]) > MAX_HEALTH_COUNT}
+                          helperText={ear[field] !== "" && ear[field] !== undefined && Number(ear[field]) > MAX_HEALTH_COUNT ? `Cannot exceed ${MAX_HEALTH_COUNT}` : ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "" || (Number(value) >= 0 && Number(value) <= MAX_HEALTH_COUNT)) {
+                              const u = [...hospitalizationRows]; u[index].earEntries[eri][field] = value; setHospitalizationRows(u);
+                            }
+                          }} />
                       </Grid>
                     ))}
                   </Grid>

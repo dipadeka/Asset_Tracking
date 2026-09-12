@@ -180,23 +180,6 @@ const EMRSImageUpload = ({ uploadedImages = {}, setUploadedImages }) => {
             />
             📁 Browse Files
           </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            component="label"
-            sx={{ borderColor: "#2563eb", color: "#2563eb", pointerEvents: "none" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input
-              type="file"
-              hidden
-              multiple
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => handleFiles(e.target.files, activeCategory)}
-            />
-            📷 Take Photo
-          </Button>
         </Box>
       </Paper>
 

@@ -97,6 +97,18 @@ const FinancialProcurement = ({
       };
     });
 
+  // ── Validation: GeM count vs Total Number of Procurements (dialog) ──
+  const gemExceedsTotal =
+    currentProcurement.totalNumber !== "" &&
+    currentProcurement.throughGem !== "" &&
+    Number(currentProcurement.throughGem) > Number(currentProcurement.totalNumber);
+
+  // ── Validation: Funds Utilized vs Funds Allocated ──
+  const fundsUtilizedExceedsAllocated =
+    financialData.totalFundsAllocated !== "" &&
+    financialData.totalFundsUtilized !== "" &&
+    Number(financialData.totalFundsUtilized) > Number(financialData.totalFundsAllocated);
+
   return (
     <>
       {/* ── Header ── */}
@@ -242,6 +254,12 @@ const FinancialProcurement = ({
               inputProps={{ min: 0 }}
               value={financialData.totalFundsUtilized}
               onChange={(e) => handleFundsChange("totalFundsUtilized", e.target.value)}
+              error={fundsUtilizedExceedsAllocated}
+              helperText={
+                fundsUtilizedExceedsAllocated
+                  ? "Cannot exceed Total Funds Allocated"
+                  : ""
+              }
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
@@ -612,10 +630,7 @@ const FinancialProcurement = ({
           </tr>
         </tbody>
       </table>
-      <Typography variant="caption" sx={{ display: "block", color: "#666", mb: 3, mt: -2 }}>
-        Note: Procurement of food articles, raw material, food tenders, manpower (other than
-        sanctioned staff), fuel charges etc. are to be done from mess expenditures.
-      </Typography>
+      
 
       {/* ── Add Procurement Dialog ── */}
       <Dialog
@@ -713,9 +728,15 @@ const FinancialProcurement = ({
                 onChange={(e) =>
                   setCurrentProcurement((prev) => ({ ...prev, throughGem: e.target.value }))
                 }
+                error={gemExceedsTotal}
+                helperText={
+                  gemExceedsTotal
+                    ? "Cannot exceed Total Number of Procurements"
+                    : ""
+                }
               />
             </Grid>
-            {currentProcurement.totalNumber && currentProcurement.throughGem && (
+            {currentProcurement.totalNumber && currentProcurement.throughGem && !gemExceedsTotal && (
               <Grid item xs={12}>
                 <Typography variant="body2" sx={{ color: "#1976d2", fontWeight: 600 }}>
                   GeM %:{" "}
@@ -759,7 +780,8 @@ const FinancialProcurement = ({
             disabled={
               !currentProcurement.type ||
               !currentProcurement.totalNumber ||
-              !currentProcurement.throughGem
+              !currentProcurement.throughGem ||
+              gemExceedsTotal
             }
             onClick={() => {
               setProcurements((prev) => [...prev, currentProcurement]);

@@ -11,6 +11,14 @@
 //
 // THIS REVISION
 // ─────────────────────
+// • FIX: exported Operational Cost PDFs were showing a stray "1" right
+//   before every amount (e.g. "'30,000" instead of "₹30,000"). This
+//   wasn't actually a "1" — it was the ₹ (rupee) symbol failing to
+//   render, because jsPDF's default core font (Helvetica) has no glyph
+//   for ₹ and silently swaps in a mismatched character instead. PDFs now
+//   format amounts as "Rs. 30,000" (plain ASCII, renders correctly in
+//   every PDF viewer) while the on-screen UI and Excel exports keep using
+//   the real ₹ symbol, since browsers and Excel render it fine.
 // • Removed the triangular zig-zag divider pattern. Every place that used
 //   to show the woven/triangle strip (top & bottom of panels, under the
 //   page header) now shows a single clean line instead — same accent
@@ -23,11 +31,20 @@
 //   step and data they left off at, and the "New Monthly Activity" tab
 //   shows a small draft indicator dot so it's obvious there's unfinished
 //   work waiting, even before opening the tab.
-// • NEW: Operational Cost and Saksham Saturday can now each be exported
+// • Operational Cost and Saksham Saturday can now each be exported
 //   individually (Excel + PDF) per submitted month, exactly like Staff
-//   and Student attendance already could. Previously only the attendance
-//   rows had export buttons inside the history accordion — the other two
-//   steps had no way to download their results at all.
+//   and Student attendance already could.
+// • The Saksham Saturday step is fully lifted into this page's state
+//   instead of living only inside the child component. That means:
+//     - "Students Participated" can never go negative (also enforced at
+//       the input layer in Steps/Attendance.jsx).
+//     - A submitted month now keeps its full Saksham Saturday report —
+//       every activity, theme, resource person, students participated,
+//       learning outcomes — not just a plain "Completed" flag.
+//     - Photos and report files uploaded in the Post-Activity Report
+//       table are kept (as data URLs) and actually shown — as real
+//       thumbnails in the history view, and embedded as images in the
+//       exported PDF, instead of the PDF only ever showing "Completed".
 //
 // DEPENDENCIES TO INSTALL (if not already present in the project):
 //   npm install xlsx jspdf jspdf-autotable
@@ -109,6 +126,63 @@ const PAL = {
   cream: "#FBF4E8",
   ink: "#2E1D10",
 };
+
+/* ────────────────────────────────────────────────────────────────────────
+   Saksham Saturday — default rows
+   Kept here (mirroring the defaults inside Steps/Attendance.jsx) so this
+   page can lift the Saksham Saturday planning/report state up to itself.
+   Lifting it means a submitted month keeps the FULL report — activities,
+   themes, resource persons, students participated, photos, report files —
+   not just a boolean "completed" flag.
+   ──────────────────────────────────────────────────────────────────────── */
+
+const DEFAULT_SAKSHAM_PRE_ROWS = [
+  {
+    id: 1,
+    monthWeek: "Week 1",
+    className: "6",
+    themeCategory: "Literary Arts and Language Enrichment",
+    activity: "Reading activity",
+    resourcePersons: "Language teacher",
+    studentsParticipated: "40",
+    orientation: "Student orientation before activity",
+    learningObjectives: "Reading fluency and comprehension",
+  },
+];
+
+const DEFAULT_SAKSHAM_POST_ROWS = [
+  {
+    id: 1,
+    monthWeek: "Week 1",
+    className: "6",
+    themeCategory: "Literary Arts and Language Enrichment",
+    activity: "Reading activity",
+    resourcePersons: "Language teacher",
+    studentsParticipated: "",
+    learningObjectives: "Reading fluency and comprehension",
+    resourcesRequired: "Story cards, worksheets",
+    preActivityPlanning: "Orientation, materials and briefing completed",
+    executionDuringActivity: "",
+    learningOutcomesAssessment: "",
+    photos: [],
+    reportFile: null,
+  },
+];
+
+// Deep-clones the default Saksham Saturday rows so every reset/restore gets
+// its own independent copy instead of several form instances sharing (and
+// accidentally mutating) the same objects.
+const cloneSakshamRows = (rows) => JSON.parse(JSON.stringify(rows));
+
+// A Saksham Saturday activity row counts as "recorded" once it has an
+// activity name, so the Not filled/Completed status and every summary
+// reflect real user input rather than the pre-seeded example row.
+const isRecordedSakshamRow = (row) =>
+  Boolean(
+    (row.activity || "").trim() ||
+    (row.photos && row.photos.length) ||
+    row.reportFile
+  );
 
 /* ────────────────────────────────────────────────────────────────────────
    Storage helpers (previously utils/monthlyActivityStore.js)
@@ -397,7 +471,12 @@ const exportOperationalCostToPDF = async (rows, { month, year, fileName }) => {
           r.year || year,
           r.month || month,
           r.costType || "—",
-          r.amount ? currency(r.amount) : "—",
+          // PDF text uses "Rs." instead of the ₹ symbol — jsPDF's default
+          // core font has no ₹ glyph, so the real symbol renders as a
+          // broken/mismatched character (it showed up as a stray "1"
+          // right before the amount). currencyPDF() below is ASCII-only
+          // and renders correctly in every PDF viewer.
+          r.amount ? currencyPDF(r.amount) : "—",
         ]),
         headStyles: { fillColor: [180, 69, 31] },
         styles: { fontSize: 9 },
@@ -405,7 +484,7 @@ const exportOperationalCostToPDF = async (rows, { month, year, fileName }) => {
       const total = cleanRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
       const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 32;
       doc.setFontSize(11);
-      doc.text(`Total Operational Cost: ${currency(total)}`, 14, finalY);
+      doc.text(`Total Operational Cost: ${currencyPDF(total)}`, 14, finalY);
     } else {
       doc.setFontSize(11);
       doc.text("No operational cost entries recorded for this month.", 14, 26);
@@ -418,18 +497,36 @@ const exportOperationalCostToPDF = async (rows, { month, year, fileName }) => {
 };
 
 /* ── Saksham Saturday export helpers ──
-   The stored submission only tracks whether Saksham Saturday was marked
-   complete for that month, so the export is a small status summary. */
+   The stored submission now keeps the FULL pre/post-activity planning and
+   report data (not just a completed/not-filled flag), so the export shows
+   every activity — theme, class, resource person, students participated,
+   learning outcomes — and, for the PDF, the actual uploaded photos
+   embedded as images. */
+const getSakshamActivityRows = (entry) =>
+  (entry.sakshamPostPlanningRows || []).filter(isRecordedSakshamRow);
+
 const exportSakshamToExcel = async (entry, { fileName }) => {
   try {
     const XLSX = await loadXLSX();
-    const ws = XLSX.utils.json_to_sheet([
-      {
-        Month: entry.month || "—",
-        Year: entry.year || "—",
-        Status: entry.sakshamCompleted ? "Completed" : "Not filled",
-      },
-    ]);
+    const activityRows = getSakshamActivityRows(entry);
+    const sheetRows = activityRows.length
+      ? activityRows.map((r) => ({
+          "Month / Week": r.monthWeek || "—",
+          Class: r.className || "—",
+          "Theme Category": r.themeCategory || "—",
+          Activity: r.activity || "—",
+          "Resource Person": r.resourcePersons || "—",
+          "Students Participated": r.studentsParticipated || 0,
+          "Learning Objectives": r.learningObjectives || "—",
+          "Resources Required": r.resourcesRequired || "—",
+          "Pre-Activity Planning": r.preActivityPlanning || "—",
+          "Execution During Activity": r.executionDuringActivity || "—",
+          "Learning Outcomes / Assessment": r.learningOutcomesAssessment || "—",
+          "Photos Uploaded": r.photos?.length ? r.photos.map((p) => p.name).join(", ") : "None",
+          "Report File": r.reportFile?.name || "None",
+        }))
+      : [{ Month: entry.month, Year: entry.year, Status: "Not filled" }];
+    const ws = XLSX.utils.json_to_sheet(sheetRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Saksham Saturday");
     XLSX.writeFile(wb, fileName);
@@ -445,17 +542,86 @@ const exportSakshamToPDF = async (entry, { fileName }) => {
     const doc = new jsPDF();
     doc.setFontSize(14);
     doc.text(`Saksham Saturday — ${entry.month} ${entry.year}`, 14, 16);
+
+    const activityRows = getSakshamActivityRows(entry);
+
+    if (!activityRows.length) {
+      doc.setFontSize(11);
+      doc.text("No Saksham Saturday activities recorded for this month.", 14, 26);
+      doc.save(fileName);
+      return;
+    }
+
+    // Summary table — one row per activity
     autoTable(doc, {
       startY: 22,
-      head: [["Field", "Value"]],
-      body: [
-        ["Month", entry.month || "—"],
-        ["Year", String(entry.year || "—")],
-        ["Status", entry.sakshamCompleted ? "Completed" : "Not filled"],
-      ],
+      head: [["Week", "Class", "Theme", "Activity", "Resource Person", "Students", "Photos"]],
+      body: activityRows.map((r) => [
+        r.monthWeek || "—",
+        r.className || "—",
+        r.themeCategory || "—",
+        r.activity || "—",
+        r.resourcePersons || "—",
+        String(r.studentsParticipated || 0),
+        r.photos?.length ? `${r.photos.length} photo(s)` : "None",
+      ]),
       headStyles: { fillColor: [180, 69, 31] },
-      styles: { fontSize: 10 },
+      styles: { fontSize: 8 },
     });
+
+    // Detail section per activity — learning outcomes text plus the
+    // actual uploaded photos, embedded as images (this is what used to
+    // be missing: the PDF previously only ever showed "Completed").
+    let cursorY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 40;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    activityRows.forEach((r, idx) => {
+      if (cursorY > pageHeight - 40) {
+        doc.addPage();
+        cursorY = 16;
+      }
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text(`${idx + 1}. ${r.activity || "Untitled activity"} (${r.monthWeek || "—"})`, 14, cursorY);
+      doc.setFont(undefined, "normal");
+      cursorY += 6;
+      doc.setFontSize(9);
+
+      if (r.learningOutcomesAssessment) {
+        const lines = doc.splitTextToSize(`Outcome: ${r.learningOutcomesAssessment}`, pageWidth - 28);
+        doc.text(lines, 14, cursorY);
+        cursorY += lines.length * 5 + 2;
+      }
+
+      if (r.photos && r.photos.length) {
+        let x = 14;
+        const imgSize = 30;
+        r.photos.forEach((p) => {
+          if (x + imgSize > pageWidth - 14) {
+            x = 14;
+            cursorY += imgSize + 4;
+          }
+          if (cursorY + imgSize > pageHeight - 14) {
+            doc.addPage();
+            cursorY = 16;
+            x = 14;
+          }
+          try {
+            const format = p.dataUrl?.includes("image/png") ? "PNG" : "JPEG";
+            doc.addImage(p.dataUrl, format, x, cursorY, imgSize, imgSize);
+          } catch {
+            // Skip photos that can't be embedded (unsupported format, corrupted data, etc.)
+          }
+          x += imgSize + 4;
+        });
+        cursorY += imgSize + 8;
+      } else {
+        cursorY += 4;
+      }
+      cursorY += 4;
+    });
+
     doc.save(fileName);
   } catch (err) {
     console.error(err);
@@ -699,10 +865,21 @@ const AttendanceRecordsList = ({ rows = [], month, year, kind, icon }) => {
    with an "export all" pair (Excel + PDF) for the whole section.
    ──────────────────────────────────────────────────────────────────────── */
 
+// On-screen / Excel currency formatting — the real ₹ symbol. Browsers and
+// Excel both render this correctly.
 const currency = (n) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(
     Number(n) || 0
   );
+
+// PDF-safe currency formatting — plain ASCII "Rs." prefix instead of the ₹
+// symbol. jsPDF's default core font (Helvetica) has no ₹ glyph, so text
+// containing the real symbol renders as a broken/mismatched character in
+// the exported PDF (it showed up as a stray "1" right before the amount).
+// Use this helper anywhere a value is written directly into a PDF via
+// doc.text(...) or an autoTable cell.
+const currencyPDF = (n) =>
+  `Rs. ${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Number(n) || 0)}`;
 
 const OperationalCostSection = ({ rows = [], month, year }) => {
   const cleanRows = (rows || []).filter((r) => r.amount || r.costType || r.month || r.year);
@@ -794,47 +971,135 @@ const OperationalCostSection = ({ rows = [], month, year }) => {
 
 /* ────────────────────────────────────────────────────────────────────────
    Saksham Saturday section — shown inside each month's accordion.
-   The submission only tracks a completed/not-filled status per month, so
-   this section shows that status with its own export pair (Excel + PDF).
+   Now shows the FULL report for the month: every recorded activity
+   (theme, class, resource person, students participated, outcomes) and
+   the actual uploaded photos as thumbnails — not just a status chip.
    ──────────────────────────────────────────────────────────────────────── */
 
-const SakshamSaturdaySection = ({ entry }) => (
-  <Box sx={{ mt: 2.5 }}>
-    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" rowGap={1}>
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <CelebrationIcon fontSize="small" sx={{ color: PAL.clay }} />
-        <Typography variant="subtitle2" fontWeight={800} sx={{ color: PAL.clayDark }}>
-          Saksham Saturday — {entry.month} {entry.year}
-        </Typography>
-        <Chip
-          size="small"
-          label={entry.sakshamCompleted ? "Completed" : "Not filled"}
-          sx={{
-            bgcolor: entry.sakshamCompleted ? "#DCEEDB" : "#F3E3D3",
-            color: entry.sakshamCompleted ? "#2E7D32" : PAL.brownDark,
-            fontWeight: 700,
-          }}
-        />
-      </Stack>
-      <Tooltip title={`Export Saksham Saturday status for ${entry.month} ${entry.year}`}>
-        <span>
-          <ExportIconButtons
-            onExcel={() =>
-              exportSakshamToExcel(entry, {
-                fileName: `saksham_saturday_${slugify(entry.month)}_${entry.year}.xlsx`,
-              })
-            }
-            onPdf={() =>
-              exportSakshamToPDF(entry, {
-                fileName: `saksham_saturday_${slugify(entry.month)}_${entry.year}.pdf`,
-              })
-            }
+const SakshamSaturdaySection = ({ entry }) => {
+  const activityRows = getSakshamActivityRows(entry);
+  const hasActivity = activityRows.length > 0;
+  const totalPhotos = activityRows.reduce((sum, r) => sum + (r.photos?.length || 0), 0);
+  const totalStudents = activityRows.reduce((sum, r) => sum + (Number(r.studentsParticipated) || 0), 0);
+
+  return (
+    <Box sx={{ mt: 2.5 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" rowGap={1}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <CelebrationIcon fontSize="small" sx={{ color: PAL.clay }} />
+          <Typography variant="subtitle2" fontWeight={800} sx={{ color: PAL.clayDark }}>
+            Saksham Saturday — {entry.month} {entry.year}
+          </Typography>
+          <Chip
+            size="small"
+            label={hasActivity ? `${activityRows.length} activit${activityRows.length > 1 ? "ies" : "y"} recorded` : "Not filled"}
+            sx={{
+              bgcolor: hasActivity ? "#DCEEDB" : "#F3E3D3",
+              color: hasActivity ? "#2E7D32" : PAL.brownDark,
+              fontWeight: 700,
+            }}
           />
-        </span>
-      </Tooltip>
-    </Stack>
-  </Box>
-);
+        </Stack>
+        <Tooltip title={`Export Saksham Saturday report for ${entry.month} ${entry.year}`}>
+          <span>
+            <ExportIconButtons
+              onExcel={() =>
+                exportSakshamToExcel(entry, {
+                  fileName: `saksham_saturday_${slugify(entry.month)}_${entry.year}.xlsx`,
+                })
+              }
+              onPdf={() =>
+                exportSakshamToPDF(entry, {
+                  fileName: `saksham_saturday_${slugify(entry.month)}_${entry.year}.pdf`,
+                })
+              }
+            />
+          </span>
+        </Tooltip>
+      </Stack>
+
+      {hasActivity ? (
+        <>
+          <Grid container spacing={1.5} sx={{ mt: 0.5, mb: 1.5 }}>
+            <Grid item xs={6} sm={4}>
+              <SummaryStat icon={<GroupsIcon fontSize="small" />} label="Total students participated" value={totalStudents} />
+            </Grid>
+            <Grid item xs={6} sm={4}>
+              <SummaryStat icon={<GridOnIcon fontSize="small" />} label="Photos uploaded" value={totalPhotos} />
+            </Grid>
+          </Grid>
+
+          <Stack spacing={1.25} sx={{ maxHeight: 440, overflowY: "auto", pr: 0.5 }}>
+            {activityRows.map((row, idx) => (
+              <Paper
+                key={idx}
+                variant="outlined"
+                sx={{ p: 1.5, borderRadius: 2, borderColor: PAL.ochreLight, bgcolor: PAL.sand }}
+              >
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" rowGap={0.5}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={800} sx={{ color: PAL.ink }}>
+                      {row.activity || "Untitled activity"}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: PAL.brown }}>
+                      {row.monthWeek || "—"} · Class {row.className || "—"} · {row.themeCategory || "—"}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    size="small"
+                    label={`${row.studentsParticipated || 0} student${Number(row.studentsParticipated) === 1 ? "" : "s"}`}
+                    sx={{ bgcolor: PAL.ochreLight, color: PAL.brownDark, fontWeight: 700 }}
+                  />
+                </Stack>
+
+                {row.resourcePersons && (
+                  <Typography variant="caption" sx={{ display: "block", color: PAL.brown, mt: 0.5 }}>
+                    Resource person: {row.resourcePersons}
+                  </Typography>
+                )}
+                {row.learningOutcomesAssessment && (
+                  <Typography variant="body2" sx={{ color: PAL.ink, mt: 0.5 }}>
+                    {row.learningOutcomesAssessment}
+                  </Typography>
+                )}
+
+                {row.photos && row.photos.length > 0 && (
+                  <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mt: 1 }}>
+                    {row.photos.map((p, pIdx) => (
+                      <Box
+                        key={pIdx}
+                        component="img"
+                        src={p.dataUrl}
+                        alt={p.name}
+                        sx={{ width: 56, height: 56, objectFit: "cover", borderRadius: 1.5, border: `1px solid ${PAL.ochre}` }}
+                      />
+                    ))}
+                  </Box>
+                )}
+
+                {row.reportFile && (
+                  <Button
+                    size="small"
+                    component="a"
+                    href={row.reportFile.dataUrl}
+                    download={row.reportFile.name}
+                    sx={{ mt: 1, color: PAL.clay, textTransform: "none", fontWeight: 700, px: 0 }}
+                  >
+                    Download report: {row.reportFile.name}
+                  </Button>
+                )}
+              </Paper>
+            ))}
+          </Stack>
+        </>
+      ) : (
+        <Typography variant="body2" sx={{ color: PAL.brown, opacity: 0.7, mt: 1 }}>
+          No Saksham Saturday activities recorded for this month.
+        </Typography>
+      )}
+    </Box>
+  );
+};
 
 /* ────────────────────────────────────────────────────────────────────────
    History view (previously Steps/MonthlyActivityHistory.jsx)
@@ -930,6 +1195,7 @@ const MonthlyActivityHistory = ({ submissions = [], onDelete }) => {
                   (sum, r) => sum + (Number(r.amount) || 0),
                   0
                 );
+                const sakshamActivityCount = getSakshamActivityRows(entry).length;
 
                 return (
                   <Accordion
@@ -1017,7 +1283,7 @@ const MonthlyActivityHistory = ({ submissions = [], onDelete }) => {
                           <SummaryStat
                             icon={<CelebrationIcon fontSize="small" />}
                             label="Saksham Saturday"
-                            value={entry.sakshamCompleted ? "Completed" : "Not filled"}
+                            value={sakshamActivityCount > 0 ? `${sakshamActivityCount} activit${sakshamActivityCount > 1 ? "ies" : "y"}` : "Not filled"}
                           />
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
@@ -1041,8 +1307,8 @@ const MonthlyActivityHistory = ({ submissions = [], onDelete }) => {
                         icon={<SchoolIcon fontSize="small" sx={{ color: PAL.clay }} />}
                       />
 
-                      {/* NEW: Saksham Saturday and Operational Cost — each
-                          individually exportable, matching Attendance. */}
+                      {/* Saksham Saturday — full activity report, photos and
+                          all, individually exportable, matching Attendance. */}
                       <SakshamSaturdaySection entry={entry} />
 
                       <OperationalCostSection
@@ -1371,7 +1637,8 @@ const MonthlyActivity = () => {
 
   const [staffAttendanceRows, setStaffAttendanceRows] = useState([]);
   const [studentAttendanceData, setStudentAttendanceData] = useState([]);
-  const [sakshamCompleted, setSakshamCompleted] = useState(false);
+  const [sakshamPrePlanningRows, setSakshamPrePlanningRows] = useState(() => cloneSakshamRows(DEFAULT_SAKSHAM_PRE_ROWS));
+  const [sakshamPostPlanningRows, setSakshamPostPlanningRows] = useState(() => cloneSakshamRows(DEFAULT_SAKSHAM_POST_ROWS));
   const [operationalCostRows, setOperationalCostRows] = useState([
     { year: "", month: "", costType: "", amount: "" },
   ]);
@@ -1401,7 +1668,16 @@ const MonthlyActivity = () => {
       setActiveStep(draft.activeStep || 0);
       setStaffAttendanceRows(draft.staffAttendanceRows || []);
       setStudentAttendanceData(draft.studentAttendanceData || []);
-      setSakshamCompleted(!!draft.sakshamCompleted);
+      setSakshamPrePlanningRows(
+        draft.sakshamPrePlanningRows && draft.sakshamPrePlanningRows.length
+          ? draft.sakshamPrePlanningRows
+          : cloneSakshamRows(DEFAULT_SAKSHAM_PRE_ROWS)
+      );
+      setSakshamPostPlanningRows(
+        draft.sakshamPostPlanningRows && draft.sakshamPostPlanningRows.length
+          ? draft.sakshamPostPlanningRows
+          : cloneSakshamRows(DEFAULT_SAKSHAM_POST_ROWS)
+      );
       setOperationalCostRows(
         draft.operationalCostRows && draft.operationalCostRows.length
           ? draft.operationalCostRows
@@ -1421,16 +1697,21 @@ const MonthlyActivity = () => {
 
   // Auto-save (debounced) whenever the in-progress form actually has
   // something in it. If the user hasn't touched anything yet (still on
-  // step 0 with everything blank) we don't bother writing a draft, and
-  // we clean up any stale empty draft.
+  // step 0 with everything blank, and the Saksham Saturday tables still
+  // match their pre-seeded example row) we don't bother writing a draft,
+  // and we clean up any stale empty draft.
   useEffect(() => {
     if (!draftRestoreAttemptedRef.current) return;
+
+    const sakshamChanged =
+      JSON.stringify(sakshamPrePlanningRows) !== JSON.stringify(DEFAULT_SAKSHAM_PRE_ROWS) ||
+      JSON.stringify(sakshamPostPlanningRows) !== JSON.stringify(DEFAULT_SAKSHAM_POST_ROWS);
 
     const hasProgress =
       activeStep > 0 ||
       staffAttendanceRows.length > 0 ||
       studentAttendanceData.length > 0 ||
-      sakshamCompleted ||
+      sakshamChanged ||
       operationalCostRows.some((r) => r.amount || r.costType || r.month || r.year);
 
     const t = setTimeout(() => {
@@ -1441,7 +1722,8 @@ const MonthlyActivity = () => {
           activeStep,
           staffAttendanceRows,
           studentAttendanceData,
-          sakshamCompleted,
+          sakshamPrePlanningRows,
+          sakshamPostPlanningRows,
           operationalCostRows,
         });
         setHasDraft(true);
@@ -1459,7 +1741,8 @@ const MonthlyActivity = () => {
     activeStep,
     staffAttendanceRows,
     studentAttendanceData,
-    sakshamCompleted,
+    sakshamPrePlanningRows,
+    sakshamPostPlanningRows,
     operationalCostRows,
   ]);
 
@@ -1467,7 +1750,8 @@ const MonthlyActivity = () => {
     setActiveStep(0);
     setStaffAttendanceRows([]);
     setStudentAttendanceData([]);
-    setSakshamCompleted(false);
+    setSakshamPrePlanningRows(cloneSakshamRows(DEFAULT_SAKSHAM_PRE_ROWS));
+    setSakshamPostPlanningRows(cloneSakshamRows(DEFAULT_SAKSHAM_POST_ROWS));
     setOperationalCostRows([{ year: "", month: "", costType: "", amount: "" }]);
   };
 
@@ -1479,17 +1763,17 @@ const MonthlyActivity = () => {
   };
 
   const handleNext = () => {
-    // Mark the Saksham Saturday step as visited/completed once the user
-    // moves past it, rather than always forcing it to true on submit.
-    if (activeStep === 1) setSakshamCompleted(true);
-
     if (activeStep === steps.length - 1) {
       const submission = {
         month: reportingMonth,
         year: reportingYear,
         staffAttendanceRows,
         studentAttendanceData,
-        sakshamCompleted: sakshamCompleted || activeStep >= 1,
+        sakshamPrePlanningRows,
+        sakshamPostPlanningRows,
+        // Kept for backward-compatibility with any older submissions that
+        // only ever stored this boolean; now derived from real activity data.
+        sakshamCompleted: sakshamPostPlanningRows.some(isRecordedSakshamRow),
         operationalCostRows,
       };
 
@@ -1544,7 +1828,14 @@ const MonthlyActivity = () => {
           />
         );
       case 1:
-        return <SakshamSaturdayReport />;
+        return (
+          <SakshamSaturdayReport
+            prePlanningRows={sakshamPrePlanningRows}
+            setPrePlanningRows={setSakshamPrePlanningRows}
+            postPlanningRows={sakshamPostPlanningRows}
+            setPostPlanningRows={setSakshamPostPlanningRows}
+          />
+        );
       case 2:
         return (
           <OperationalCost

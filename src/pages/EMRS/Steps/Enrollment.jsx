@@ -33,6 +33,13 @@ const EXAM_CLASS_MAP = {
   "NID": ["12"],
 };
 
+// ── Section options by class ──
+// Classes 6–10 only offer sections A and B; classes 11 & 12 offer A, B and C.
+const getSectionOptionsForClass = (className) => {
+  if (["11", "12"].includes(className)) return ["A", "B", "C"];
+  return ["A", "B"];
+};
+
 const getFilteredAchievementLevels = (className) => {
   if (!className) return achievementLevels;
   return achievementLevels.filter((level) => {
@@ -153,7 +160,18 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                 <TextField
                   select label="Class" fullWidth size="small" sx={{ minWidth: 220 }}
                   value={row.class}
-                  onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].class = e.target.value; setEnrollmentRows(u); }}
+                  onChange={(e) => {
+                    const u = [...enrollmentRows];
+                    const newClass = e.target.value;
+                    u[rowIndex].class = newClass;
+                    // Reset section if it's not valid for the newly selected class
+                    // (e.g. "C" was selected for class 11/12, then class changes to 6-10)
+                    const validSections = getSectionOptionsForClass(newClass);
+                    if (u[rowIndex].section && !validSections.includes(u[rowIndex].section)) {
+                      u[rowIndex].section = "";
+                    }
+                    setEnrollmentRows(u);
+                  }}
                 >
                   {["6", "7", "8", "9", "10", "11", "12"].map((c) => (
                     <MenuItem key={c} value={c}>{c}</MenuItem>
@@ -166,7 +184,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   value={row.section}
                   onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].section = e.target.value; setEnrollmentRows(u); }}
                 >
-                  {["A", "B", "C"].map((s) => (
+                  {getSectionOptionsForClass(row.class).map((s) => (
                     <MenuItem key={s} value={s}>{s}</MenuItem>
                   ))}
                 </TextField>
@@ -883,6 +901,9 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   <TextField
                     label="Student Name" fullWidth size="small" value={achievement.studentName}
                     onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].achievements[aIndex].studentName = e.target.value; setEnrollmentRows(u); }}
+                  onKeyDown={(e) => { if (/^[0-9]$/.test(e.key)) e.preventDefault(); }}
+                    error={/\d/.test(achievement.studentName || "")}
+                    helperText={/\d/.test(achievement.studentName || "") ? "Invalid input. Please enter a valid student name." : ""}
                   />
                 </Grid>
                 <Grid item xs={12} md={3}>
