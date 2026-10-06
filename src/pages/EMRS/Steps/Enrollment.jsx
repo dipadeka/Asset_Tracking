@@ -63,7 +63,98 @@ const getMarksFromPercentage = (percent) => {
   return 0;
 };
 
+// ── Validation helpers for Students Appeared / Students Passed ──
+// Only whole, non-negative numbers are accepted ("" is allowed so the field can be cleared).
+const isValidCount = (val) => val === "" || /^\d+$/.test(String(val));
+
+// Blocks characters that make no sense for a head-count (negative sign, decimal point, exponent).
+const blockInvalidCountKeys = (e) => {
+  if (["-", "+", "e", "E", "."].includes(e.key)) e.preventDefault();
+};
+
+// Recalculates Pass % and Marks on a row object.
+// Pass % is only calculated when the numbers are valid, so it can never exceed 100%.
+const recalcPerformance = (r) => {
+  const appeared = Number(r.appeared || 0);
+  const passed = Number(r.passed || 0);
+  if (appeared <= 0 || passed > appeared) {
+    r.passPercent = "";
+    r.marks = 0;
+    return;
+  }
+  const percent = (passed / appeared) * 100;
+  r.passPercent = percent.toFixed(2);
+  r.marks = getMarksFromPercentage(percent);
+};
+
 const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
+  // ── Students Appeared handler ──
+  const handleAppearedChange = (rowIndex, value) => {
+    if (!isValidCount(value)) return;
+    const u = [...enrollmentRows];
+    u[rowIndex] = { ...u[rowIndex], appeared: value };
+    recalcPerformance(u[rowIndex]);
+    setEnrollmentRows(u);
+  };
+
+  // ── Students Passed handler ──
+  // Passed can never be more than Appeared, so such input is rejected.
+  const handlePassedChange = (rowIndex, value) => {
+    if (!isValidCount(value)) return;
+    const appeared = Number(enrollmentRows[rowIndex].appeared || 0);
+    if (value !== "" && Number(value) > appeared) return;
+    const u = [...enrollmentRows];
+    u[rowIndex] = { ...u[rowIndex], passed: value };
+    recalcPerformance(u[rowIndex]);
+    setEnrollmentRows(u);
+  };
+
+  // ── Shared fields: Students Appeared | Students Passed | Pass % ──
+  const renderAppearedPassedFields = (row, rowIndex) => {
+    const appearedNum = Number(row.appeared || 0);
+    const passedNum = Number(row.passed || 0);
+    const noAppeared = appearedNum <= 0;
+    const passedExceeds = passedNum > appearedNum;
+
+    let passedHelper = "";
+    if (noAppeared && !row.passed) passedHelper = "Enter Students Appeared first";
+    else if (passedExceeds) passedHelper = `Cannot be more than Students Appeared (${appearedNum})`;
+
+    return (
+      <>
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Students Appeared" type="number" fullWidth size="small"
+            value={row.appeared ?? ""}
+            inputProps={{ min: 0, step: 1 }}
+            onKeyDown={blockInvalidCountKeys}
+            onChange={(e) => handleAppearedChange(rowIndex, e.target.value)}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Students Passed" type="number" fullWidth size="small"
+            value={row.passed ?? ""}
+            disabled={noAppeared}
+            inputProps={{ min: 0, max: appearedNum || undefined, step: 1 }}
+            onKeyDown={blockInvalidCountKeys}
+            onChange={(e) => handlePassedChange(rowIndex, e.target.value)}
+            error={passedExceeds}
+            helperText={passedHelper}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            label="Pass %" type="number" fullWidth size="small"
+            value={row.passPercent || ""}
+            InputProps={{ readOnly: true }}
+            inputProps={{ min: 0, max: 100 }}
+          />
+        </Grid>
+      </>
+    );
+  };
+
   return (
     <>
       {/* ================= UNIFIED STUDENT ENROLLMENT SECTION ================= */}
@@ -393,41 +484,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   Annual Exam Performance — Class {row.class}
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Students Appeared" type="number" fullWidth size="small"
-                      value={row.appeared}
-                      onChange={(e) => {
-                        const u = [...enrollmentRows];
-                        u[rowIndex].appeared = e.target.value;
-                        const appeared = Number(e.target.value || 0);
-                        const passed = Number(u[rowIndex].passed || 0);
-                        const percent = appeared > 0 ? (passed / appeared) * 100 : 0;
-                        u[rowIndex].passPercent = percent.toFixed(2);
-                        u[rowIndex].marks = getMarksFromPercentage(percent);
-                        setEnrollmentRows(u);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Students Passed" type="number" fullWidth size="small"
-                      value={row.passed}
-                      onChange={(e) => {
-                        const u = [...enrollmentRows];
-                        u[rowIndex].passed = e.target.value;
-                        const passed = Number(e.target.value || 0);
-                        const appeared = Number(u[rowIndex].appeared || 0);
-                        const percent = appeared > 0 ? (passed / appeared) * 100 : 0;
-                        u[rowIndex].passPercent = percent.toFixed(2);
-                        u[rowIndex].marks = getMarksFromPercentage(percent);
-                        setEnrollmentRows(u);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField label="Pass %" type="number" fullWidth size="small" value={row.passPercent || ""} InputProps={{ readOnly: true }} />
-                  </Grid>
+                  {renderAppearedPassedFields(row, rowIndex)}
                 </Grid>
               </Box>
             )}
@@ -439,41 +496,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   Board Exam Performance — Class 10
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Students Appeared" type="number" fullWidth size="small"
-                      value={row.appeared}
-                      onChange={(e) => {
-                        const u = [...enrollmentRows];
-                        u[rowIndex].appeared = e.target.value;
-                        const appeared = Number(e.target.value || 0);
-                        const passed = Number(u[rowIndex].passed || 0);
-                        const percent = appeared > 0 ? (passed / appeared) * 100 : 0;
-                        u[rowIndex].passPercent = percent.toFixed(2);
-                        u[rowIndex].marks = getMarksFromPercentage(percent);
-                        setEnrollmentRows(u);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Students Passed" type="number" fullWidth size="small"
-                      value={row.passed}
-                      onChange={(e) => {
-                        const u = [...enrollmentRows];
-                        u[rowIndex].passed = e.target.value;
-                        const passed = Number(e.target.value || 0);
-                        const appeared = Number(u[rowIndex].appeared || 0);
-                        const percent = appeared > 0 ? (passed / appeared) * 100 : 0;
-                        u[rowIndex].passPercent = percent.toFixed(2);
-                        u[rowIndex].marks = getMarksFromPercentage(percent);
-                        setEnrollmentRows(u);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField label="Pass %" type="number" fullWidth size="small" value={row.passPercent || ""} InputProps={{ readOnly: true }} />
-                  </Grid>
+                  {renderAppearedPassedFields(row, rowIndex)}
                   <Grid item xs={12} sm={6} md={4}>
                     <TextField label="Marks Obtained (out of 10)" fullWidth size="small" value={row.marks || ""} InputProps={{ readOnly: true }} />
                   </Grid>
@@ -521,39 +544,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   </Grid>
                 </Grid>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Students Appeared" type="number" fullWidth size="small" value={row.appeared}
-                      onChange={(e) => {
-                        const u = [...enrollmentRows];
-                        u[rowIndex].appeared = e.target.value;
-                        const appeared = Number(e.target.value || 0);
-                        const passed = Number(u[rowIndex].passed || 0);
-                        const passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
-                        u[rowIndex].passPercent = passPercent;
-                        u[rowIndex].marks = getMarksFromPercentage(Number(passPercent));
-                        setEnrollmentRows(u);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField
-                      label="Students Passed" type="number" fullWidth size="small" value={row.passed}
-                      onChange={(e) => {
-                        const u = [...enrollmentRows];
-                        u[rowIndex].passed = e.target.value;
-                        const passed = Number(e.target.value || 0);
-                        const appeared = Number(u[rowIndex].appeared || 0);
-                        const passPercent = appeared > 0 ? ((passed / appeared) * 100).toFixed(2) : "";
-                        u[rowIndex].passPercent = passPercent;
-                        u[rowIndex].marks = getMarksFromPercentage(Number(passPercent));
-                        setEnrollmentRows(u);
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
-                    <TextField label="Pass %" type="number" fullWidth size="small" value={row.passPercent || ""} InputProps={{ readOnly: true }} />
-                  </Grid>
+                  {renderAppearedPassedFields(row, rowIndex)}
                   <Grid item xs={12} sm={6} md={4}>
                     <TextField label="Marks Obtained (out of 10)" fullWidth size="small" value={row.marks || ""} InputProps={{ readOnly: true }} />
                   </Grid>
@@ -901,7 +892,7 @@ const Enrollment = ({ enrollmentRows, setEnrollmentRows }) => {
                   <TextField
                     label="Student Name" fullWidth size="small" value={achievement.studentName}
                     onChange={(e) => { const u = [...enrollmentRows]; u[rowIndex].achievements[aIndex].studentName = e.target.value; setEnrollmentRows(u); }}
-                  onKeyDown={(e) => { if (/^[0-9]$/.test(e.key)) e.preventDefault(); }}
+                    onKeyDown={(e) => { if (/^[0-9]$/.test(e.key)) e.preventDefault(); }}
                     error={/\d/.test(achievement.studentName || "")}
                     helperText={/\d/.test(achievement.studentName || "") ? "Invalid input. Please enter a valid student name." : ""}
                   />

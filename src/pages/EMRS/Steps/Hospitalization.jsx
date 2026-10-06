@@ -20,6 +20,67 @@ const getSectionOptionsForClass = (className) => {
 // ── Max allowed value for eye/ear health headcount fields ──
 const MAX_HEALTH_COUNT = 480;
 
+// ── Count validation rules ──
+// Each field lists the fields it must stay below (strict) or at/below (non-strict).
+// To change a rule from "less than" to "less than or equal", set strict: false.
+const SICKLE_RULES = {
+  sickleCellPositiveCases: [
+    { field: "sickleCellTotalScreened", label: "Total Students Screened", strict: false },
+  ],
+  sickleCellReferred: [
+    { field: "sickleCellTotalScreened", label: "Total Students Screened", strict: false },
+  ],
+};
+
+const EYE_RULES = {
+  eyeStudentsWithProblem: [
+    { field: "eyeStudentsScreened", label: "No. of Students Screened", strict: false },
+  ],
+  eyeNeedsSpectacle: [
+    { field: "eyeStudentsScreened", label: "No. of Students Screened", strict: false },
+    { field: "eyeStudentsWithProblem", label: "No. of Students with Eye Problem", strict: false },
+  ],
+  eyeNeedsHigherInvestigation: [
+    { field: "eyeStudentsScreened", label: "No. of Students Screened", strict: false },
+  ],
+};
+
+const EAR_RULES = {
+  earStudentsWithProblem: [
+    { field: "earStudentsScreened", label: "No. of Students Screened", strict: false },
+  ],
+  earNeedsEquipment: [
+    { field: "earStudentsScreened", label: "No. of Students Screened", strict: false },
+    { field: "earStudentsWithProblem", label: "No. of Students with Ear Problem", strict: false },
+  ],
+};
+
+const isFilled = (v) => v !== "" && v !== undefined && v !== null;
+
+// Returns an error message for `field` in `entry`, or "" when valid.
+const getCountError = (entry, field, rules) => {
+  const value = entry?.[field];
+  if (!isFilled(value)) return "";
+  if (Number(value) > MAX_HEALTH_COUNT && rules !== SICKLE_RULES) return `Cannot exceed ${MAX_HEALTH_COUNT}`;
+  for (const rule of rules[field] || []) {
+    const limit = entry[rule.field];
+    if (!isFilled(limit)) continue;
+    const ok = rule.strict ? Number(value) < Number(limit) : Number(value) <= Number(limit);
+    if (!ok) return `Must be ${rule.strict ? "less than" : "less than or equal to"} ${rule.label}`;
+  }
+  return "";
+};
+
+// Optional: use this in your parent's submit handler to block saving invalid rows.
+export const hasHospitalizationCountErrors = (row) => {
+  const check = (entries, rules) =>
+    (entries || []).some((entry) => Object.keys(rules).some((f) => getCountError(entry, f, rules)));
+  const sickle = row["Sickle Cell Screening Conducted"] === "Yes"
+    ? Object.keys(SICKLE_RULES).some((f) => getCountError(row, f, SICKLE_RULES))
+    : false;
+  return sickle || check(row.eyeEntries, EYE_RULES) || check(row.earEntries, EAR_RULES);
+};
+
 const HospitalizationSection = ({
   hospitalizationRows,
   setHospitalizationRows,
@@ -257,36 +318,38 @@ const HospitalizationSection = ({
 
                         {/* Conducted By */}
                         <Grid item xs={12} sm={6}>
-                          <TextField select label="Conducted By" fullWidth size="small"
+                          <TextField select label="Conducted By" fullWidth size="small" sx={{ minWidth: 220 }}
                             value={row.sickleCellConductedBy || ""}
                             onChange={(e) => { const u = [...hospitalizationRows]; u[index].sickleCellConductedBy = e.target.value; setHospitalizationRows(u); }}>
                             {["Government Hospital Team","Mobile Health Unit","ASHA / ANM Worker","NGO / External Agency","School Medical Staff","Other"].map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
                           </TextField>
                         </Grid>
 
-                        {/* Total Students Screened */}
-                        <Grid item xs={12} sm={6} md={4}>
-                          <TextField label="Total Students Screened" fullWidth size="small" type="number" inputProps={{ min: 0 }}
-                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                            value={row.sickleCellTotalScreened || ""}
-                            onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].sickleCellTotalScreened = e.target.value; setHospitalizationRows(u); } }} />
-                        </Grid>
-
-                        {/* Positive Cases */}
-                        <Grid item xs={12} sm={6} md={4}>
-                          <TextField label="Positive Cases Detected" fullWidth size="small" type="number" inputProps={{ min: 0 }}
-                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                            value={row.sickleCellPositiveCases || ""}
-                            onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].sickleCellPositiveCases = e.target.value; setHospitalizationRows(u); } }} />
-                        </Grid>
-
-                        {/* Referred for Further Treatment */}
-                        <Grid item xs={12} sm={6} md={4}>
-                          <TextField label="Students Referred for Treatment" fullWidth size="small" type="number" inputProps={{ min: 0 }}
-                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                            value={row.sickleCellReferred || ""}
-                            onChange={(e) => { if (Number(e.target.value) >= 0) { const u = [...hospitalizationRows]; u[index].sickleCellReferred = e.target.value; setHospitalizationRows(u); } }} />
-                        </Grid>
+                        {/* Total Screened / Positive Cases / Referred
+                            Positive and Referred must be <= Total Screened */}
+                        {[
+                          { label: "Total Students Screened", field: "sickleCellTotalScreened" },
+                          { label: "Positive Cases Detected", field: "sickleCellPositiveCases" },
+                          { label: "Students Referred for Treatment", field: "sickleCellReferred" },
+                        ].map(({ label, field }) => {
+                          const err = getCountError(row, field, SICKLE_RULES);
+                          return (
+                            <Grid item xs={12} sm={6} md={4} key={field}>
+                              <TextField label={label} fullWidth size="small" type="number" inputProps={{ min: 0 }}
+                                onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+                                value={row[field] || ""}
+                                error={!!err}
+                                helperText={err}
+                                onChange={(e) => {
+                                  if (Number(e.target.value) >= 0) {
+                                    const u = [...hospitalizationRows];
+                                    u[index][field] = e.target.value;
+                                    setHospitalizationRows(u);
+                                  }
+                                }} />
+                            </Grid>
+                          );
+                        })}
 
                         {/* Prevention Counselling Done */}
                         <Grid item xs={12} sm={6} md={4}>
@@ -364,7 +427,6 @@ const HospitalizationSection = ({
                   <Typography sx={{ color: "#fff", fontSize: "0.68rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.4px" }}>Marks</Typography>
                 </Box>
                 {[
-                  
                   { status: "5 or 6 conditions fulfilled",  marks: 7, bg: "#d4edda", color: "#155724", border: "#b8dfc4" },
                   { status: "3 or 4 conditions fulfilled",  marks: 5, bg: "#fff3cd", color: "#856404", border: "#f0d78c" },
                   { status: "1 or 2 conditions fulfilled",  marks: 3, bg: "#fde8d8", color: "#7d3c0c", border: "#f0c09a" },
@@ -448,21 +510,24 @@ const HospitalizationSection = ({
                       { label: "No. of Students with Eye Problem", field: "eyeStudentsWithProblem" },
                       { label: "No. of Students requiring Spectacle", field: "eyeNeedsSpectacle" },
                       { label: "No. of Students requiring Treatment", field: "eyeNeedsHigherInvestigation" },
-                    ].map(({ label, field }) => (
-                      <Grid item xs={12} sm={6} md={3} key={field}>
-                        <TextField label={label} fullWidth size="small" sx={{ minWidth: 220 }} type="number" inputProps={{ min: 0, max: MAX_HEALTH_COUNT }}
-                          onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                          value={eye[field] || ""}
-                          error={eye[field] !== "" && eye[field] !== undefined && Number(eye[field]) > MAX_HEALTH_COUNT}
-                          helperText={eye[field] !== "" && eye[field] !== undefined && Number(eye[field]) > MAX_HEALTH_COUNT ? `Cannot exceed ${MAX_HEALTH_COUNT}` : ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "" || (Number(value) >= 0 && Number(value) <= MAX_HEALTH_COUNT)) {
-                              const u = [...hospitalizationRows]; u[index].eyeEntries[ei][field] = value; setHospitalizationRows(u);
-                            }
-                          }} />
-                      </Grid>
-                    ))}
+                    ].map(({ label, field }) => {
+                      const err = getCountError(eye, field, EYE_RULES);
+                      return (
+                        <Grid item xs={12} sm={6} md={3} key={field}>
+                          <TextField label={label} fullWidth size="small" sx={{ minWidth: 220 }} type="number" inputProps={{ min: 0, max: MAX_HEALTH_COUNT }}
+                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+                            value={eye[field] || ""}
+                            error={!!err}
+                            helperText={err}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || (Number(value) >= 0 && Number(value) <= MAX_HEALTH_COUNT)) {
+                                const u = [...hospitalizationRows]; u[index].eyeEntries[ei][field] = value; setHospitalizationRows(u);
+                              }
+                            }} />
+                        </Grid>
+                      );
+                    })}
                   </Grid>
                 </Box>
               ))}
@@ -531,21 +596,24 @@ const HospitalizationSection = ({
                       { label: "No. of Students Screened", field: "earStudentsScreened" },
                       { label: "No. of Students with Ear Problem", field: "earStudentsWithProblem" },
                       { label: "No. of Students requiring Ear Equipment", field: "earNeedsEquipment" },
-                    ].map(({ label, field }) => (
-                      <Grid item xs={12} sm={6} md={4} key={field}>
-                        <TextField label={label} fullWidth size="small" sx={{ minWidth: 220 }} type="number" inputProps={{ min: 0, max: MAX_HEALTH_COUNT }}
-                          onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
-                          value={ear[field] || ""}
-                          error={ear[field] !== "" && ear[field] !== undefined && Number(ear[field]) > MAX_HEALTH_COUNT}
-                          helperText={ear[field] !== "" && ear[field] !== undefined && Number(ear[field]) > MAX_HEALTH_COUNT ? `Cannot exceed ${MAX_HEALTH_COUNT}` : ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "" || (Number(value) >= 0 && Number(value) <= MAX_HEALTH_COUNT)) {
-                              const u = [...hospitalizationRows]; u[index].earEntries[eri][field] = value; setHospitalizationRows(u);
-                            }
-                          }} />
-                      </Grid>
-                    ))}
+                    ].map(({ label, field }) => {
+                      const err = getCountError(ear, field, EAR_RULES);
+                      return (
+                        <Grid item xs={12} sm={6} md={4} key={field}>
+                          <TextField label={label} fullWidth size="small" sx={{ minWidth: 220 }} type="number" inputProps={{ min: 0, max: MAX_HEALTH_COUNT }}
+                            onKeyDown={(e) => { if (e.key === "-" || e.key === "e") e.preventDefault(); }}
+                            value={ear[field] || ""}
+                            error={!!err}
+                            helperText={err}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || (Number(value) >= 0 && Number(value) <= MAX_HEALTH_COUNT)) {
+                                const u = [...hospitalizationRows]; u[index].earEntries[eri][field] = value; setHospitalizationRows(u);
+                              }
+                            }} />
+                        </Grid>
+                      );
+                    })}
                   </Grid>
                 </Box>
               ))}
@@ -593,7 +661,7 @@ const HospitalizationSection = ({
                         {["GNM (General Nursing & Midwifery)","ANM (Auxiliary Nurse Midwife)","B.Sc Nursing","M.Sc Nursing","Post Basic B.Sc Nursing","Other"].map((q) => <MenuItem key={q} value={q}>{q}</MenuItem>)}
                       </TextField>
                     </Grid>
-                   
+
                     <Grid item xs={12} sm={6} md={4}>
                       <TextField label="Contact Number" fullWidth size="small" sx={{ minWidth: 220 }} value={nurse.nurseContact}
                         inputProps={{ maxLength: 10, inputMode: "numeric" }}
@@ -602,8 +670,6 @@ const HospitalizationSection = ({
                         helperText={nurse.nurseContact && nurse.nurseContact.length !== 10 ? "Must be 10 digits" : ""}
                         onChange={(e) => { const u = [...hospitalizationRows]; u[index].nurseEntries[ni].nurseContact = e.target.value; setHospitalizationRows(u); }} />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-</Grid>
                     <Grid item xs={12} sm={6} md={4}>
                       <TextField label="Date of Joining" fullWidth size="small" type="date" InputLabelProps={{ shrink: true }} value={nurse.nurseJoiningDate}
                         onChange={(e) => { const u = [...hospitalizationRows]; u[index].nurseEntries[ni].nurseJoiningDate = e.target.value; setHospitalizationRows(u); }} />
@@ -673,7 +739,7 @@ const HospitalizationSection = ({
                         {["General Medicine / MBBS","Paediatrics","General Surgery","Gynaecology","Orthopaedics","Dermatology","ENT","Ophthalmology","Other"].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                       </TextField>
                     </Grid>
-                    
+
                     <Grid item xs={12} sm={6} md={4}>
                       <TextField label="Contact Number" fullWidth size="small" value={row.visitingDoctorContact || ""}
                         inputProps={{ maxLength: 10, inputMode: "numeric" }}

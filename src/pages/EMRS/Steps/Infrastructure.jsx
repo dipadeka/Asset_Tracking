@@ -454,6 +454,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
             </Table>
           </TableContainer>
         </Box>
+
 {/* Solar Power Infrastructure */}
 <Box sx={sectionBox("#c8e6c9", "#f4fff6")}>
   <Typography
@@ -504,6 +505,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Plant Capacity (kW)"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
                 inputProps={{ min: 0 }}
                 onChange={(e) => {
                   if (isNonNegative(e.target.value)) field.onChange(e.target.value);
@@ -525,6 +527,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Installation Year"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
                 inputProps={{ min: 0 }}
                 onChange={(e) => {
                   if (isNonNegative(e.target.value)) field.onChange(e.target.value);
@@ -577,8 +580,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
           />
         </Grid>
 
-       
-
+        {/* FIX: minWidth added so the full label "Campus Powered (%)" is displayed */}
         <Grid item xs={12} sm={4} md={3}>
           <Controller
             name="solarCoverage"
@@ -591,6 +593,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Campus Powered (%)"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
                 inputProps={{ min: 0, max: 100 }}
                 onChange={(e) => {
                   if (isNonNegative(e.target.value)) field.onChange(e.target.value);
@@ -600,7 +603,6 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
           />
         </Grid>
 
-       
         <Grid item xs={12} sm={4} md={3}>
           <Controller
             name="lastSolarMaintenance"
@@ -613,6 +615,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Last Maintenance"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
                 InputLabelProps={{ shrink: true }}
               />
             )}
@@ -631,6 +634,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                 label="Next Maintenance"
                 fullWidth
                 size="small"
+                sx={{ minWidth: 220 }}
                 InputLabelProps={{ shrink: true }}
               />
             )}
@@ -658,6 +662,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
 
   </Grid>
 </Box>
+
         {/* Library */}
         <Box sx={sectionBox()}>
           <Typography sx={{ fontWeight: 600, color: "#1976d2", mb: 1.5, fontSize: 14 }}>
@@ -770,7 +775,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
                   />
                 </Grid>
 
-                {/* ── NEW: Types of Sports Played ── */}
+                {/* Types of Sports Played */}
                 <Grid item xs={12} sm={6} md={5}>
                   <Controller
                     name="sportsPlayed"
@@ -929,7 +934,7 @@ export default function InfrastructureDetails({ control, watch, setValue, syncIn
               </Grid>
             ))}
 
-            {/* ── NEW: Fire Audit Conducted ── */}
+            {/* Fire Audit Conducted */}
             <Grid item xs={12} sm={4} md={3}>
               <Controller name="fireAuditConducted" control={control} defaultValue=""
                 render={({ field }) => (

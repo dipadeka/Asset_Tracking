@@ -30,6 +30,7 @@ import { CircularProgress } from "@mui/material";
 import * as exifr from "exifr";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
+import { EMRS_SUBMIT_URL } from "../../api/emrsApi";
 import { DesktopDatePicker } from "@mui/x-date-pickers/DesktopDatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -169,13 +170,7 @@ const getHolidaysForMonth = (monthName) => {
 
 /* ─────────────────────────────────────────────────────────────────────────────
    QUALIFICATION ROW DEFAULTS — single source of truth for the shape of one
-   Academic / Professional / TET qualification entry. Used everywhere a new
-   qualification row is created (initial staff state, "+ Add Staff Post",
-   and the +/↺ buttons inside the qualification tables) so every staff row
-   — first one or the fifth one added later — always has the full, matching
-   field set. Previously these were duplicated ad-hoc in three different
-   places with different (incomplete) field sets, which is why newly added
-   staff or Professional Qualifications silently lost data.
+   Academic / Professional / TET qualification entry.
 ───────────────────────────────────────────────────────────────────────────── */
 const blankAcademicQualification = () => ({
   post: "", staffname: " ", qualification: "", course: "", registrationNo: "",
@@ -227,11 +222,6 @@ const convertUploadedImages = async (imagesObj) => {
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DRAFT PERSISTENCE HELPERS
-   These let the EMRS form auto-save its in-progress state (per logged-in
-   user) to localStorage, so that if the user is logged out mid-way through
-   filling the form — or simply closes the tab / their session expires —
-   the next time they log back in and open this form, everything they had
-   entered (including which step they were on) is restored automatically.
 ───────────────────────────────────────────────────────────────────────────── */
 const EMRS_DRAFT_PREFIX = "emrs_form_draft__";
 
@@ -239,8 +229,6 @@ const getEmrsDraftUserId = (user) => {
   if (user) {
     return String(user.schoolCode || user.username || user.id || user.email || "guest");
   }
-  // Fall back to whatever the app happens to keep in localStorage under a
-  // few common keys, in case `user` from context hasn't hydrated yet.
   const candidateKeys = ["user", "authUser", "emrsUser", "username", "userId"];
   for (const key of candidateKeys) {
     try {
@@ -250,7 +238,6 @@ const getEmrsDraftUserId = (user) => {
       const id = parsed?.schoolCode || parsed?.username || parsed?.id || parsed?.email;
       if (id) return String(id);
     } catch {
-      // raw wasn't JSON (e.g. a plain username string) — use it directly
       const raw = localStorage.getItem(key);
       if (raw) return raw;
     }
@@ -1414,7 +1401,7 @@ const WaterHygieneSanitation = ({
                   onChange={(e) => handleField("actionDate", e.target.value)} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField select fullWidth size="small" label="Action Status"
+                <TextField select fullWidth size="small" sx={{ minWidth: 220 }} label="Action Status"
                   value={waterHygieneData.actionStatus || ""}
                   onChange={(e) => handleField("actionStatus", e.target.value)}>
                   <MenuItem value="">Select</MenuItem>
@@ -1733,10 +1720,7 @@ const EMRSForm = () => {
 
   const [hospitalizationRows, setHospitalizationRows] = useState([emptyHospitalizationRow()]);
 
-  /* ── TEACHING / NON-TEACHING STAFF STATE — all three qualification
-     arrays now use the shared blank*Qualification() helpers so every row
-     (first one, or one added later via "+ Add Staff Post") has the exact
-     same field set. ── */
+  /* ── TEACHING / NON-TEACHING STAFF STATE ── */
   const [teachingRows, setteachingRows] = useState([{
     post: "", staffName: "", name: "", dob: "", doj: "", email: "", contactNumber: "", contact: "", total: "", filled: "", vacant: "",
     academicQualifications: [blankAcademicQualification()],
@@ -2106,11 +2090,11 @@ const EMRSForm = () => {
     });
   };
 
-  /* ── QUALIFICATION TABLES — now renders THREE tables: Academic,
-     Professional (previously missing any UI at all — this is why it was
-     always blank), and TET. `showTET` still lets non-teaching staff hide
-     the TET table; Professional Qualification is shown for both staff
-     types since both have a professionalQualifications array. ── */
+  /* ── QUALIFICATION TABLES — renders Academic, Professional and TET tables.
+     CHANGE: the "Action" column now has  "+" (add a row below)  and
+     "🗑" (delete this row). The old "↺" refresh/reset button is removed.
+     The delete button is disabled when only one row is left, so each
+     table always keeps at least one editable row. ── */
   const renderQualificationTables = (staffRows, setStaffRows, staffIndex, showTET = true) => {
     const row = staffRows[staffIndex];
     const qThStyle = { backgroundColor: "#1976d2", color: "#fff", padding: "8px 6px", textAlign: "center", fontSize: "12px", fontWeight: 600, border: "1px solid #1565c0", whiteSpace: "nowrap" };
@@ -2126,18 +2110,34 @@ const EMRSForm = () => {
       const u = [...staffRows]; u[staffIndex][qualType][qIndex][field] = sanitizedValue; setStaffRows(u);
     };
 
-    const ActionButtons = ({ qualType, qIndex, emptyObj }) => (
-      <Box display="flex" gap={0.5} justifyContent="center">
-        <Button variant="contained" size="small" sx={{ minWidth: 0, px: 1, py: 0.3, fontSize: "13px", backgroundColor: "#f59e0b", "&:hover": { backgroundColor: "#d97706" } }}
-          onClick={() => { const u = [...staffRows]; u[staffIndex][qualType].splice(qIndex + 1, 0, { ...emptyObj }); setStaffRows(u); }}>+</Button>
-        <Button variant="outlined" size="small" sx={{ minWidth: 0, px: 1, py: 0.3, fontSize: "13px", borderColor: "#1976d2", color: "#1976d2" }}
-          onClick={() => { const u = [...staffRows]; u[staffIndex][qualType][qIndex] = { ...emptyObj }; setStaffRows(u); }}>↺</Button>
-      </Box>
-    );
+    const ActionButtons = ({ qualType, qIndex, emptyObj }) => {
+      const canDelete = (row[qualType] || []).length > 1;
+      return (
+        <Box display="flex" gap={0.5} justifyContent="center">
+          <Tooltip title="Add row below">
+            <Button variant="contained" size="small" sx={{ minWidth: 0, px: 1, py: 0.3, fontSize: "13px", backgroundColor: "#f59e0b", "&:hover": { backgroundColor: "#d97706" } }}
+              onClick={() => { const u = [...staffRows]; u[staffIndex][qualType].splice(qIndex + 1, 0, { ...emptyObj }); setStaffRows(u); }}>+</Button>
+          </Tooltip>
+          <Tooltip title={canDelete ? "Delete this row" : "At least one row is required"}>
+            <span>
+              <Button variant="outlined" color="error" size="small" disabled={!canDelete}
+                sx={{ minWidth: 0, px: 1, py: 0.3 }}
+                onClick={() => {
+                  const u = [...staffRows];
+                  u[staffIndex] = {
+                    ...u[staffIndex],
+                    [qualType]: u[staffIndex][qualType].filter((_, i) => i !== qIndex),
+                  };
+                  setStaffRows(u);
+                }}>
+                <DeleteOutlineIcon fontSize="small" />
+              </Button>
+            </span>
+          </Tooltip>
+        </Box>
+      );
+    };
 
-    // Row post/name preview — read-only, mirrors the staff row itself
-    // (post/staffname on the qualification object are kept in sync
-    // automatically at submit time, see syncQualificationOwner()).
     const PostNameCells = () => (
       <>
         <td style={{ ...qTdStyle, minWidth: 120 }}><Typography sx={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#1976d2", px: 1, py: 0.4, borderRadius: 1, textAlign: "center", whiteSpace: "nowrap" }}>{row.post || "—"}</Typography></td>
@@ -2171,9 +2171,7 @@ const EMRSForm = () => {
           </table>
         </Box>
 
-        {/* ── Professional Qualification — NEW: previously this data had
-            no editable table anywhere, so it stayed at its blank default
-            forever and dumped as raw JSON on the applied-forms page. ── */}
+        {/* ── Professional Qualification ── */}
         <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#374151", mb: 1 }}>Professional Qualification</Typography>
         <Box sx={{ overflowX: "auto", mb: 2 }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -2360,9 +2358,7 @@ const EMRSForm = () => {
 
   /* ── syncQualificationOwner — at submit time, stamps every qualification
      entry (academic / professional / TET) with the staff row's own post
-     and name. This guarantees the exported "post"/"staffname" fields
-     always match what the user actually typed for that staff member,
-     regardless of when each qualification row was added. ── */
+     and name. ── */
   const syncQualificationOwner = (staff) => {
     const staffname = String(staff.name || staff.staffName || "").trim() || " ";
     const post = staff.post || "";
@@ -2454,10 +2450,6 @@ const EMRSForm = () => {
       if (cred) { payload.username = cred.username; payload.loginId = cred.username; payload.schoolCode = cred.schoolCode; payload.EMRScode = cred.schoolCode; payload.schoolname = payload.schoolname || cred.schoolName; payload.district = payload.district || cred.district; payload.block = payload.block || cred.block; }
       else if (user) { payload.username = String(user.username || user.loginId || user.id || ""); payload.loginId = payload.username; }
 
-      // ── FIXED: was a 10-second timeout that could not survive a payload
-      // with base64-embedded images. Extended to 60s and now passes a real
-      // `reason` to abort() so, if it *does* fire, the caught error carries
-      // a meaningful message instead of "signal is aborted without reason".
       const controller = new AbortController();
       const timeoutMs = 60000;
       const timeoutId = setTimeout(
@@ -2467,7 +2459,7 @@ const EMRSForm = () => {
 
       let response;
       try {
-        response = await fetch("/api/emrs", {
+        response = await fetch(EMRS_SUBMIT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -2496,8 +2488,6 @@ const EMRSForm = () => {
       navigate("/emrs/dashboard");
     } catch (error) {
       toast.dismiss(loadingToast);
-      // ── FIXED: give a clear, actionable message for timeouts instead of
-      // surfacing the raw DOMException text to the user.
       const isTimeout = error.name === "AbortError" || error.name === "TimeoutError";
       const friendlyMessage = isTimeout
         ? "The submission timed out — this can happen when uploading a lot of photos. Please check your connection and try again."

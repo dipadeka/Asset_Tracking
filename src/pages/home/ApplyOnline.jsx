@@ -328,65 +328,6 @@ const DOC_ICONS = {
 const AUTO_CHECKED_DOCS = ["aadhaarDoc", "stCertificate"];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ★ DIGILOCKER INTEGRATION (simulated)
-// Lets the applicant pull a document straight from their DigiLocker account
-// instead of manually scanning/uploading it — mirroring how real Indian
-// government portals let citizens "Fetch from DigiLocker" for Aadhaar,
-// certificates, marksheets, etc. There's no live backend wired up in this
-// demo (that would require registering with DigiLocker's Partner/eSign API
-// and a server-side OAuth exchange), so this simulates the flow end-to-end
-// — connect, pick the matching document, "fetch" it — and produces a
-// placeholder file so the rest of the app (attach/verify/preview) behaves
-// exactly as if a real document had been pulled in. In production, replace
-// `simulateDigiLockerFetch` with a real DigiLocker "Pull Document" API call.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Which DigiLocker-issued document(s) can be pulled in for each checklist
-// item, shown as the picker list once "connected".
-const DIGILOCKER_DOC_OPTIONS = {
-  passportPhoto: [{ id: "photo", label: "Passport-size Photograph" }],
-  candidateSignature: [{ id: "sig", label: "Specimen Signature" }],
-  birthCertificate: [{ id: "birth", label: "Birth Certificate — Registrar of Births & Deaths" }],
-  aadhaarDoc: [{ id: "aadhaar", label: "Aadhaar Card — UIDAI" }],
-  stCertificate: [{ id: "st", label: "Scheduled Tribe Certificate — Govt. of Assam" }],
-  residenceCertificate: [{ id: "residence", label: "Residence / Domicile Certificate — Govt. of Assam" }],
-  incomeCertificate: [{ id: "income", label: "Income Certificate — Govt. of Assam" }],
-  bonafideCertificate: [{ id: "bonafide", label: "Bonafide Certificate — School" }],
-  disabilityCertificate: [{ id: "udid", label: "Unique Disability ID (UDID) Certificate" }],
-  sportsCertificate: [{ id: "sports", label: "Sports Certificate — SAI / State Sports Council" }],
-};
-
-// Builds a small placeholder image (as a real File object) standing in for
-// the document DigiLocker would have returned, so the rest of the app can
-// treat it exactly like a manually uploaded scan.
-function createMockDigiLockerFile(label) {
-  return new Promise(resolve => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 600;
-    canvas.height = 380;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#0b3d66";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-    ctx.fillStyle = "#0b3d66";
-    ctx.font = "bold 20px sans-serif";
-    ctx.fillText("DigiLocker — Verified Document", 30, 50);
-    ctx.font = "16px sans-serif";
-    ctx.fillStyle = "#333333";
-    ctx.fillText(label, 30, 90);
-    ctx.font = "12px sans-serif";
-    ctx.fillStyle = "#777777";
-    ctx.fillText("Issued document fetched via DigiLocker (simulated)", 30, 340);
-    canvas.toBlob(blob => {
-      const safeName = label.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
-      resolve(new File([blob], `${safeName}_digilocker.png`, { type: "image/png" }));
-    }, "image/png");
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // ★ OFFICIAL / GOVERNMENT-STYLE ACCENTS
 // A small, restrained navy accent used only for the "official portal" chrome
 // (masthead strip, form-reference chip, mandatory-field legend, footer
@@ -596,6 +537,78 @@ const selectStyle = { ...inputStyle, cursor: "pointer" };
 const textAreaStyle = { ...inputStyle, minHeight: 86, resize: "vertical" };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ★ VISIBLE SCROLLBAR CSS — a reusable chunk of CSS that gives every
+// scrollable panel in this modal (the AuthGate form area and the wizard's
+// main body) an always-visible, clearly styled vertical scrollbar, instead
+// of relying on the OS's default (which on Mac/touch devices is a thin
+// overlay bar that only appears while actively scrolling and is easy to
+// miss). Injected into each portal's own <style> tag since each is a
+// separate `createPortal` root.
+// ─────────────────────────────────────────────────────────────────────────────
+const SCROLLBAR_CSS = `
+  .emrs-scrollbar {
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: #c8781e #f3e6d3;
+  }
+  .emrs-scrollbar::-webkit-scrollbar {
+    width: 12px;
+  }
+  .emrs-scrollbar::-webkit-scrollbar-track {
+    background: #f3e6d3;
+    border-radius: 20px;
+  }
+  .emrs-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg,#8b4513,#c8781e);
+    border-radius: 20px;
+    border: 2px solid #f3e6d3;
+    min-height: 40px;
+  }
+  .emrs-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #8b4513;
+  }
+`;
+
+// Locks/unlocks scrolling on the underlying page while a full-screen modal
+// portal is open, so mouse-wheel/trackpad/arrow-key scrolling always acts on
+// the modal's own scrollable panel instead of (invisibly) scrolling the page
+// behind it — which is what previously made it feel like nothing was
+// scrolling until the page itself was nudged.
+function useBodyScrollLock() {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ★ INPUT FILTERS — applied as the user types, so invalid characters never
+// make it into the field in the first place (rather than only being caught
+// by validation after the fact). Used via each field's `inputFilter` flag:
+//   "alpha"   → letters, spaces, and a few punctuation marks common in
+//               names/institutions (., ', -) — used for candidate/parent/
+//               guardian names and the present school name.
+//   "numeric" → digits only — used for Aadhaar, PIN code, mobile numbers,
+//               and year of passing.
+// ─────────────────────────────────────────────────────────────────────────────
+function applyInputFilter(filterType, rawValue) {
+  if (filterType === "alpha") return rawValue.replace(/[^A-Za-z\s.'-]/g, "");
+  if (filterType === "numeric") return rawValue.replace(/[^0-9]/g, "");
+  return rawValue;
+}
+
+// Today's date as "YYYY-MM-DD", used as the `max` on Date of Birth so the
+// native date picker (and typed input) can't accept a future date.
+function todayDateString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ★ APPLICATION FORM STEP DEFINITIONS — Page 1 → Page 6
 // Field-driven config so every page is rendered by one generic component.
 // Mirrors the "EMRS Entrance Test (EMRSST) Application Form": Page 1 covers
@@ -616,6 +629,9 @@ const ASSAM_DISTRICTS = [
 
 const YES_NO = ["Yes", "No"];
 
+const NAME_PATTERN = /^[A-Za-z\s.'-]+$/;
+const NAME_PATTERN_MSG = "Only alphabets are allowed";
+
 const APPLICATION_STEPS = [
   {
     key: "1",
@@ -627,8 +643,8 @@ const APPLICATION_STEPS = [
     fields: [
       { name: "academicSession", label: "Academic Session", type: "text", placeholder: "e.g. 2026–27" },
       { name: "classApplied", label: "Class Applied", type: "select", options: ["VI", "VIII", "IX", "X","XI","XII"] },
-      { name: "candidateName", label: "Candidate Name", type: "text", placeholder: "As per birth certificate" },
-      { name: "aadhaar", label: "Aadhaar Number", type: "text", placeholder: "12-digit Aadhaar", pattern: /^\d{12}$/, patternMsg: "Enter a valid 12-digit Aadhaar number" },
+      { name: "candidateName", label: "Candidate Name", type: "text", placeholder: "As per birth certificate", inputFilter: "alpha", pattern: NAME_PATTERN, patternMsg: NAME_PATTERN_MSG },
+      { name: "aadhaar", label: "Aadhaar Number", type: "text", placeholder: "12-digit Aadhaar", inputFilter: "numeric", pattern: /^\d{12}$/, patternMsg: "Enter a valid 12-digit Aadhaar number" },
       { name: "dob", label: "Date of Birth", type: "date" },
       { name: "age", label: "Age (as on 31 March)", type: "text", placeholder: "Auto-calculated from Date of Birth", readOnly: true },
       { name: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Other"] },
@@ -643,16 +659,16 @@ const APPLICATION_STEPS = [
       { name: "district", label: "District", type: "select", options: ASSAM_DISTRICTS },
       { name: "block", label: "Block", type: "text" },
       { name: "village", label: "Village", type: "text" },
-      { name: "pinCode", label: "PIN Code", type: "text", placeholder: "6-digit PIN", pattern: /^\d{6}$/, patternMsg: "Enter a valid 6-digit PIN code" },
-      { name: "mobile", label: "Mobile Number", type: "text", placeholder: "10-digit mobile number", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit mobile number" },
+      { name: "pinCode", label: "PIN Code", type: "text", placeholder: "6-digit PIN", inputFilter: "numeric", pattern: /^\d{6}$/, patternMsg: "Enter a valid 6-digit PIN code" },
+      { name: "mobile", label: "Mobile Number", type: "text", placeholder: "10-digit mobile number", inputFilter: "numeric", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit numeric mobile number" },
       { name: "email", label: "Email ID", type: "email", placeholder: "you@example.com" },
-    { name: "fatherName", label: "Father's Name", type: "text" },
-      { name: "motherName", label: "Mother's Name", type: "text" },
-      { name: "guardianName", label: "Guardian Name (if applicable)", type: "text" },
+    { name: "fatherName", label: "Father's Name", type: "text", inputFilter: "alpha", pattern: NAME_PATTERN, patternMsg: NAME_PATTERN_MSG },
+      { name: "motherName", label: "Mother's Name", type: "text", inputFilter: "alpha", pattern: NAME_PATTERN, patternMsg: NAME_PATTERN_MSG },
+      { name: "guardianName", label: "Guardian Name (if applicable)", type: "text", inputFilter: "alpha", pattern: NAME_PATTERN, patternMsg: NAME_PATTERN_MSG },
       { name: "occupation", label: "Occupation", type: "text" },
       { name: "annualIncome", label: "Annual Family Income", type: "select", options: ["Below ₹1 Lakh","₹1–2.5 Lakh","₹2.5–5 Lakh","₹5–8 Lakh","Above ₹8 Lakh"] },
-      { name: "fatherMobile", label: "Father's Mobile", type: "text", placeholder: "10-digit mobile number", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit mobile number" },
-      { name: "motherMobile", label: "Mother's Mobile", type: "text", placeholder: "10-digit mobile number", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit mobile number" },
+      { name: "fatherMobile", label: "Father's Mobile", type: "text", placeholder: "10-digit mobile number", inputFilter: "numeric", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit numeric mobile number" },
+      { name: "motherMobile", label: "Mother's Mobile", type: "text", placeholder: "10-digit mobile number", inputFilter: "numeric", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit numeric mobile number" },
     ],
   },
   {
@@ -661,11 +677,11 @@ const APPLICATION_STEPS = [
     icon: "🏫",
     intro: "Details of the school the candidate currently attends.",
     fields: [
-      { name: "presentSchool", label: "Present School", type: "text" },
+      { name: "presentSchool", label: "Present School", type: "text", inputFilter: "alpha", pattern: NAME_PATTERN, patternMsg: NAME_PATTERN_MSG },
       { name: "schoolType", label: "School Type", type: "select", options: ["Government","Government-aided","Private","EMRS","Other"] },
       { name: "currentClass", label: "Current Class", type: "text", placeholder: "e.g. V or VII" },
       { name: "classPassed", label: "Class Passed", type: "text" },
-      { name: "yearOfPassing", label: "Year of Passing", type: "text", placeholder: "e.g. 2025", pattern: /^(19|20)\d{2}$/, patternMsg: "Enter a valid 4-digit year" },
+      { name: "yearOfPassing", label: "Year of Passing", type: "text", placeholder: "e.g. 2025", inputFilter: "numeric", pattern: /^(19|20)\d{2}$/, patternMsg: "Enter a valid 4-digit numeric year" },
       { name: "rollNumber", label: "Roll Number", type: "text" },
       { name: "mediumOfInstruction", label: "Medium of Instruction", type: "select", options: ["Assamese","English","Bodo","Hindi","Bengali","Other"] },
     ],
@@ -724,7 +740,7 @@ const APPLICATION_STEPS = [
       { name: "medicalBloodGroup", label: "Blood Group", type: "select", options: ["A+","A-","B+","B-","AB+","AB-","O+","O-","Not known"] },
       { name: "allergies", label: "Allergies", type: "text", placeholder: "e.g. none / peanuts / dust" },
       { name: "medicalCondition", label: "Medical Condition", type: "textarea", placeholder: "Any condition the school should be aware of" },
-      { name: "emergencyContact", label: "Emergency Contact", type: "text", placeholder: "10-digit mobile number", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit mobile number" },
+      { name: "emergencyContact", label: "Emergency Contact", type: "text", placeholder: "10-digit mobile number", inputFilter: "numeric", pattern: /^\d{10}$/, patternMsg: "Enter a valid 10-digit numeric mobile number" },
     ],
   },
 ];
@@ -829,6 +845,16 @@ function GenericField({ field, value, error, onChange }) {
     );
   }
 
+  // Text/email/date input onChange — routes through the field's
+  // `inputFilter` (if any) so out-of-scope characters (digits in a name
+  // field, letters in a numeric field) never make it into state, rather
+  // than only being flagged by validation after the fact.
+  const handleTextChange = (e) => {
+    const raw = e.target.value;
+    const filtered = field.inputFilter ? applyInputFilter(field.inputFilter, raw) : raw;
+    onChange(name, filtered);
+  };
+
   return (
     <div>
       <FieldLabel required={required}>{label}</FieldLabel>
@@ -857,10 +883,12 @@ function GenericField({ field, value, error, onChange }) {
           type={type === "date" ? "date" : type === "email" ? "email" : "text"}
           style={{ ...inputStyle, ...focusStyle }}
           value={value || ""}
-          onChange={e => onChange(name, e.target.value)}
+          onChange={handleTextChange}
           placeholder={placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          max={type === "date" && name === "dob" ? todayDateString() : undefined}
+          inputMode={field.inputFilter === "numeric" ? "numeric" : undefined}
           maxLength={field.pattern && field.name.match(/mobile|aadhaar|pin|contact/i) ? (field.name === "aadhaar" ? 12 : field.name === "pinCode" ? 6 : 10) : undefined}
         />
       )}
@@ -879,96 +907,7 @@ const VERIFICATION_STYLES = {
   unsupported: { bg: "#fff6e8", border: "rgba(200,120,30,0.3)", text: "#8b6914", dot: T.brownLight },
 };
 
-// Reusable "Fetch from DigiLocker" control: click → simulated connect →
-// pick the matching issued document → simulated fetch → calls
-// onFetched(file) with a placeholder File standing in for the real one.
-function DigiLockerButton({ options, onFetched }) {
-  const [phase, setPhase] = useState("idle"); // idle | connecting | picking | fetching
-  const timerRef = useRef(null);
-
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
-
-  const start = (e) => {
-    e.stopPropagation();
-    setPhase("connecting");
-    timerRef.current = setTimeout(() => setPhase("picking"), 700);
-  };
-
-  const cancel = (e) => {
-    e?.stopPropagation();
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPhase("idle");
-  };
-
-  const pick = async (option, e) => {
-    e.stopPropagation();
-    setPhase("fetching");
-    const file = await createMockDigiLockerFile(option.label);
-    timerRef.current = setTimeout(() => {
-      setPhase("idle");
-      onFetched(file, option.label);
-    }, 500);
-  };
-
-  return (
-    <div style={{ position: "relative", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-      <button
-        type="button"
-        onClick={phase === "idle" ? start : undefined}
-        style={{
-          background: "#fff", color: GOVT.navy, border: `1.5px solid ${GOVT.navyBorder}`,
-          fontSize: 12.5, fontWeight: 700, padding: "7px 12px", borderRadius: 8,
-          cursor: phase === "idle" ? "pointer" : "default", display: "flex", alignItems: "center", gap: 5,
-        }}
-      >
-        🔗 {phase === "idle" ? "DigiLocker" : phase === "connecting" ? "Connecting…" : phase === "fetching" ? "Fetching…" : "DigiLocker"}
-      </button>
-
-      {(phase === "connecting" || phase === "picking" || phase === "fetching") && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 20, width: 270,
-          background: "#fff", border: `1.5px solid ${GOVT.navyBorder}`, borderRadius: 11,
-          boxShadow: "0 10px 28px rgba(11,61,102,0.2)", padding: "14px 16px",
-        }}>
-          {phase === "connecting" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: GOVT.navy }}>
-              <span style={{ width: 13, height: 13, borderRadius: "50%", border: `2px solid ${GOVT.navy}`, borderTopColor: "transparent", animation: "stCertSpin 0.8s linear infinite" }} />
-              Connecting to DigiLocker…
-            </div>
-          )}
-          {phase === "picking" && (
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: GOVT.navy, marginBottom: 9 }}>Select a document to fetch</div>
-              {options.map(o => (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={(e) => pick(o, e)}
-                  style={{
-                    display: "block", width: "100%", textAlign: "left", background: GOVT.navySoft,
-                    border: `1.5px solid ${GOVT.navyBorder}`, borderRadius: 8, padding: "9px 11px",
-                    fontSize: 13, color: "#333", cursor: "pointer", marginBottom: 7,
-                  }}
-                >
-                  📄 {o.label}
-                </button>
-              ))}
-              <button type="button" onClick={cancel} style={{ background: "none", border: "none", color: T.faint, fontSize: 12.5, cursor: "pointer", marginTop: 2 }}>Cancel</button>
-            </div>
-          )}
-          {phase === "fetching" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: GOVT.navy }}>
-              <span style={{ width: 13, height: 13, borderRadius: "50%", border: `2px solid ${GOVT.navy}`, borderTopColor: "transparent", animation: "stCertSpin 0.8s linear infinite" }} />
-              Fetching document…
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ChecklistRow({ item, checked, file, source, onToggle, onFile, onDigiLockerFetch, verification }) {
+function ChecklistRow({ item, checked, file, onToggle, onFile, verification }) {
   const fileRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const vStatus = verification?.status;
@@ -1007,15 +946,11 @@ function ChecklistRow({ item, checked, file, source, onToggle, onFile, onDigiLoc
             {isAutoChecked && (
               <span style={{ fontSize: 10.5, fontWeight: 700, color: T.brown, background: "rgba(139,69,19,0.08)", border: "1px solid rgba(139,69,19,0.18)", borderRadius: 20, padding: "2px 8px", letterSpacing: 0.3 }}>🤖 auto-checked</span>
             )}
-            {source === "digilocker" && (
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: GOVT.navy, background: GOVT.navySoft, border: `1px solid ${GOVT.navyBorder}`, borderRadius: 20, padding: "2px 8px", letterSpacing: 0.3 }}>🔗 via DigiLocker</span>
-            )}
           </div>
           <div style={{ fontSize: 12, color: T.faint, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {file ? file.name : "Drag & drop, Attach, or fetch via DigiLocker — optional"}
+            {file ? file.name : "Drag & drop or Attach — optional"}
           </div>
         </div>
-        <DigiLockerButton options={DIGILOCKER_DOC_OPTIONS[item.key] || []} onFetched={(f, label) => onDigiLockerFetch(item.key, f, label)} />
         <button type="button" onClick={() => fileRef.current?.click()} style={{ background: file ? "none" : "linear-gradient(135deg,#8b4513,#c8781e)", color: file ? T.brown : "#fff", border: file ? `1.5px solid rgba(139,69,19,0.25)` : "none", fontSize: 12.5, fontWeight: 700, padding: "7px 14px", borderRadius: 8, cursor: "pointer", flexShrink: 0 }}>{file ? "Replace" : "Attach"}</button>
         <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={e => onFile(item.key, e.target.files?.[0] || null)} />
       </div>
@@ -1090,9 +1025,11 @@ function AuthGate({ onAuthenticated, onClose }) {
     onAuthenticated(mobile);
   };
 
+  useBodyScrollLock();
+
   return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "#fdf8f0", zIndex: 10050, display: "flex", flexDirection: "column", height: "100vh", width: "100vw" }}>
-      <style>{`@keyframes stCertSpin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes stCertSpin { to { transform: rotate(360deg); } } ${SCROLLBAR_CSS}`}</style>
 
       {/* ── Official masthead strip — matches the wizard's chrome ── */}
       <div style={{ background: GOVT.navy, padding: "7px 40px", flexShrink: 0 }}>
@@ -1124,7 +1061,7 @@ function AuthGate({ onAuthenticated, onClose }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px" }}>
+      <div className="emrs-scrollbar" style={{ flex: 1, overflowY: "scroll", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 20px" }}>
         <div style={{ width: "100%", maxWidth: 460, background: "#fff", border: `1.5px solid ${T.border}`, borderRadius: 18, padding: "32px 32px 26px", boxShadow: "0 14px 40px rgba(139,69,19,0.14)" }}>
           {/* Tab switcher */}
           <div style={{ display: "flex", gap: 7, marginBottom: 24, background: "rgba(139,69,19,0.06)", borderRadius: 12, padding: 5 }}>
@@ -1173,6 +1110,7 @@ function AuthGate({ onAuthenticated, onClose }) {
                 placeholder="10-digit mobile number"
                 style={inputStyle}
                 maxLength={10}
+                inputMode="numeric"
                 autoFocus
               />
             </div>
@@ -1255,11 +1193,6 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [checklist, setChecklist] = useState({});
   const [checklistFiles, setChecklistFiles] = useState({});
-  // Tracks how each checklist file arrived: "upload" (manually attached) or
-  // "digilocker" (pulled in via the simulated DigiLocker fetch) — used to
-  // show the "via DigiLocker" badge and to skip the OCR cross-check for
-  // documents that came straight from the issuing government source.
-  const [checklistSource, setChecklistSource] = useState({});
   // Identity-verification results for documents that get an automatic
   // cross-check against form data. For Aadhaar: name, date of birth, and
   // Aadhaar number. For ST Certificate: name, parent's name, and category.
@@ -1314,7 +1247,6 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
         setStep(typeof saved.step === "number" ? Math.min(saved.step, TOTAL_STEPS - 1) : 0);
         if (saved.appNo) setAppNo(saved.appNo);
         setChecklist(saved.checklist || {});
-        setChecklistSource(saved.checklistSource || {});
         setDocVerification(saved.docVerification || {});
 
         if (saved.photo) {
@@ -1394,7 +1326,6 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
         step,
         formData,
         checklist,
-        checklistSource,
         docVerification,
         photo: photoData,
         checklistFilesData,
@@ -1420,7 +1351,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
     autosaveTimerRef.current = setTimeout(() => { persistNow(); }, 900);
     return () => { if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, step, formData, checklist, checklistSource, checklistFiles, declarations, photo]);
+  }, [hydrated, step, formData, checklist, checklistFiles, declarations, photo]);
   const handleLogout = async () => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     await persistNow();
@@ -1596,28 +1527,9 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
 
   const setChecklistFile = (key, file) => {
     setChecklistFiles(c => ({ ...c, [key]: file }));
-    setChecklistSource(s => ({ ...s, [key]: file ? "upload" : undefined }));
     if (file) {
       setChecklist(c => ({ ...c, [key]: true }));
       runVerification(key, file);
-    } else {
-      setDocVerification(v => ({ ...v, [key]: undefined }));
-    }
-  };
-
-  // Called when a document is pulled in via the simulated DigiLocker fetch
-  // instead of a manual upload. Documents fetched this way come directly
-  // from the issuing government source, so they're treated as already
-  // verified — no client-side OCR cross-check is needed or run.
-  const handleDigiLockerFetch = (key, file, label) => {
-    setChecklistFiles(c => ({ ...c, [key]: file }));
-    setChecklistSource(s => ({ ...s, [key]: "digilocker" }));
-    setChecklist(c => ({ ...c, [key]: true }));
-    if (AUTO_CHECKED_DOCS.includes(key)) {
-      setDocVerification(v => ({
-        ...v,
-        [key]: { status: "match", message: `✅ Fetched directly from DigiLocker (${label}) — an issued government record, so no further check is needed.` },
-      }));
     } else {
       setDocVerification(v => ({ ...v, [key]: undefined }));
     }
@@ -1741,6 +1653,9 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
         const v = (formData[f.name] || "").toString().trim();
         if (f.required && !v) { newErrors[f.name] = "Required"; return; }
         if (v && f.pattern && !f.pattern.test(v)) newErrors[f.name] = f.patternMsg || "Invalid value";
+        if (f.name === "dob" && v) {
+          if (v > todayDateString()) newErrors[f.name] = "Date of birth cannot be a future date";
+        }
       });
     }
     setErrors(newErrors);
@@ -1807,6 +1722,8 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
     }
   };
 
+  useBodyScrollLock();
+
   const currentSection = step < TOTAL_DATA_STEPS ? APPLICATION_STEPS[step] : null;
 
   // Small rollup used both on Page 6 (as a summary banner) and on the
@@ -1828,7 +1745,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
   if (!hydrated) {
     return createPortal(
       <div style={{ position: "fixed", inset: 0, background: "#fdf8f0", zIndex: 10050, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <style>{`@keyframes stCertSpin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`@keyframes stCertSpin { to { transform: rotate(360deg); } } ${SCROLLBAR_CSS}`}</style>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
           <span style={{ width: 34, height: 34, borderRadius: "50%", border: `3px solid ${T.brown}`, borderTopColor: "transparent", animation: "stCertSpin 0.8s linear infinite" }} />
           <div style={{ fontSize: 15, color: T.brownDark, fontWeight: 600 }}>Loading your saved application…</div>
@@ -1852,6 +1769,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
         @keyframes emrsToastIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
         .emrs-apply-body-anim { animation: emrsFadeIn 0.2s ease; }
         .emrs-saved-toast { animation: emrsToastIn 0.2s ease; }
+        ${SCROLLBAR_CSS}
       `}</style>
 
       {/* ── Official masthead strip — Government / Ministry identity bar ── */}
@@ -1894,7 +1812,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
       </div>
 
       {submitted ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 30px", textAlign: "center", overflowY: "auto" }}>
+        <div className="emrs-scrollbar" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 30px", textAlign: "center", overflowY: "scroll" }}>
           <div style={{ maxWidth: 500 }}>
             <div style={{ fontSize: 52, marginBottom: 12 }}>✅</div>
             <div style={{ fontSize: 21, fontWeight: 800, color: T.brownDark, marginBottom: 10 }}>Application Submitted Successfully</div>
@@ -1929,7 +1847,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
             </div>
           </div>
 
-          <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "10px 40px 32px" }}>
+          <div ref={bodyRef} className="emrs-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: "scroll", padding: "10px 40px 32px" }}>
             <div className="emrs-apply-body-anim" style={{ maxWidth: 1000, margin: "0 auto" }} key={step}>
               {currentSection && (
                 <>
@@ -1982,7 +1900,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
                       }}>
                         <span style={{ fontSize: 20 }}>🤖</span>
                         <div style={{ fontSize: 13.5, color: "#5a3e28", lineHeight: 1.55 }}>
-                          Every document below can be attached manually or fetched directly via <strong>🔗 DigiLocker</strong>. <strong>Aadhaar</strong> uploads are automatically scanned and cross-checked against the candidate's name, date of birth, and Aadhaar number entered earlier in this form. <strong>ST Certificate</strong> uploads are checked against the candidate's name, parent's name, and reservation category. Documents fetched via DigiLocker skip this check since they come directly from the issuing government source.
+                          Every document below can be attached manually. <strong>Aadhaar</strong> uploads are automatically scanned and cross-checked against the candidate's name, date of birth, and Aadhaar number entered earlier in this form. <strong>ST Certificate</strong> uploads are checked against the candidate's name, parent's name, and reservation category.
                           {(verificationSummary.matched > 0 || verificationSummary.mismatched > 0) && (
                             <span style={{ display: "block", marginTop: 5, fontWeight: 700 }}>
                               {verificationSummary.matched > 0 && <span style={{ color: T.green }}>✔ {verificationSummary.matched} verified  </span>}
@@ -1998,10 +1916,8 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
                           item={item}
                           checked={checklist[item.key]}
                           file={checklistFiles[item.key]}
-                          source={checklistSource[item.key]}
                           onToggle={toggleChecklist}
                           onFile={setChecklistFile}
-                          onDigiLockerFetch={handleDigiLockerFetch}
                           verification={docVerification[item.key]}
                         />
                       ))}
