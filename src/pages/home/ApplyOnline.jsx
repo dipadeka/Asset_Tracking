@@ -1704,7 +1704,7 @@ function ApplicationWizard({ candidateKey, onLogout, onClose }) {
       // both signed declarations (base64 signature + optional uploaded
       // scanned copy) to the admissions API, e.g.:
       //
-      // await fetch("http://localhost:5000/api/emrs/admission/apply", {
+      // await fetch("http://192.168.20.193:5000/api/emrs/admission/apply", {
       //   method: "POST",
       //   headers: { "Content-Type": "application/json" },
       //   body: JSON.stringify({ formData, declarations, checklist }),

@@ -381,7 +381,7 @@ export const exportPDF = (form) => {
   win.print();
 };
 
-export const EMRS_API_BASE = "http://localhost:5000/api/emrs";
+export const EMRS_API_BASE = "http://192.168.20.193:5000/api/emrs";
 
 export const fetchEmrsFromBackend = async () => {
   const res = await fetch(EMRS_API_BASE);

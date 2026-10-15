@@ -6,7 +6,7 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (payload, { rejectWithValue }) => {
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/login", payload);
+      const response = await axios.post("http://192.168.20.193:5000/api/auth/login", payload);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || { message: 'Server error' });

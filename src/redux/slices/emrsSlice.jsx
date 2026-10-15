@@ -6,7 +6,7 @@ export const submitEMRSForm = createAsyncThunk(
   'emrs/submitForm',
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/emrs', payload);
+      const res = await axios.post('http://192.168.20.193:5000/api/emrs', payload);
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || { message: 'Server error' });
